@@ -1,11 +1,12 @@
 import { useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft, ChevronRight, Grid2X2 } from 'lucide-react'
-import type { SlideDefinition } from '@/types'
+import type { UnifiedSlide } from '@/types'
 import { SlideShell } from './SlideShell'
+import { DbSlideRenderer } from './DbSlideRenderer'
 
 interface PresentationViewProps {
-  slides: SlideDefinition[]
+  slides: UnifiedSlide[]
   activeIndex: number
   onExit: () => void
   onNavigate: (index: number) => void
@@ -38,7 +39,7 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate }: Pr
   const prev = useCallback(() => go(activeIndex - 1), [go, activeIndex])
   const next = useCallback(() => go(activeIndex + 1), [go, activeIndex])
 
-  const ActiveSlide = slides[activeIndex].component
+  const activeSlide = slides[activeIndex]
 
   return (
     <motion.div
@@ -52,12 +53,6 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate }: Pr
     >
       {/* Slide area — 16:9 centered */}
       <div className="flex-1 overflow-hidden flex items-center justify-center" style={{ padding: '16px 24px' }}>
-        {/*
-          Two-step 16:9 constraint:
-          1. Outer limits width so that height = width*9/16 never exceeds available height
-          2. Inner uses padding-bottom trick (56.25%) to establish the actual 16:9 box;
-             absolutely-positioned children fill it reliably without needing an explicit height.
-        */}
         <div style={{ width: '100%', maxWidth: 'calc((100vh - 88px) * 16/9)' }}>
           <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', overflow: 'hidden', borderRadius: 8 }}>
             <AnimatePresence mode="wait" custom={directionRef.current}>
@@ -72,9 +67,13 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate }: Pr
                 onAnimationComplete={() => { isTransitioning.current = false }}
                 style={{ position: 'absolute', inset: 0 }}
               >
-                <SlideShell>
-                  <ActiveSlide isActive={true} />
-                </SlideShell>
+                {activeSlide.kind === 'code' ? (
+                  <SlideShell>
+                    <activeSlide.component isActive={true} />
+                  </SlideShell>
+                ) : (
+                  <DbSlideRenderer blocks={activeSlide.blocks} theme={activeSlide.theme} />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

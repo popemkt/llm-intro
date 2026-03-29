@@ -3,152 +3,89 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { OverviewGrid } from '@/components/OverviewGrid'
 import { PresentationView } from '@/components/PresentationView'
-import { codePresentations } from '@/presentations/registry'
+import { codeSlideRegistry } from '@/slides/registry'
 import { api } from '@/api/client'
-import type { UnifiedSlide, DbSlide, DbPresentation, Block } from '@/types'
+import type { UnifiedSlide, ApiSlide, ApiPresentation } from '@/types'
+
+function toUnified(slide: ApiSlide, theme: ApiPresentation['theme']): UnifiedSlide {
+  if (slide.kind === 'code') {
+    const component = codeSlideRegistry[slide.code_id ?? '']
+    if (!component) {
+      console.warn(`Unknown code_id: ${slide.code_id}`)
+      // Fall back to a db-style empty slide so the app doesn't crash
+      return { kind: 'db', id: slide.id, title: slide.title, blocks: [], theme }
+    }
+    return { kind: 'code', id: slide.id, title: slide.title, component }
+  }
+  return { kind: 'db', id: slide.id, title: slide.title, blocks: slide.blocks, theme }
+}
 
 export function PresentationPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const pid = Number(id)
 
   const [mode, setMode] = useState<'overview' | 'presentation'>('overview')
   const [activeIndex, setActiveIndex] = useState(0)
   const [slides, setSlides] = useState<UnifiedSlide[]>([])
-  // companion = DB presentation used to store extra slides for code presentations
-  const [companion, setCompanion] = useState<DbPresentation | null>(null)
-  const [presentation, setPresentation] = useState<DbPresentation | null>(null)
+  const [presentation, setPresentation] = useState<ApiPresentation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const isDb = /^\d+$/.test(id ?? '')
-  // The presentation that owns the slides (companion for code, self for DB)
-  const slideOwner = isDb ? presentation : companion
-
   useEffect(() => {
-    if (!id) return
-
-    if (!isDb) {
-      // Code presentation — load code slides + companion DB slides
-      const codePresentation = codePresentations.find(p => p.slug === id)
-      if (!codePresentation) { setError('Presentation not found'); setLoading(false); return }
-
-      const codeSlides: UnifiedSlide[] = codePresentation.slides.map(s => ({
-        kind: 'code', id: s.id, title: s.title, component: s.component,
-      }))
-
-      api.presentations.getOrCreateBySlug(id)
-        .then(comp => {
-          setCompanion(comp)
-          return api.slides.list(comp.id).then(dbSlides => {
-            setSlides([
-              ...codeSlides,
-              ...dbSlides.map(s => ({
-                kind: 'db' as const,
-                id: s.id,
-                title: s.title,
-                blocks: parseBlocks(s.blocks),
-                theme: comp.theme,
-              })),
-            ])
-          })
-        })
-        .catch(() => {
-          // If API is not reachable, just show code slides without "+"
-          setSlides(codeSlides)
-        })
-        .finally(() => setLoading(false))
-      return
-    }
-
-    // Pure DB presentation
-    const pid = Number(id)
-    Promise.all([
-      api.presentations.list().then(all => all.find(p => p.id === pid)),
-      api.slides.list(pid),
-    ]).then(([pres, dbSlides]) => {
-      if (!pres) { setError('Presentation not found'); return }
-      setPresentation(pres)
-      setSlides(dbSlides.map(s => ({
-        kind: 'db',
-        id: s.id,
-        title: s.title,
-        blocks: parseBlocks(s.blocks),
-        theme: pres.theme,
-      })))
-    }).catch(() => setError('Failed to load'))
+    if (!id || isNaN(pid)) { setError('Invalid ID'); setLoading(false); return }
+    Promise.all([api.presentations.get(pid), api.slides.list(pid)])
+      .then(([pres, apiSlides]) => {
+        setPresentation(pres)
+        setSlides(apiSlides.map(s => toUnified(s, pres.theme)))
+      })
+      .catch(() => setError('Presentation not found'))
       .finally(() => setLoading(false))
-  }, [id, isDb])
+  }, [id, pid])
 
   useEffect(() => {
     if (mode !== 'presentation') return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        e.preventDefault()
-        setActiveIndex(i => Math.min(i + 1, slides.length - 1))
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault()
-        setActiveIndex(i => Math.max(i - 1, 0))
-      } else if (e.key === 'Escape') {
-        setMode('overview')
-      }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, slides.length - 1)) }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)) }
+      else if (e.key === 'Escape') setMode('overview')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [mode, slides.length])
 
   const handleAddSlide = useCallback(async () => {
-    if (!slideOwner) return
-    const newSlide = await api.slides.create(slideOwner.id)
-    setSlides(prev => [...prev, {
-      kind: 'db',
-      id: newSlide.id,
-      title: newSlide.title,
-      blocks: [],
-      theme: slideOwner.theme,
-    }])
-  }, [slideOwner])
+    if (!presentation) return
+    const s = await api.slides.create(presentation.id)
+    setSlides(prev => [...prev, toUnified(s, presentation.theme)])
+  }, [presentation])
 
   const handleReorder = useCallback(async (ids: number[]) => {
-    if (!slideOwner) return
+    if (!presentation) return
     setSlides(prev => {
       const map = new Map(prev.map(s => [s.id, s]))
-      // Keep code slides in front, reorder only DB slides
-      const codeSlides = prev.filter(s => s.kind === 'code')
-      const reorderedDb = ids.map(id => map.get(id)).filter(Boolean) as UnifiedSlide[]
-      return [...codeSlides, ...reorderedDb]
+      return ids.map(id => map.get(id)!).filter(Boolean)
     })
-    await api.slides.reorder(slideOwner.id, ids)
-  }, [slideOwner])
+    await api.slides.reorder(presentation.id, ids)
+  }, [presentation])
 
-  const handleSlideUpdated = useCallback((updated: DbSlide) => {
-    setSlides(prev => prev.map(s =>
-      s.id === updated.id
-        ? { ...s, title: updated.title, blocks: parseBlocks(updated.blocks) } as UnifiedSlide
-        : s
-    ))
-  }, [])
+  const handleSlideUpdated = useCallback((updated: ApiSlide) => {
+    if (!presentation) return
+    setSlides(prev => prev.map(s => s.id === updated.id ? toUnified(updated, presentation.theme) : s))
+  }, [presentation])
 
-  if (loading) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0f0e', color: '#7a9985', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
-        Loading…
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0f0e', color: '#7a9985', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
+      Loading…
+    </div>
+  )
 
-  if (error) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0d0f0e', color: '#e8f0eb', fontFamily: 'Inter, sans-serif', gap: 16 }}>
-        <div style={{ fontSize: 14 }}>{error}</div>
-        <button onClick={() => navigate('/')} style={{ fontSize: 12, color: '#7a9985', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-          ← Back to home
-        </button>
-      </div>
-    )
-  }
-
-  const codePresentation = !isDb ? codePresentations.find(p => p.slug === id) : null
-  const presTitle = codePresentation?.name ?? presentation?.name ?? ''
+  if (error || !presentation) return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0d0f0e', color: '#e8f0eb', fontFamily: 'Inter, sans-serif', gap: 16 }}>
+      <div style={{ fontSize: 14 }}>{error ?? 'Not found'}</div>
+      <button onClick={() => navigate('/')} style={{ fontSize: 12, color: '#7a9985', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>← Back</button>
+    </div>
+  )
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
@@ -157,13 +94,13 @@ export function PresentationPage() {
           <OverviewGrid
             key="overview"
             slides={slides}
-            presentationId={slideOwner?.id}
-            presentationTheme={slideOwner?.theme}
-            title={presTitle}
+            presentationId={presentation.id}
+            presentationTheme={presentation.theme}
+            title={presentation.name}
             onSelectSlide={i => { setActiveIndex(i); setMode('presentation') }}
-            onAddSlide={slideOwner ? handleAddSlide : undefined}
-            onReorder={slideOwner ? handleReorder : undefined}
-            onSlideUpdated={slideOwner ? handleSlideUpdated : undefined}
+            onAddSlide={handleAddSlide}
+            onReorder={handleReorder}
+            onSlideUpdated={handleSlideUpdated}
             onGoHome={() => navigate('/')}
           />
         ) : (
@@ -179,8 +116,4 @@ export function PresentationPage() {
       </AnimatePresence>
     </div>
   )
-}
-
-function parseBlocks(raw: string): Block[] {
-  try { return JSON.parse(raw) as Block[] } catch { return [] }
 }

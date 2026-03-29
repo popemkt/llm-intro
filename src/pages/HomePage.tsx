@@ -1,28 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { Plus, Presentation, Code2, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Presentation } from 'lucide-react'
 import { api } from '@/api/client'
-import { codePresentations } from '@/presentations/registry'
-import type { DbPresentation, ThemeName } from '@/types'
+import { THEME_NAMES, type ApiPresentation, type ThemeName } from '@/types'
 import { T } from '@/design/tokens'
-
-const THEMES: ThemeName[] = ['dark-green', 'dark-blue', 'light', 'neon']
 
 export function HomePage() {
   const navigate = useNavigate()
-  const [dbPresentations, setDbPresentations] = useState<DbPresentation[]>([])
+  const [presentations, setPresentations] = useState<ApiPresentation[]>([])
   const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [newName, setNewName] = useState('')
   const [newTheme, setNewTheme] = useState<ThemeName>('dark-green')
-  const [showForm, setShowForm] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    api.presentations.list()
-      .then(setDbPresentations)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    api.presentations.list().then(setPresentations).finally(() => setLoading(false))
   }, [])
 
   const create = async () => {
@@ -30,19 +24,16 @@ export function HomePage() {
     setCreating(true)
     try {
       const pres = await api.presentations.create(newName.trim(), newTheme)
-      setDbPresentations(prev => [pres, ...prev])
-      setNewName('')
-      setShowForm(false)
       navigate(`/p/${pres.id}`)
     } finally {
       setCreating(false)
     }
   }
 
-  const deletePresentation = async (id: number) => {
-    if (!confirm('Delete this presentation?')) return
+  const remove = async (id: number) => {
+    if (!confirm('Delete this presentation and all its slides?')) return
     await api.presentations.delete(id)
-    setDbPresentations(prev => prev.filter(p => p.id !== id))
+    setPresentations(prev => prev.filter(p => p.id !== id))
   }
 
   return (
@@ -50,21 +41,16 @@ export function HomePage() {
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${T.border}`, padding: '20px 40px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.accent }} />
-        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em', color: T.text }}>Presentations</span>
+        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em' }}>Decks</span>
         <button
           onClick={() => setShowForm(v => !v)}
-          style={{
-            marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
-            background: T.accent, color: T.bg, border: 'none', borderRadius: 8,
-            padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-          }}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, background: T.accent, color: T.bg, border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
         >
           <Plus size={13} /> New
         </button>
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 40px' }}>
-
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 40px' }}>
         {/* Create form */}
         {showForm && (
           <motion.div
@@ -79,7 +65,7 @@ export function HomePage() {
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && create()}
-                placeholder="My presentation"
+                placeholder="My deck"
                 style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, color: T.text, outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box' }}
               />
             </div>
@@ -90,7 +76,7 @@ export function HomePage() {
                 onChange={e => setNewTheme(e.target.value as ThemeName)}
                 style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, color: T.text, outline: 'none', cursor: 'pointer' }}
               >
-                {THEMES.map(t => <option key={t} value={t}>{t}</option>)}
+                {THEME_NAMES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <button
@@ -109,87 +95,37 @@ export function HomePage() {
           </motion.div>
         )}
 
-        {/* Code presentations */}
-        <section style={{ marginBottom: 40 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Code2 size={14} style={{ color: T.textDim }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: T.textDim, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>Built-in</span>
-          </div>
+        {loading ? (
+          <div style={{ fontSize: 12, color: T.textDim }}>Loading…</div>
+        ) : presentations.length === 0 ? (
+          <div style={{ fontSize: 12, color: T.muted, fontStyle: 'italic' }}>No decks yet.</div>
+        ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-            {codePresentations.map(pres => (
-              <motion.button
-                key={pres.slug}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(`/p/${pres.slug}`)}
-                style={{
-                  background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12,
-                  padding: '18px 20px', textAlign: 'left', cursor: 'pointer', display: 'block',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <Presentation size={14} style={{ color: T.accent }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{pres.name}</span>
-                </div>
-                <p style={{ margin: 0, fontSize: 11, color: T.textDim, lineHeight: 1.5 }}>{pres.description}</p>
-                <div style={{ marginTop: 12, fontSize: 10, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-                  {pres.slides.length} slides · code
-                </div>
-              </motion.button>
+            {presentations.map(pres => (
+              <motion.div key={pres.id} whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => navigate(`/p/${pres.id}`)}
+                  style={{ width: '100%', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: '18px 20px', textAlign: 'left', cursor: 'pointer', display: 'block' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <Presentation size={14} style={{ color: T.accent }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{pres.name}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                    theme: {pres.theme}
+                  </div>
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); remove(pres.id) }}
+                  style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: T.muted, padding: 4, borderRadius: 6 }}
+                  title="Delete"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </motion.div>
             ))}
           </div>
-        </section>
-
-        {/* DB presentations */}
-        <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Presentation size={14} style={{ color: T.textDim }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: T.textDim, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>Custom</span>
-          </div>
-          {loading ? (
-            <div style={{ fontSize: 12, color: T.textDim }}>Loading…</div>
-          ) : dbPresentations.length === 0 ? (
-            <div style={{ fontSize: 12, color: T.muted, fontStyle: 'italic' }}>
-              No custom presentations yet. Click "New" to create one.
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-              {dbPresentations.map(pres => (
-                <motion.div
-                  key={pres.id}
-                  whileHover={{ scale: 1.02 }}
-                  style={{ position: 'relative' }}
-                >
-                  <button
-                    onClick={() => navigate(`/p/${pres.id}`)}
-                    style={{
-                      width: '100%', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12,
-                      padding: '18px 20px', textAlign: 'left', cursor: 'pointer', display: 'block',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <Presentation size={14} style={{ color: T.accent }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{pres.name}</span>
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 10, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-                      theme: {pres.theme} · id: {pres.id}
-                    </div>
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); deletePresentation(pres.id) }}
-                    style={{
-                      position: 'absolute', top: 10, right: 10, background: 'none', border: 'none',
-                      cursor: 'pointer', color: T.muted, padding: 4, borderRadius: 6,
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </section>
+        )}
       </div>
     </div>
   )

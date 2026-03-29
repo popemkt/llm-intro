@@ -22,6 +22,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ name, theme }),
       }),
+    getOrCreateBySlug: (slug: string, theme: ThemeName = 'dark-green') =>
+      request<DbPresentation>('/api/presentations/by-slug', {
+        method: 'POST',
+        body: JSON.stringify({ slug, theme }),
+      }),
     update: (id: number, patch: Partial<Pick<DbPresentation, 'name' | 'theme'>>) =>
       request<DbPresentation>(`/api/presentations/${id}`, {
         method: 'PATCH',

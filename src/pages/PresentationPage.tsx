@@ -14,26 +14,53 @@ export function PresentationPage() {
   const [mode, setMode] = useState<'overview' | 'presentation'>('overview')
   const [activeIndex, setActiveIndex] = useState(0)
   const [slides, setSlides] = useState<UnifiedSlide[]>([])
+  // companion = DB presentation used to store extra slides for code presentations
+  const [companion, setCompanion] = useState<DbPresentation | null>(null)
   const [presentation, setPresentation] = useState<DbPresentation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Determine if numeric (DB) or slug (code)
   const isDb = /^\d+$/.test(id ?? '')
+  // The presentation that owns the slides (companion for code, self for DB)
+  const slideOwner = isDb ? presentation : companion
 
   useEffect(() => {
     if (!id) return
 
     if (!isDb) {
-      // Code presentation
-      const found = codePresentations.find(p => p.slug === id)
-      if (!found) { setError('Presentation not found'); setLoading(false); return }
-      setSlides(found.slides.map(s => ({ kind: 'code', id: s.id, title: s.title, component: s.component })))
-      setLoading(false)
+      // Code presentation — load code slides + companion DB slides
+      const codePresentation = codePresentations.find(p => p.slug === id)
+      if (!codePresentation) { setError('Presentation not found'); setLoading(false); return }
+
+      const codeSlides: UnifiedSlide[] = codePresentation.slides.map(s => ({
+        kind: 'code', id: s.id, title: s.title, component: s.component,
+      }))
+
+      api.presentations.getOrCreateBySlug(id)
+        .then(comp => {
+          setCompanion(comp)
+          return api.slides.list(comp.id).then(dbSlides => {
+            setSlides([
+              ...codeSlides,
+              ...dbSlides.map(s => ({
+                kind: 'db' as const,
+                id: s.id,
+                title: s.title,
+                blocks: parseBlocks(s.blocks),
+                theme: comp.theme,
+              })),
+            ])
+          })
+        })
+        .catch(() => {
+          // If API is not reachable, just show code slides without "+"
+          setSlides(codeSlides)
+        })
+        .finally(() => setLoading(false))
       return
     }
 
-    // DB presentation
+    // Pure DB presentation
     const pid = Number(id)
     Promise.all([
       api.presentations.list().then(all => all.find(p => p.id === pid)),
@@ -70,26 +97,28 @@ export function PresentationPage() {
   }, [mode, slides.length])
 
   const handleAddSlide = useCallback(async () => {
-    if (!presentation) return
-    const newSlide = await api.slides.create(presentation.id)
+    if (!slideOwner) return
+    const newSlide = await api.slides.create(slideOwner.id)
     setSlides(prev => [...prev, {
       kind: 'db',
       id: newSlide.id,
       title: newSlide.title,
       blocks: [],
-      theme: presentation.theme,
+      theme: slideOwner.theme,
     }])
-  }, [presentation])
+  }, [slideOwner])
 
   const handleReorder = useCallback(async (ids: number[]) => {
-    if (!presentation) return
-    // Optimistic update
+    if (!slideOwner) return
     setSlides(prev => {
       const map = new Map(prev.map(s => [s.id, s]))
-      return ids.map(id => map.get(id)!).filter(Boolean)
+      // Keep code slides in front, reorder only DB slides
+      const codeSlides = prev.filter(s => s.kind === 'code')
+      const reorderedDb = ids.map(id => map.get(id)).filter(Boolean) as UnifiedSlide[]
+      return [...codeSlides, ...reorderedDb]
     })
-    await api.slides.reorder(presentation.id, ids)
-  }, [presentation])
+    await api.slides.reorder(slideOwner.id, ids)
+  }, [slideOwner])
 
   const handleSlideUpdated = useCallback((updated: DbSlide) => {
     setSlides(prev => prev.map(s =>
@@ -118,7 +147,8 @@ export function PresentationPage() {
     )
   }
 
-  const presTitle = isDb ? (presentation?.name ?? '') : (codePresentations.find(p => p.slug === id)?.name ?? '')
+  const codePresentation = !isDb ? codePresentations.find(p => p.slug === id) : null
+  const presTitle = codePresentation?.name ?? presentation?.name ?? ''
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
@@ -127,13 +157,14 @@ export function PresentationPage() {
           <OverviewGrid
             key="overview"
             slides={slides}
-            presentationId={isDb ? presentation?.id : undefined}
-            presentationTheme={presentation?.theme}
+            presentationId={slideOwner?.id}
+            presentationTheme={slideOwner?.theme}
             title={presTitle}
             onSelectSlide={i => { setActiveIndex(i); setMode('presentation') }}
-            onAddSlide={isDb ? handleAddSlide : undefined}
-            onReorder={isDb ? handleReorder : undefined}
-            onSlideUpdated={isDb ? handleSlideUpdated : undefined}
+            onAddSlide={slideOwner ? handleAddSlide : undefined}
+            onReorder={slideOwner ? handleReorder : undefined}
+            onSlideUpdated={slideOwner ? handleSlideUpdated : undefined}
+            onGoHome={() => navigate('/')}
           />
         ) : (
           <PresentationView
@@ -142,6 +173,7 @@ export function PresentationPage() {
             activeIndex={activeIndex}
             onExit={() => setMode('overview')}
             onNavigate={setActiveIndex}
+            onGoHome={() => navigate('/')}
           />
         )}
       </AnimatePresence>

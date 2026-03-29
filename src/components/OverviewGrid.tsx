@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Home } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -21,13 +21,14 @@ import { SlideEditor } from './SlideEditor'
 
 interface OverviewGridProps {
   slides: UnifiedSlide[]
-  presentationId?: number           // set for DB presentations (enables DnD + add)
+  presentationId?: number
   presentationTheme?: ThemeName
   title: string
   onSelectSlide: (index: number) => void
   onAddSlide?: () => void
   onReorder?: (ids: number[]) => void
   onSlideUpdated?: (updated: DbSlide) => void
+  onGoHome?: () => void
 }
 
 const LOGICAL_W = 1000
@@ -57,7 +58,7 @@ function ThumbnailCell({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: slide.id, disabled: !isDb })
+  } = useSortable({ id: slide.id, disabled: slide.kind !== 'db' })
 
   useEffect(() => {
     const el = outerRef.current
@@ -85,8 +86,8 @@ function ThumbnailCell({
         onClick={() => onSelect(index)}
         className="group relative rounded-xl overflow-hidden border border-(--color-border) hover:border-(--color-accent)/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) transition-colors text-left w-full"
         style={{ background: 'var(--color-surface)' }}
-        {...(isDb ? attributes : {})}
-        {...(isDb ? listeners : {})}
+        {...(slide.kind === 'db' ? attributes : {})}
+        {...(slide.kind === 'db' ? listeners : {})}
       >
         {/* 16:9 aspect ratio container */}
         <div ref={outerRef} style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
@@ -160,19 +161,21 @@ export function OverviewGrid({
   onAddSlide,
   onReorder,
   onSlideUpdated,
+  onGoHome,
 }: OverviewGridProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const isDb = Boolean(presentationId)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !onReorder) return
-    const oldIndex = slides.findIndex(s => s.id === active.id)
-    const newIndex = slides.findIndex(s => s.id === over.id)
+    // Only reorder among DB slides
+    const dbSlides = slides.filter(s => s.kind === 'db')
+    const oldIndex = dbSlides.findIndex(s => s.id === active.id)
+    const newIndex = dbSlides.findIndex(s => s.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
-    const reordered = [...slides]
+    const reordered = [...dbSlides]
     const [moved] = reordered.splice(oldIndex, 1)
     reordered.splice(newIndex, 0, moved)
     onReorder(reordered.map(s => s.id))
@@ -195,13 +198,23 @@ export function OverviewGrid({
       {/* Header */}
       <div className="sticky top-0 z-10 px-8 py-4 border-b border-(--color-border) backdrop-blur-sm flex items-center gap-3"
            style={{ background: 'color-mix(in srgb, var(--color-bg) 85%, transparent)' }}>
+        {onGoHome && (
+          <button
+            onClick={onGoHome}
+            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors hover:bg-(--color-border)"
+            style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+            title="Home"
+          >
+            <Home size={13} />
+          </button>
+        )}
         <div className="w-2 h-2 rounded-full" style={{ background: 'var(--color-accent)' }} />
         <span className="text-sm font-semibold tracking-wide" style={{ color: 'var(--color-text)' }}>
           {title}
         </span>
-        {isDb && (
+        {presentationTheme && (
           <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--color-surface)', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)' }}>
-            {presentationTheme ?? 'dark-green'}
+            {presentationTheme}
           </span>
         )}
         <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-text-dim)' }}>
@@ -218,13 +231,13 @@ export function OverviewGrid({
                 key={slide.id}
                 slide={slide}
                 index={i}
-                isDb={isDb}
+                isDb={slide.kind === 'db'}
                 presentationId={presentationId}
                 onSelect={handleSelect}
-                onEdit={isDb ? setEditingIndex : undefined}
+                onEdit={slide.kind === 'db' ? setEditingIndex : undefined}
               />
             ))}
-            {isDb && onAddSlide && <AddSlideCard onClick={onAddSlide} />}
+            {onAddSlide && <AddSlideCard onClick={onAddSlide} />}
           </div>
         </SortableContext>
       </DndContext>

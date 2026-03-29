@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, ChevronRight, Grid2X2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Grid2X2, Home } from 'lucide-react'
 import type { UnifiedSlide } from '@/types'
 import { SlideShell } from './SlideShell'
 import { DbSlideRenderer } from './DbSlideRenderer'
@@ -10,6 +10,7 @@ interface PresentationViewProps {
   activeIndex: number
   onExit: () => void
   onNavigate: (index: number) => void
+  onGoHome?: () => void
 }
 
 const variants = {
@@ -24,7 +25,7 @@ const variants = {
   }),
 }
 
-export function PresentationView({ slides, activeIndex, onExit, onNavigate }: PresentationViewProps) {
+export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGoHome }: PresentationViewProps) {
   const directionRef = useRef(1)
   const isTransitioning = useRef(false)
 
@@ -85,6 +86,18 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate }: Pr
         className="flex-shrink-0 flex items-center gap-4 px-6 py-3 border-t border-(--color-border)"
         style={{ background: 'var(--color-surface)', height: 56 }}
       >
+        {/* Home */}
+        {onGoHome && (
+          <button
+            onClick={onGoHome}
+            className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+            style={{ color: 'var(--color-text-dim)' }}
+            title="Home"
+          >
+            <Home size={14} />
+          </button>
+        )}
+
         {/* Back to overview */}
         <button
           onClick={onExit}

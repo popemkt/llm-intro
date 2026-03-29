@@ -4,21 +4,36 @@ import { db } from '../db.js'
 export const presentationsRouter = Router()
 
 presentationsRouter.get('/', (_req, res) => {
-  const rows = db.prepare('SELECT * FROM presentations ORDER BY created_at DESC').all()
+  // Exclude companion presentations (code_slug set) from the home page list
+  const rows = db.prepare('SELECT * FROM presentations WHERE code_slug IS NULL ORDER BY created_at DESC').all()
   res.json(rows)
 })
 
 presentationsRouter.post('/', (req, res) => {
-  const { name, theme = 'dark-green' } = req.body as { name: string; theme?: string }
+  const { name, theme = 'dark-green', code_slug } = req.body as { name: string; theme?: string; code_slug?: string }
   if (!name?.trim()) {
     res.status(400).json({ error: 'name is required' })
     return
   }
   const result = db.prepare(
-    'INSERT INTO presentations (name, theme) VALUES (?, ?)'
-  ).run(name.trim(), theme)
+    'INSERT INTO presentations (name, theme, code_slug) VALUES (?, ?, ?)'
+  ).run(name.trim(), theme, code_slug ?? null)
   const row = db.prepare('SELECT * FROM presentations WHERE id = ?').get(result.lastInsertRowid)
   res.status(201).json(row)
+})
+
+// Get or create a companion presentation for a code slug
+presentationsRouter.post('/by-slug', (req, res) => {
+  const { slug, theme = 'dark-green' } = req.body as { slug: string; theme?: string }
+  if (!slug?.trim()) { res.status(400).json({ error: 'slug is required' }); return }
+  let row = db.prepare('SELECT * FROM presentations WHERE code_slug = ?').get(slug)
+  if (!row) {
+    const result = db.prepare(
+      'INSERT INTO presentations (name, theme, code_slug) VALUES (?, ?, ?)'
+    ).run(slug, theme, slug)
+    row = db.prepare('SELECT * FROM presentations WHERE id = ?').get(result.lastInsertRowid)
+  }
+  res.json(row)
 })
 
 presentationsRouter.get('/:id', (req, res) => {

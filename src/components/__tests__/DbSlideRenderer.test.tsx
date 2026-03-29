@@ -6,7 +6,7 @@ import type { Block } from '@/types'
 describe('DbSlideRenderer', () => {
   it('renders empty state when no blocks', () => {
     render(<DbSlideRenderer blocks={[]} theme="dark-green" />)
-    expect(screen.getByText('Empty slide')).toBeInTheDocument()
+    expect(screen.getByText('empty slide')).toBeInTheDocument()
   })
 
   it('renders text block with markdown', () => {

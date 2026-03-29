@@ -38,7 +38,6 @@ function migrate() {
   }
 
   if (version < 2) {
-    // Add kind + code_id to slides — ALTER TABLE ignores if column already exists via try/catch
     for (const sql of [
       `ALTER TABLE slides ADD COLUMN kind TEXT NOT NULL DEFAULT 'db'`,
       `ALTER TABLE slides ADD COLUMN code_id TEXT`,
@@ -50,7 +49,7 @@ function migrate() {
 }
 
 const LLM_INTRO_SLIDES = [
-  { code_id: '01-opener',           title: 'What is an LLM?' },
+  { code_id: '01-opener',            title: 'What is an LLM?' },
   { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
   { code_id: '03-tool-use',          title: 'Tool Use / Agent Loop' },
   { code_id: '04-claude-desktop',    title: 'Claude Desktop' },
@@ -61,15 +60,25 @@ const LLM_INTRO_SLIDES = [
 ]
 
 function seed() {
-  const existing = db.prepare("SELECT id FROM presentations WHERE name = 'LLM & Agent Basics'").get()
-  if (existing) return
+  let pres = db.prepare("SELECT id FROM presentations WHERE name = 'LLM & Agent Basics'").get() as { id: number } | undefined
 
-  const { lastInsertRowid: pid } = db.prepare(
-    "INSERT INTO presentations (name, theme) VALUES ('LLM & Agent Basics', 'dark-green')"
-  ).run()
+  if (!pres) {
+    const { lastInsertRowid } = db
+      .prepare("INSERT INTO presentations (name, theme) VALUES ('LLM & Agent Basics', 'dark-green')")
+      .run()
+    pres = { id: Number(lastInsertRowid) }
+  }
 
+  // If all code slides are already there, nothing to do
+  const codeCount = (db.prepare(
+    "SELECT COUNT(*) as n FROM slides WHERE presentation_id=? AND kind='code'"
+  ).get(pres.id) as { n: number }).n
+  if (codeCount >= LLM_INTRO_SLIDES.length) return
+
+  // Wipe and re-seed (handles migration leftover where slides got kind='db' by default)
+  db.prepare('DELETE FROM slides WHERE presentation_id=?').run(pres.id)
   const insert = db.prepare(
     "INSERT INTO slides (presentation_id, position, kind, code_id, title, blocks) VALUES (?, ?, 'code', ?, ?, '[]')"
   )
-  LLM_INTRO_SLIDES.forEach(({ code_id, title }, i) => insert.run(pid, i, code_id, title))
+  LLM_INTRO_SLIDES.forEach(({ code_id, title }, i) => insert.run(pres!.id, i, code_id, title))
 }

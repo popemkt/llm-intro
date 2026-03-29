@@ -11,7 +11,8 @@ export const THEME_NAMES: ThemeName[] = ['dark-green', 'dark-blue', 'light', 'ne
 export type TextBlock   = { id: string; type: 'text';   markdown: string }
 export type ImageBlock  = { id: string; type: 'image';  url: string; alt?: string }
 export type IframeBlock = { id: string; type: 'iframe'; url: string; height?: number }
-export type Block = TextBlock | ImageBlock | IframeBlock
+export type ShapeBlock  = { id: string; type: 'shape';  shape: 'rect' | 'pill' | 'circle'; color: string; label?: string; width?: string; height?: string }
+export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock
 
 // Shape returned by the API
 export interface ApiPresentation {

@@ -63,7 +63,9 @@ test.describe('User deck flow', () => {
 
     await firstThumbnail.click()
     await expect(page.getByText('Hello world')).toBeVisible()
-    await page.getByRole('button', { name: /overview/i }).click()
+    await page.reload()
+    await expect(page.getByText('Hello world')).toBeVisible()
+    await expect(page.getByTestId('slide-thumbnail')).toHaveCount(1)
 
     await page.getByLabel('Add slide').click()
     await expect(page.getByTestId('slide-thumbnail')).toHaveCount(2)
@@ -94,8 +96,11 @@ test.describe('User deck flow', () => {
     await expect(page.getByText('Saved')).toBeVisible()
     await page.getByLabel('Back to presentation').click()
     await expect(page.getByText('neon', { exact: true })).toBeVisible()
+    await page.reload()
+    await expect(page.getByText('neon', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: /home/i }).click()
+    await expect(page.getByText(deckName)).toBeVisible()
     page.once('dialog', dialog => dialog.accept())
     await page.getByLabel(`Delete ${deckName}`).click()
     await expect(page.getByText(deckName)).toHaveCount(0)

@@ -1,23 +1,16 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  BUILT_IN_SLIDES,
+  SYSTEM_PRESENTATION_KEY,
+  SYSTEM_PRESENTATION_NAME,
+  SYSTEM_PRESENTATION_THEME,
+} from '../shared/systemPresentation.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const DB_PATH = path.join(__dirname, 'data', 'app.db')
-
-export const SYSTEM_PRESENTATION_KEY = 'llm-intro'
-
-const BUILT_IN_SLIDES = [
-  { code_id: '01-opener', title: 'What is an LLM?' },
-  { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
-  { code_id: '03-tool-use', title: 'Tool Use / Agent Loop' },
-  { code_id: '04-claude-desktop', title: 'Claude Desktop' },
-  { code_id: '05-browser-control', title: 'Browser Control (Playwright)' },
-  { code_id: '06-workspace-setup', title: 'Workspace Setup' },
-  { code_id: '07-workspace-concepts', title: 'Workspace Concepts' },
-  { code_id: '08-appendix', title: 'Tech Landscape (Appendix)' },
-] as const
 
 export function openDatabase(filePath = DB_PATH) {
   const db = new Database(filePath)
@@ -131,7 +124,7 @@ function seedSystemPresentation(db: Database.Database) {
   } else {
     const { lastInsertRowid } = db
       .prepare('INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)')
-      .run('LLM & Agent Basics', 'dark-green', SYSTEM_PRESENTATION_KEY)
+      .run(SYSTEM_PRESENTATION_NAME, SYSTEM_PRESENTATION_THEME, SYSTEM_PRESENTATION_KEY)
     presentationId = Number(lastInsertRowid)
   }
 

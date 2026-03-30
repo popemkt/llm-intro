@@ -19,6 +19,7 @@
     "better-sqlite3": "^12.8.0",
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "lucide-react": "^0.511.0",
     "motion": "^12.9.4",
@@ -27,6 +28,7 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.2",
+    "sqlocal": "^0.17.0",
     "tailwind-merge": "^3.2.0"
   },
   "devDependencies": {

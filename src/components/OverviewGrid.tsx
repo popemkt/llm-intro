@@ -43,7 +43,7 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
   const [isRenaming, setIsRenaming] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: slide.id, disabled: !sortableEnabled })
+    useSortable({ id: slide.id, disabled: !sortableEnabled || isRenaming })
 
   useEffect(() => {
     const el = outerRef.current
@@ -70,7 +70,9 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined }}
+      {...attributes}
+      {...listeners}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined, cursor: sortableEnabled && !isRenaming ? (isDragging ? 'grabbing' : 'grab') : undefined }}
       className="relative group"
     >
       <motion.div
@@ -78,19 +80,10 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.15 }}
         onClick={() => { if (!isRenaming) onSelect(index) }}
-        onKeyDown={(e) => {
-          if (isRenaming) return
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onSelect(index)
-          }
-        }}
         aria-label={`Open slide ${index + 1}: ${slide.title}`}
         data-testid="slide-thumbnail"
         className="relative rounded-xl overflow-hidden border border-(--color-border) hover:border-(--color-accent)/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) transition-colors text-left w-full"
-        style={{ background: 'var(--color-surface)', cursor: isRenaming ? 'default' : sortableEnabled ? 'grab' : 'pointer' }}
-        {...attributes}
-        {...(isRenaming || !sortableEnabled ? {} : listeners)}
+        style={{ background: 'var(--color-surface)' }}
       >
         <div ref={outerRef} style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: LOGICAL_W, height: LOGICAL_H, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
@@ -147,6 +140,7 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={e => { e.stopPropagation(); onEdit(slide.id) }}
+            onPointerDown={e => e.stopPropagation()}
             aria-label={`Edit ${slide.title}`}
             className="p-1.5 rounded-lg"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)', cursor: 'pointer' }}
@@ -156,6 +150,7 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDelete(slide.id) }}
+            onPointerDown={e => e.stopPropagation()}
             aria-label={`Delete ${slide.title}`}
             className="p-1.5 rounded-lg"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: '#ff6b6b', cursor: 'pointer' }}
@@ -246,7 +241,7 @@ export function OverviewGrid({ slides, canManageSlides, presentationId, presenta
                 key={slide.id}
                 slide={slide}
                 index={i}
-                sortableEnabled={canManageSlides && slide.kind === 'db'}
+                sortableEnabled={canManageSlides}
                 onSelect={onSelectSlide}
                 onEdit={onEditSlide}
                 onDelete={onDeleteSlide}

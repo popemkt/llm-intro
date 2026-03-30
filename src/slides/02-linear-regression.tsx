@@ -33,6 +33,7 @@ const TOKEN_POOL = [
 function ScatterPlot(_: { isActive: boolean }) {
   const [points, setPoints] = useState<Point[]>(INITIAL_POINTS)
   const [dragging, setDragging] = useState<number | null>(null)
+  const didDrag = useRef(false)
   const [predictX, setPredictX] = useState(8.5)
   const [draggingPredict, setDraggingPredict] = useState(false)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -61,13 +62,10 @@ function ScatterPlot(_: { isActive: boolean }) {
   const handlePointDown = useCallback((e: React.PointerEvent, i: number) => {
     e.stopPropagation()
     svgRef.current!.setPointerCapture(e.pointerId)
+    didDrag.current = false
     setDragging(i)
   }, [])
 
-  const handlePointClick = useCallback((e: React.MouseEvent, i: number) => {
-    e.stopPropagation()
-    setPoints(prev => prev.filter((_, idx) => idx !== i))
-  }, [])
 
   const handlePredictDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation()
@@ -77,6 +75,7 @@ function ScatterPlot(_: { isActive: boolean }) {
 
   const handleMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     if (dragging !== null) {
+      didDrag.current = true
       const sp = svgPoint(e)
       const x = Math.max(0.05, Math.min(DATA_MAX - 0.05, fromSVGX(sp.x)))
       const y = Math.max(0.05, Math.min(DATA_MAX - 0.05, fromSVGY(sp.y)))
@@ -90,9 +89,12 @@ function ScatterPlot(_: { isActive: boolean }) {
   }, [dragging, draggingPredict, svgPoint])
 
   const handleUp = useCallback(() => {
+    if (dragging !== null && !didDrag.current) {
+      setPoints(prev => prev.filter((_, idx) => idx !== dragging))
+    }
     setDragging(null)
     setDraggingPredict(false)
-  }, [])
+  }, [dragging])
 
   const lineX1 = toSVGX(DATA_MIN)
   const lineX2 = toSVGX(DATA_MAX)
@@ -192,7 +194,6 @@ function ScatterPlot(_: { isActive: boolean }) {
             fill={T.surface} stroke={T.accent} strokeWidth={1.5}
             style={{ cursor: 'grab' }}
             onPointerDown={(e) => handlePointDown(e, i)}
-            onClick={(e) => handlePointClick(e, i)}
           />
         ))}
 

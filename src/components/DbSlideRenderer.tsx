@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import type { Block, ThemeName } from '@/types'
+import { getReadableTextColor } from '@/lib/color'
 
 interface Props {
   blocks: Block[]
@@ -114,9 +115,9 @@ function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
           <div style={{
             background: block.color,
             borderRadius: radius,
-            width:  block.width  ?? (isCircle ? 120 : '100%'),
-            height: block.height ?? (isCircle ? 120 : (canvas ? '100%' : 'auto')),
-            padding: (isCircle || canvas) ? 0 : '14px 28px',
+              width:  block.width  ?? (isCircle ? 120 : '100%'),
+              height: block.height ?? (isCircle ? 120 : (canvas ? '100%' : 'auto')),
+              padding: (isCircle || canvas) ? 0 : '14px 28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -124,7 +125,7 @@ function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
             boxShadow: `0 2px 12px ${block.color}44`,
           }}>
             {block.label && (
-              <span style={{ fontSize: 15, fontWeight: 700, color: textColorFor(block.color), fontFamily: 'Inter, sans-serif' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: getReadableTextColor(block.color), fontFamily: 'Inter, sans-serif' }}>
                 {block.label}
               </span>
             )}
@@ -133,13 +134,4 @@ function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
       )
     }
   }
-}
-
-function textColorFor(hex: string): string {
-  const c = hex.replace('#', '')
-  if (c.length !== 6) return '#ffffff'
-  const r = parseInt(c.slice(0, 2), 16)
-  const g = parseInt(c.slice(2, 4), 16)
-  const b = parseInt(c.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff'
 }

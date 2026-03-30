@@ -57,6 +57,17 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
 
   const slide = slides[activeIndex]
 
+  if (!slide) {
+    return (
+      <div
+        ref={containerRef}
+        style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
+      >
+        No slides available.
+      </div>
+    )
+  }
+
   return (
     <div
       ref={containerRef}

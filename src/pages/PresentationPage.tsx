@@ -5,7 +5,7 @@ import { OverviewGrid } from '@/components/OverviewGrid'
 import { PresentationView } from '@/components/PresentationView'
 import { FullscreenView } from '@/components/FullscreenView'
 import { codeSlideRegistry } from '@/slides/registry'
-import { api } from '@/api/client'
+import { api, getErrorMessage } from '@/api/client'
 import type { UnifiedSlide, ApiSlide, ApiPresentation } from '@/types'
 
 function toUnified(slide: ApiSlide, theme: ApiPresentation['theme']): UnifiedSlide {
@@ -31,17 +31,35 @@ export function PresentationPage() {
   const [presentation, setPresentation] = useState<ApiPresentation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const hydrateSlides = useCallback((apiSlides: ApiSlide[], pres: ApiPresentation) => {
+    setSlides(apiSlides.map(slide => toUnified(slide, pres.theme)))
+  }, [])
+
+  const loadPresentation = useCallback(async () => {
+    if (!id || isNaN(pid)) {
+      setError('Invalid ID')
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const [pres, apiSlides] = await Promise.all([api.presentations.get(pid), api.slides.list(pid)])
+      setPresentation(pres)
+      hydrateSlides(apiSlides, pres)
+    } catch {
+      setError('Presentation not found')
+    } finally {
+      setLoading(false)
+    }
+  }, [hydrateSlides, id, pid])
 
   useEffect(() => {
-    if (!id || isNaN(pid)) { setError('Invalid ID'); setLoading(false); return }
-    Promise.all([api.presentations.get(pid), api.slides.list(pid)])
-      .then(([pres, apiSlides]) => {
-        setPresentation(pres)
-        setSlides(apiSlides.map(s => toUnified(s, pres.theme)))
-      })
-      .catch(() => setError('Presentation not found'))
-      .finally(() => setLoading(false))
-  }, [id, pid])
+    void loadPresentation()
+  }, [loadPresentation])
 
   // Keyboard handler for regular presentation mode only
   // (fullscreen mode handles its own keys)
@@ -57,20 +75,43 @@ export function PresentationPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [mode, slides.length])
 
+  useEffect(() => {
+    if (slides.length === 0) {
+      setActiveIndex(0)
+      if (mode !== 'overview') setMode('overview')
+      return
+    }
+    setActiveIndex(index => Math.min(index, slides.length - 1))
+  }, [mode, slides.length])
+
   const handleAddSlide = useCallback(async () => {
     if (!presentation) return
-    const s = await api.slides.create(presentation.id)
-    setSlides(prev => [...prev, toUnified(s, presentation.theme)])
+    setNotice(null)
+    try {
+      const slide = await api.slides.create(presentation.id)
+      setSlides(prev => [...prev, toUnified(slide, presentation.theme)])
+    } catch (err) {
+      setNotice(getErrorMessage(err))
+    }
   }, [presentation])
 
   const handleReorder = useCallback(async (ids: number[]) => {
     if (!presentation) return
+    const previousSlides = slides
+    setNotice(null)
     setSlides(prev => {
-      const map = new Map(prev.map(s => [s.id, s]))
-      return ids.map(id => map.get(id)!).filter(Boolean)
+      const map = new Map(prev.map(slide => [slide.id, slide]))
+      return ids.map((slideId) => map.get(slideId)!).filter(Boolean)
     })
-    await api.slides.reorder(presentation.id, ids)
-  }, [presentation])
+
+    try {
+      const reordered = await api.slides.reorder(presentation.id, ids)
+      hydrateSlides(reordered, presentation)
+    } catch (err) {
+      setSlides(previousSlides)
+      setNotice(getErrorMessage(err))
+    }
+  }, [hydrateSlides, presentation, slides])
 
   const handleEditSlide = useCallback((slideId: number) => {
     navigate(`/p/${pid}/edit/${slideId}`)
@@ -79,14 +120,24 @@ export function PresentationPage() {
   const handleDeleteSlide = useCallback(async (slideId: number) => {
     if (!presentation) return
     if (!confirm('Delete this slide?')) return
-    await api.slides.delete(presentation.id, slideId)
-    setSlides(prev => prev.filter(s => s.id !== slideId))
+    setNotice(null)
+    try {
+      await api.slides.delete(presentation.id, slideId)
+      setSlides(prev => prev.filter(slide => slide.id !== slideId))
+    } catch (err) {
+      setNotice(getErrorMessage(err))
+    }
   }, [presentation])
 
   const handleRenameSlide = useCallback(async (slideId: number, newTitle: string) => {
     if (!presentation) return
-    await api.slides.update(presentation.id, slideId, { title: newTitle })
-    setSlides(prev => prev.map(s => s.id === slideId ? { ...s, title: newTitle } : s))
+    setNotice(null)
+    try {
+      const updatedSlide = await api.slides.update(presentation.id, slideId, { title: newTitle })
+      setSlides(prev => prev.map(slide => slide.id === slideId ? toUnified(updatedSlide, presentation.theme) : slide))
+    } catch (err) {
+      setNotice(getErrorMessage(err))
+    }
   }, [presentation])
 
   if (loading) return (
@@ -104,11 +155,17 @@ export function PresentationPage() {
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
+      {notice && (
+        <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 20, maxWidth: 320, padding: '10px 12px', borderRadius: 10, background: 'rgba(20, 26, 23, 0.95)', border: '1px solid var(--color-border)', color: '#ff9b9b', fontSize: 12 }}>
+          {notice}
+        </div>
+      )}
       <AnimatePresence mode="wait">
         {mode === 'overview' ? (
           <OverviewGrid
             key="overview"
             slides={slides}
+            canManageSlides={!presentation.is_system}
             presentationId={presentation.id}
             presentationTheme={presentation.theme}
             title={presentation.name}

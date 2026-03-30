@@ -5,15 +5,7 @@ import type { ThemeName } from '@/types'
 import { THEME_NAMES } from '@/types'
 import { applyAppTheme, getStoredAppTheme } from '@/lib/appTheme'
 import { C } from '@/design/tokens'
-
-const THEME_META: Record<ThemeName, { label: string; desc: string }> = {
-  'dark-green': { label: 'Dark Green',  desc: 'Terminal signal green'  },
-  'dark-blue':  { label: 'Dark Blue',   desc: 'Midnight cool blue'     },
-  'light':      { label: 'Light',       desc: 'Clean minimal light'    },
-  'neon':       { label: 'Neon',        desc: 'Vivid neon magenta'     },
-  'warm':       { label: 'Warm',        desc: 'Amber candlelight dark' },
-  'ocean':      { label: 'Ocean',       desc: 'Deep teal seabed'       },
-}
+import { THEME_META } from '@/lib/themeMeta'
 
 export function AppSettingsPage() {
   const navigate = useNavigate()
@@ -27,7 +19,7 @@ export function AppSettingsPage() {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       <div style={{ height: 56, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', background: C.surface }}>
-        <button onClick={() => navigate('/')}
+        <button aria-label="Back home" onClick={() => navigate('/')}
           style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
           <ArrowLeft size={16} />
         </button>

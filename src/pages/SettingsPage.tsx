@@ -3,17 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check } from 'lucide-react'
 import type { ThemeName } from '@/types'
 import { THEME_NAMES } from '@/types'
-import { api } from '@/api/client'
+import { api, getErrorMessage } from '@/api/client'
 import { C } from '@/design/tokens'
-
-const THEME_META: Record<ThemeName, { label: string; desc: string }> = {
-  'dark-green': { label: 'Dark Green',  desc: 'Terminal signal green'  },
-  'dark-blue':  { label: 'Dark Blue',   desc: 'Midnight cool blue'     },
-  'light':      { label: 'Light',       desc: 'Clean minimal light'    },
-  'neon':       { label: 'Neon',        desc: 'Vivid neon magenta'     },
-  'warm':       { label: 'Warm',        desc: 'Amber candlelight dark' },
-  'ocean':      { label: 'Ocean',       desc: 'Deep teal seabed'       },
-}
+import { THEME_META } from '@/lib/themeMeta'
 
 const inp: React.CSSProperties = {
   width: '100%', background: C.bg, border: `1px solid ${C.border}`,
@@ -30,17 +22,27 @@ export function SettingsPage() {
   const [slideTheme, setSlideTheme] = useState<ThemeName>('dark-green')
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    api.presentations.get(pid).then(p => { setName(p.name); setSlideTheme(p.theme) })
+    setLoading(true)
+    setError(null)
+    api.presentations.get(pid)
+      .then(p => { setName(p.name); setSlideTheme(p.theme) })
+      .catch(err => setError(getErrorMessage(err)))
+      .finally(() => setLoading(false))
   }, [pid])
 
   const save = async () => {
     setSaving(true)
+    setError(null)
     try {
       await api.presentations.update(pid, { name, theme: slideTheme })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setSaving(false)
     }
@@ -50,7 +52,7 @@ export function SettingsPage() {
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       {/* Header */}
       <div style={{ height: 56, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', background: C.surface }}>
-        <button onClick={() => navigate(`/p/${pid}`)}
+        <button aria-label="Back to presentation" onClick={() => navigate(`/p/${pid}`)}
           style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
           <ArrowLeft size={16} />
         </button>
@@ -75,13 +77,18 @@ export function SettingsPage() {
       </div>
 
       <div style={{ maxWidth: 660, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 36 }}>
+        {error && (
+          <div style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: '#ff8a8a', fontSize: 12 }}>
+            {error}
+          </div>
+        )}
 
         {/* Presentation Name */}
         <section>
           <h2 style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
             Presentation Name
           </h2>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Name…" style={inp} />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Name…" style={inp} disabled={loading} />
         </section>
 
         {/* Slide Theme */}

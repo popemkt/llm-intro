@@ -1,22 +1,13 @@
-import express from 'express'
-import cors from 'cors'
-import { presentationsRouter } from './routes/presentations.js'
-import { slidesRouter } from './routes/slides.js'
+import { fileURLToPath } from 'url'
+import { buildDefaultRuntime } from './runtime.js'
 
-export const app = express()
-
-app.use(cors())
-app.use(express.json())
-
-app.use('/api/presentations', presentationsRouter)
-app.use('/api/presentations/:pid/slides', slidesRouter)
-
-app.get('/api/health', (_req, res) => res.json({ ok: true }))
+export const { app, db } = buildDefaultRuntime()
 
 const PORT = Number(process.env.PORT ?? 3001)
+const isDirectExecution = process.argv[1] === fileURLToPath(import.meta.url)
 
 // Only listen when run directly (not when imported by tests)
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (isDirectExecution) {
   app.listen(PORT, () => {
     console.log(`API server running on http://localhost:${PORT}`)
   })

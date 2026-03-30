@@ -4,8 +4,9 @@ import { ArrowLeft, Type, Image as ImageIcon, Globe, Square, Trash2, Settings, C
 import { nanoid } from 'nanoid'
 import ReactMarkdown from 'react-markdown'
 import type { Block, ShapeBlock, ThemeName } from '@/types'
-import { api } from '@/api/client'
+import { api, getErrorMessage } from '@/api/client'
 import { C } from '@/design/tokens'
+import { getReadableTextColor } from '@/lib/color'
 
 type DragMode = 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br'
 
@@ -36,15 +37,6 @@ function makeBlock(type: Block['type']): Block {
   }
 }
 
-function textColorFor(hex: string): string {
-  const c = hex.replace('#', '')
-  if (c.length !== 6) return '#ffffff'
-  const r = parseInt(c.slice(0, 2), 16)
-  const g = parseInt(c.slice(2, 4), 16)
-  const b = parseInt(c.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff'
-}
-
 const SHAPE_COLORS = [
   '#25d366', '#4c9fff', '#ff6b6b', '#ffd93d', '#a29bfe',
   '#fd79a8', '#00cec9', '#e17055', '#6c5ce7', '#ffffff',
@@ -69,17 +61,31 @@ export function SlideEditorPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving]     = useState(false)
   const [loading, setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const dragRef   = useRef<DragState | null>(null)
 
   useEffect(() => {
+    setLoading(true)
+    setLoadError(null)
     Promise.all([api.presentations.get(pid), api.slides.list(pid)])
       .then(([pres, slides]) => {
         const slide = slides.find(s => s.id === sid)
-        if (slide) { setTitle(slide.title); setBlocks(slide.blocks) }
+        if (!slide) {
+          setLoadError('Slide not found')
+          return
+        }
+        if (slide.kind !== 'db') {
+          setLoadError('Only custom slides can be edited here')
+          return
+        }
+        setTitle(slide.title)
+        setBlocks(slide.blocks)
         setTheme(pres.theme)
       })
+      .catch(err => setLoadError(getErrorMessage(err)))
       .finally(() => setLoading(false))
   }, [pid, sid])
 
@@ -151,9 +157,12 @@ export function SlideEditorPage() {
 
   const save = async () => {
     setSaving(true)
+    setSaveError(null)
     try {
       await api.slides.update(pid, sid, { title, blocks })
       navigate(`/p/${pid}`)
+    } catch (err) {
+      setSaveError(getErrorMessage(err))
     } finally {
       setSaving(false)
     }
@@ -167,11 +176,20 @@ export function SlideEditorPage() {
     </div>
   )
 
+  if (loadError) return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: C.bg, color: C.text }}>
+      <div style={{ fontSize: 14 }}>{loadError}</div>
+      <button onClick={() => navigate(`/p/${pid}`)} style={{ background: 'none', border: 'none', color: C.textDim, cursor: 'pointer', textDecoration: 'underline' }}>
+        Back to deck
+      </button>
+    </div>
+  )
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, overflow: 'hidden' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px', flexShrink: 0, background: C.surface }}>
-        <button onClick={() => navigate(`/p/${pid}`)} style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
+        <button aria-label="Back to presentation" onClick={() => navigate(`/p/${pid}`)} style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
           <ArrowLeft size={16} />
         </button>
         <div style={{ width: 1, height: 20, background: C.border }} />
@@ -197,6 +215,12 @@ export function SlideEditorPage() {
           </button>
         </div>
       </div>
+
+      {saveError && (
+        <div style={{ padding: '8px 20px', background: C.surface, borderBottom: `1px solid ${C.border}`, color: '#ff8a8a', fontSize: 12 }}>
+          {saveError}
+        </div>
+      )}
 
       {/* Canvas + right panel */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -466,7 +490,7 @@ function CanvasBlockContent({ block }: { block: Block }) {
             boxShadow: `0 2px 12px ${block.color}44`,
           }}>
             {block.label && (
-              <span style={{ fontSize: 13, fontWeight: 700, color: textColorFor(block.color), fontFamily: 'Inter, sans-serif' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: getReadableTextColor(block.color), fontFamily: 'Inter, sans-serif' }}>
                 {block.label}
               </span>
             )}

@@ -1,39 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import request from 'supertest'
 import Database from 'better-sqlite3'
+import { bootstrapDatabase } from '../db.js'
+import { buildRuntime } from '../runtime.js'
 
-// In-memory DB matching current schema
-const testDb = new Database(':memory:')
-testDb.pragma('foreign_keys = ON')
-testDb.exec(`
-  CREATE TABLE presentations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    theme TEXT NOT NULL DEFAULT 'dark-green',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-  CREATE TABLE slides (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    presentation_id INTEGER NOT NULL REFERENCES presentations(id) ON DELETE CASCADE,
-    position INTEGER NOT NULL DEFAULT 0,
-    kind TEXT NOT NULL DEFAULT 'db',
-    code_id TEXT,
-    title TEXT NOT NULL DEFAULT 'Untitled',
-    blocks TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`)
-
-vi.mock('../db.js', () => ({ db: testDb }))
-const { app } = await import('../index.js')
+function createTestContext(options: { seedSystemPresentation?: boolean } = {}) {
+  const db = new Database(':memory:')
+  bootstrapDatabase(db, options)
+  return {
+    db,
+    ...buildRuntime(db),
+  }
+}
 
 describe('Presentations API', () => {
-  beforeEach(() => { testDb.exec('DELETE FROM slides; DELETE FROM presentations;') })
+  const { db, app } = createTestContext({ seedSystemPresentation: false })
 
-  it('GET / returns empty array', async () => {
+  beforeEach(() => {
+    db.exec('DELETE FROM slides; DELETE FROM presentations;')
+  })
+
+  it('GET / returns empty array when no user presentations exist', async () => {
     const res = await request(app).get('/api/presentations')
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])
@@ -44,6 +31,8 @@ describe('Presentations API', () => {
     expect(res.status).toBe(201)
     expect(res.body.name).toBe('Test')
     expect(res.body.theme).toBe('dark-blue')
+    expect(res.body.is_system).toBe(false)
+    expect(res.body.system_key).toBeNull()
   })
 
   it('POST / rejects missing name', async () => {
@@ -66,7 +55,7 @@ describe('Presentations API', () => {
     expect(res.body.theme).toBe('neon')
   })
 
-  it('DELETE /:id removes it', async () => {
+  it('DELETE /:id removes a user presentation', async () => {
     const { body: { id } } = await request(app).post('/api/presentations').send({ name: 'ToDelete' })
     expect((await request(app).delete(`/api/presentations/${id}`)).status).toBe(204)
     expect((await request(app).get(`/api/presentations/${id}`)).status).toBe(404)
@@ -74,15 +63,20 @@ describe('Presentations API', () => {
 })
 
 describe('Slides API', () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false })
   let pid: number
 
   beforeEach(async () => {
-    testDb.exec('DELETE FROM slides; DELETE FROM presentations;')
+    db.exec('DELETE FROM slides; DELETE FROM presentations;')
     pid = (await request(app).post('/api/presentations').send({ name: 'Pres' })).body.id
   })
 
   it('GET / returns empty array', async () => {
     expect((await request(app).get(`/api/presentations/${pid}/slides`)).body).toEqual([])
+  })
+
+  it('GET / returns 404 for an unknown presentation', async () => {
+    expect((await request(app).get('/api/presentations/99999/slides')).status).toBe(404)
   })
 
   it('POST / creates a db slide', async () => {
@@ -107,18 +101,55 @@ describe('Slides API', () => {
   })
 
   it('PUT /order reorders slides', async () => {
-    const ids = await Promise.all(['A', 'B', 'C'].map(t =>
-      request(app).post(`/api/presentations/${pid}/slides`).send({ title: t }).then(r => r.body.id)
-    ))
+    const ids = await Promise.all(['A', 'B', 'C'].map(async (title) => {
+      const response = await request(app).post(`/api/presentations/${pid}/slides`).send({ title })
+      return response.body.id as number
+    }))
+
     const res = await request(app).put(`/api/presentations/${pid}/slides/order`).send({ ids: ids.reverse() })
     expect(res.status).toBe(200)
-    expect(res.body[0].title).toBe('C')
-    expect(res.body[2].title).toBe('A')
+    expect(res.body.map((slide: { title: string }) => slide.title)).toEqual(['C', 'B', 'A'])
+  })
+
+  it('PUT /order rejects incomplete payloads', async () => {
+    const a = await request(app).post(`/api/presentations/${pid}/slides`).send({ title: 'A' })
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: 'B' })
+
+    const res = await request(app).put(`/api/presentations/${pid}/slides/order`).send({ ids: [a.body.id] })
+    expect(res.status).toBe(400)
   })
 
   it('cascade deletes slides when presentation is deleted', async () => {
     await request(app).post(`/api/presentations/${pid}/slides`).send({ title: 'Child' })
     await request(app).delete(`/api/presentations/${pid}`)
-    expect((await request(app).get(`/api/presentations/${pid}/slides`)).body).toEqual([])
+    expect((await request(app).get(`/api/presentations/${pid}/slides`)).status).toBe(404)
+  })
+})
+
+describe('System presentation bootstrap', () => {
+  it('seeds one built-in presentation and does not duplicate it after rename', () => {
+    const db = new Database(':memory:')
+    bootstrapDatabase(db)
+
+    db.prepare("UPDATE presentations SET name='Renamed Built-in' WHERE system_key='llm-intro'").run()
+    bootstrapDatabase(db)
+
+    const rows = db.prepare('SELECT name, system_key FROM presentations').all() as Array<{ name: string; system_key: string | null }>
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toEqual({ name: 'Renamed Built-in', system_key: 'llm-intro' })
+  })
+
+  it('prevents deleting the built-in presentation and mutating its slides', async () => {
+    const { app } = createTestContext()
+
+    const builtIn = (await request(app).get('/api/presentations')).body.find(
+      (presentation: { is_system: boolean }) => presentation.is_system,
+    ) as { id: number }
+
+    const slides = (await request(app).get(`/api/presentations/${builtIn.id}/slides`)).body as Array<{ id: number }>
+
+    expect((await request(app).delete(`/api/presentations/${builtIn.id}`)).status).toBe(403)
+    expect((await request(app).post(`/api/presentations/${builtIn.id}/slides`).send({ title: 'Nope' })).status).toBe(403)
+    expect((await request(app).delete(`/api/presentations/${builtIn.id}/slides/${slides[0].id}`)).status).toBe(403)
   })
 })

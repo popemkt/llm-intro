@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Plus, Trash2, Presentation, Settings } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, getErrorMessage } from '@/api/client'
 import { THEME_NAMES, type ApiPresentation, type ThemeName } from '@/types'
 import { C } from '@/design/tokens'
 
@@ -14,17 +14,33 @@ export function HomePage() {
   const [newName, setNewName] = useState('')
   const [newTheme, setNewTheme] = useState<ThemeName>('dark-green')
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function loadPresentations() {
+    setLoading(true)
+    setError(null)
+    try {
+      setPresentations(await api.presentations.list())
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    api.presentations.list().then(setPresentations).finally(() => setLoading(false))
+    void loadPresentations()
   }, [])
 
   const create = async () => {
     if (!newName.trim()) return
     setCreating(true)
+    setError(null)
     try {
       const pres = await api.presentations.create(newName.trim(), newTheme)
       navigate(`/p/${pres.id}`)
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setCreating(false)
     }
@@ -32,8 +48,13 @@ export function HomePage() {
 
   const remove = async (id: number) => {
     if (!confirm('Delete this presentation and all its slides?')) return
-    await api.presentations.delete(id)
-    setPresentations(prev => prev.filter(p => p.id !== id))
+    setError(null)
+    try {
+      await api.presentations.delete(id)
+      setPresentations(prev => prev.filter(p => p.id !== id))
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
   }
 
   return (
@@ -45,6 +66,7 @@ export function HomePage() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
             onClick={() => navigate('/settings')}
+            aria-label="App settings"
             title="App settings"
             style={{ display: 'flex', alignItems: 'center', padding: 7, background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', color: C.textDim }}
           >
@@ -60,6 +82,15 @@ export function HomePage() {
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 40px' }}>
+        {error && (
+          <div style={{ marginBottom: 20, padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: '#ff8a8a', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span>{error}</span>
+            <button onClick={() => void loadPresentations()} style={{ background: 'none', border: 'none', color: C.textDim, cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Create form */}
         {showForm && (
           <motion.div
@@ -114,23 +145,32 @@ export function HomePage() {
               <motion.div key={pres.id} whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
                 <button
                   onClick={() => navigate(`/p/${pres.id}`)}
+                  aria-label={pres.is_system ? `Open built-in ${pres.name}` : `Open ${pres.name}`}
                   style={{ width: '100%', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', textAlign: 'left', cursor: 'pointer', display: 'block' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <Presentation size={14} style={{ color: C.accent }} />
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{pres.name}</span>
+                    {pres.is_system && (
+                      <span style={{ fontSize: 9, color: C.textDim, fontFamily: 'JetBrains Mono, monospace', padding: '2px 6px', borderRadius: 999, border: `1px solid ${C.border}` }}>
+                        Built-in
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 10, color: C.muted, fontFamily: 'JetBrains Mono, monospace' }}>
                     slides theme: {pres.theme}
                   </div>
                 </button>
-                <button
-                  onClick={e => { e.stopPropagation(); remove(pres.id) }}
-                  style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4, borderRadius: 6 }}
-                  title="Delete"
-                >
-                  <Trash2 size={13} />
-                </button>
+                {!pres.is_system && (
+                  <button
+                    onClick={e => { e.stopPropagation(); void remove(pres.id) }}
+                    aria-label={`Delete ${pres.name}`}
+                    style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4, borderRadius: 6 }}
+                    title="Delete"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </motion.div>
             ))}
           </div>

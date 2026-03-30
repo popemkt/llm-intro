@@ -3,27 +3,40 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 export const DB_PATH = path.join(__dirname, 'data', 'app.db')
 
-export const db = new Database(DB_PATH)
-db.pragma('journal_mode = WAL')
-db.pragma('foreign_keys = ON')
+export const SYSTEM_PRESENTATION_KEY = 'llm-intro'
 
-const LLM_INTRO_SLIDES = [
-  { code_id: '01-opener',             title: 'What is an LLM?' },
-  { code_id: '02-linear-regression',  title: 'Linear Regression → LLM' },
-  { code_id: '03-tool-use',           title: 'Tool Use / Agent Loop' },
-  { code_id: '04-claude-desktop',     title: 'Claude Desktop' },
-  { code_id: '05-browser-control',    title: 'Browser Control (Playwright)' },
-  { code_id: '06-workspace-setup',    title: 'Workspace Setup' },
+const BUILT_IN_SLIDES = [
+  { code_id: '01-opener', title: 'What is an LLM?' },
+  { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
+  { code_id: '03-tool-use', title: 'Tool Use / Agent Loop' },
+  { code_id: '04-claude-desktop', title: 'Claude Desktop' },
+  { code_id: '05-browser-control', title: 'Browser Control (Playwright)' },
+  { code_id: '06-workspace-setup', title: 'Workspace Setup' },
   { code_id: '07-workspace-concepts', title: 'Workspace Concepts' },
-  { code_id: '08-appendix',           title: 'Tech Landscape (Appendix)' },
-]
+  { code_id: '08-appendix', title: 'Tech Landscape (Appendix)' },
+] as const
 
-migrate()
-seed()
+export function openDatabase(filePath = DB_PATH) {
+  const db = new Database(filePath)
+  db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
+  return db
+}
 
-function migrate() {
+export function bootstrapDatabase(
+  db: Database.Database,
+  options: { seedSystemPresentation?: boolean } = {},
+) {
+  migrate(db)
+  if (options.seedSystemPresentation ?? true) {
+    seedSystemPresentation(db)
+  }
+}
+
+function migrate(db: Database.Database) {
   const version = db.pragma('user_version', { simple: true }) as number
 
   if (version < 1) {
@@ -53,32 +66,100 @@ function migrate() {
       `ALTER TABLE slides ADD COLUMN kind TEXT NOT NULL DEFAULT 'db'`,
       `ALTER TABLE slides ADD COLUMN code_id TEXT`,
     ]) {
-      try { db.exec(sql) } catch { /* already exists */ }
+      try {
+        db.exec(sql)
+      } catch {
+        // Column already exists.
+      }
     }
     db.pragma('user_version = 2')
   }
-}
 
-function seed() {
-  let pres = db.prepare("SELECT id FROM presentations WHERE name = 'LLM & Agent Basics'").get() as { id: number } | undefined
-
-  if (!pres) {
-    const { lastInsertRowid } = db
-      .prepare("INSERT INTO presentations (name, theme) VALUES ('LLM & Agent Basics', 'dark-green')")
-      .run()
-    pres = { id: Number(lastInsertRowid) }
+  if (version < 3) {
+    try {
+      db.exec(`ALTER TABLE presentations ADD COLUMN system_key TEXT`)
+    } catch {
+      // Column already exists.
+    }
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS presentations_system_key_unique
+      ON presentations(system_key)
+      WHERE system_key IS NOT NULL
+    `)
+    db.pragma('user_version = 3')
   }
 
-  // If all code slides are already there, nothing to do
-  const codeCount = (db.prepare(
-    "SELECT COUNT(*) as n FROM slides WHERE presentation_id=? AND kind='code'"
-  ).get(pres.id) as { n: number }).n
-  if (codeCount >= LLM_INTRO_SLIDES.length) return
+  if (version < 4) {
+    normalizeSlidePositions(db)
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS slides_presentation_position_unique
+      ON slides(presentation_id, position);
+      CREATE UNIQUE INDEX IF NOT EXISTS slides_presentation_code_id_unique
+      ON slides(presentation_id, code_id)
+      WHERE code_id IS NOT NULL
+    `)
+    db.pragma('user_version = 4')
+  }
+}
 
-  // Wipe and re-seed (handles migration leftover where slides got kind='db' by default)
-  db.prepare('DELETE FROM slides WHERE presentation_id=?').run(pres.id)
-  const insert = db.prepare(
-    "INSERT INTO slides (presentation_id, position, kind, code_id, title, blocks) VALUES (?, ?, 'code', ?, ?, '[]')"
+function normalizeSlidePositions(db: Database.Database) {
+  const presentationIds = db.prepare('SELECT id FROM presentations ORDER BY id').all() as Array<{ id: number }>
+  const update = db.prepare('UPDATE slides SET position=? WHERE id=?')
+
+  db.transaction(() => {
+    for (const { id } of presentationIds) {
+      const slides = db
+        .prepare('SELECT id FROM slides WHERE presentation_id=? ORDER BY position, id')
+        .all(id) as Array<{ id: number }>
+
+      slides.forEach((slide, index) => {
+        update.run(index, slide.id)
+      })
+    }
+  })()
+}
+
+function seedSystemPresentation(db: Database.Database) {
+  const existing = db
+    .prepare('SELECT id, name, theme FROM presentations WHERE system_key=?')
+    .get(SYSTEM_PRESENTATION_KEY) as { id: number; name: string; theme: string } | undefined
+
+  let presentationId: number
+
+  if (existing) {
+    presentationId = existing.id
+  } else {
+    const { lastInsertRowid } = db
+      .prepare('INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)')
+      .run('LLM & Agent Basics', 'dark-green', SYSTEM_PRESENTATION_KEY)
+    presentationId = Number(lastInsertRowid)
+  }
+
+  const selectSlide = db.prepare(
+    'SELECT id FROM slides WHERE presentation_id=? AND code_id=?',
   )
-  LLM_INTRO_SLIDES.forEach(({ code_id, title }, i) => insert.run(pres!.id, i, code_id, title))
+  const insertSlide = db.prepare(
+    "INSERT INTO slides (presentation_id, position, kind, code_id, title, blocks) VALUES (?, ?, 'code', ?, ?, '[]')",
+  )
+  const updateSlide = db.prepare(
+    "UPDATE slides SET position=?, title=?, kind='code', updated_at=datetime('now') WHERE id=?",
+  )
+  const deleteMissing = db.prepare(
+    `DELETE FROM slides
+     WHERE presentation_id=?
+       AND kind='code'
+       AND code_id NOT IN (${BUILT_IN_SLIDES.map(() => '?').join(', ')})`,
+  )
+
+  db.transaction(() => {
+    BUILT_IN_SLIDES.forEach(({ code_id, title }, position) => {
+      const row = selectSlide.get(presentationId, code_id) as { id: number } | undefined
+      if (row) {
+        updateSlide.run(position, title, row.id)
+      } else {
+        insertSlide.run(presentationId, position, code_id, title)
+      }
+    })
+    deleteMissing.run(presentationId, ...BUILT_IN_SLIDES.map((slide) => slide.code_id))
+  })()
 }

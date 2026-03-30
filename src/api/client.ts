@@ -1,13 +1,32 @@
 import type { ApiPresentation, ApiSlide, ThemeName } from '@/types'
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+export function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Something went wrong'
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers)
+  headers.set('Accept', 'application/json')
+  if (options?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+    headers,
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText })) as { error: string }
-    throw new Error(err.error ?? `HTTP ${res.status}`)
+    const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
+    throw new ApiError(res.status, err.error ?? `HTTP ${res.status}`)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>

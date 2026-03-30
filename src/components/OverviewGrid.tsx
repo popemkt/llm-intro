@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom'
 
 interface OverviewGridProps {
   slides: UnifiedSlide[]
+  canManageSlides: boolean
   presentationId: number
   presentationTheme: ThemeName
   title: string
@@ -28,20 +29,21 @@ interface OverviewGridProps {
 const LOGICAL_W = 1000
 const LOGICAL_H = 562.5
 
-function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename }: {
+function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sortableEnabled }: {
   slide: UnifiedSlide
   index: number
   onSelect: (i: number) => void
   onEdit: (slideId: number) => void
   onDelete: (slideId: number) => void
   onRename: (slideId: number, newTitle: string) => void
+  sortableEnabled: boolean
 }) {
   const outerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.3)
   const [isRenaming, setIsRenaming] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: slide.id })
+    useSortable({ id: slide.id, disabled: !sortableEnabled })
 
   useEffect(() => {
     const el = outerRef.current
@@ -71,15 +73,24 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename }: {
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined }}
       className="relative group"
     >
-      <motion.button
+      <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.15 }}
         onClick={() => { if (!isRenaming) onSelect(index) }}
+        onKeyDown={(e) => {
+          if (isRenaming) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onSelect(index)
+          }
+        }}
+        aria-label={`Open slide ${index + 1}: ${slide.title}`}
+        data-testid="slide-thumbnail"
         className="relative rounded-xl overflow-hidden border border-(--color-border) hover:border-(--color-accent)/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) transition-colors text-left w-full"
-        style={{ background: 'var(--color-surface)', cursor: isRenaming ? 'default' : 'grab' }}
+        style={{ background: 'var(--color-surface)', cursor: isRenaming ? 'default' : sortableEnabled ? 'grab' : 'pointer' }}
         {...attributes}
-        {...(isRenaming ? {} : listeners)}
+        {...(isRenaming || !sortableEnabled ? {} : listeners)}
       >
         <div ref={outerRef} style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: LOGICAL_W, height: LOGICAL_H, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
@@ -110,15 +121,18 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename }: {
           ) : (
             <>
               <span className="text-xs font-medium text-(--color-text) truncate flex-1">{slide.title}</span>
-              <button
-                onClick={startRename}
-                onPointerDown={e => e.stopPropagation()}
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity"
-                style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-                title="Rename slide"
-              >
-                <Pencil size={10} />
-              </button>
+              {sortableEnabled && slide.kind === 'db' && (
+                <button
+                  onClick={startRename}
+                  onPointerDown={e => e.stopPropagation()}
+                  aria-label={`Rename ${slide.title}`}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity"
+                  style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                  title="Rename slide"
+                >
+                  <Pencil size={10} />
+                </button>
+              )}
             </>
           )}
           {slide.kind === 'db' && !isRenaming && (
@@ -126,13 +140,14 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename }: {
               style={{ background: 'var(--color-muted)', color: 'var(--color-text-dim)', flexShrink: 0 }}>db</span>
           )}
         </div>
-      </motion.button>
+      </motion.div>
 
       {/* Edit + delete buttons — visible on hover, db slides only */}
-      {slide.kind === 'db' && !isRenaming && (
+      {sortableEnabled && slide.kind === 'db' && !isRenaming && (
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={e => { e.stopPropagation(); onEdit(slide.id) }}
+            aria-label={`Edit ${slide.title}`}
             className="p-1.5 rounded-lg"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)', cursor: 'pointer' }}
             title="Edit slide"
@@ -141,6 +156,7 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename }: {
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDelete(slide.id) }}
+            aria-label={`Delete ${slide.title}`}
             className="p-1.5 rounded-lg"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: '#ff6b6b', cursor: 'pointer' }}
             title="Delete slide"
@@ -157,6 +173,8 @@ function AddCard({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
+      aria-label="Add slide"
+      data-testid="add-slide-card"
       className="rounded-xl border-2 border-dashed border-(--color-border) hover:border-(--color-accent)/60 transition-colors w-full"
       style={{ paddingBottom: '56.25%', position: 'relative', background: 'transparent' }}
     >
@@ -168,7 +186,7 @@ function AddCard({ onClick }: { onClick: () => void }) {
   )
 }
 
-export function OverviewGrid({ slides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onEditSlide, onDeleteSlide, onRenameSlide, onGoHome }: OverviewGridProps) {
+export function OverviewGrid({ slides, canManageSlides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onEditSlide, onDeleteSlide, onRenameSlide, onGoHome }: OverviewGridProps) {
   const navigate = useNavigate()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -196,7 +214,7 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
         className="sticky top-0 z-10 px-8 py-4 border-b border-(--color-border) backdrop-blur-sm flex items-center gap-3"
         style={{ background: 'color-mix(in srgb, var(--color-bg) 85%, transparent)' }}
       >
-        <button onClick={onGoHome} className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)" style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button aria-label="Home" onClick={onGoHome} className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)" style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}>
           <Home size={14} />
         </button>
         <div className="w-2 h-2 rounded-full" style={{ background: 'var(--color-accent)' }} />
@@ -205,19 +223,22 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
           {presentationTheme}
         </span>
         <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-text-dim)' }}>
-          {slides.length} slides · click to present
+          {slides.length} slides · {canManageSlides ? 'click to present' : 'read-only'}
         </span>
-        <button
-          onClick={() => navigate(`/p/${presentationId}/settings`)}
-          title="Presentation settings"
-          className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
-          style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
-        >
-          <Settings size={14} />
-        </button>
+        {canManageSlides && (
+          <button
+            onClick={() => navigate(`/p/${presentationId}/settings`)}
+            aria-label="Presentation settings"
+            title="Presentation settings"
+            className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+            style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <Settings size={14} />
+          </button>
+        )}
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={canManageSlides ? sensors : undefined} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={slides.map(s => s.id)} strategy={rectSortingStrategy}>
           <div className="grid gap-5 p-8" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {slides.map((slide, i) => (
@@ -225,13 +246,14 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
                 key={slide.id}
                 slide={slide}
                 index={i}
+                sortableEnabled={canManageSlides && slide.kind === 'db'}
                 onSelect={onSelectSlide}
                 onEdit={onEditSlide}
                 onDelete={onDeleteSlide}
                 onRename={onRenameSlide}
               />
             ))}
-            <AddCard onClick={onAddSlide} />
+            {canManageSlides && <AddCard onClick={onAddSlide} />}
           </div>
         </SortableContext>
       </DndContext>

@@ -43,6 +43,17 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
 
   const activeSlide = slides[activeIndex]
 
+  if (!activeSlide) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center gap-4" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+        <div style={{ fontSize: 14 }}>This deck has no slides yet.</div>
+        <button onClick={onExit} style={{ background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer', textDecoration: 'underline' }}>
+          Back to overview
+        </button>
+      </div>
+    )
+  }
+
   return (
     <motion.div
       key="presentation"
@@ -91,6 +102,7 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
         {onGoHome && (
           <button
             onClick={onGoHome}
+            aria-label="Home"
             className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
             style={{ color: 'var(--color-text-dim)' }}
             title="Home"
@@ -126,6 +138,7 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
             <button
               key={i}
               onClick={() => go(i)}
+              aria-label={`Go to slide ${i + 1}`}
               className="rounded-full transition-all"
               style={{
                 width: i === activeIndex ? 20 : 6,

@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, ChevronRight, Grid2X2, Home } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Grid2X2, Home, Maximize2 } from 'lucide-react'
 import type { UnifiedSlide } from '@/types'
 import { SlideShell } from './SlideShell'
 import { DbSlideRenderer } from './DbSlideRenderer'
@@ -11,6 +11,7 @@ interface PresentationViewProps {
   onExit: () => void
   onNavigate: (index: number) => void
   onGoHome?: () => void
+  onEnterFullscreen?: () => void
 }
 
 const variants = {
@@ -25,7 +26,7 @@ const variants = {
   }),
 }
 
-export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGoHome }: PresentationViewProps) {
+export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGoHome, onEnterFullscreen }: PresentationViewProps) {
   const directionRef = useRef(1)
   const isTransitioning = useRef(false)
 
@@ -149,6 +150,18 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
         <span className="text-xs font-mono" style={{ color: 'var(--color-text-dim)', minWidth: '3.5rem', textAlign: 'right' }}>
           {activeIndex + 1} / {slides.length}
         </span>
+
+        {/* Fullscreen */}
+        {onEnterFullscreen && (
+          <button
+            onClick={onEnterFullscreen}
+            className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+            style={{ color: 'var(--color-text-dim)' }}
+            title="Fullscreen (F)"
+          >
+            <Maximize2 size={14} />
+          </button>
+        )}
       </div>
     </motion.div>
   )

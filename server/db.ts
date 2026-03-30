@@ -9,6 +9,17 @@ export const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
+const LLM_INTRO_SLIDES = [
+  { code_id: '01-opener',             title: 'What is an LLM?' },
+  { code_id: '02-linear-regression',  title: 'Linear Regression → LLM' },
+  { code_id: '03-tool-use',           title: 'Tool Use / Agent Loop' },
+  { code_id: '04-claude-desktop',     title: 'Claude Desktop' },
+  { code_id: '05-browser-control',    title: 'Browser Control (Playwright)' },
+  { code_id: '06-workspace-setup',    title: 'Workspace Setup' },
+  { code_id: '07-workspace-concepts', title: 'Workspace Concepts' },
+  { code_id: '08-appendix',           title: 'Tech Landscape (Appendix)' },
+]
+
 migrate()
 seed()
 
@@ -47,17 +58,6 @@ function migrate() {
     db.pragma('user_version = 2')
   }
 }
-
-const LLM_INTRO_SLIDES = [
-  { code_id: '01-opener',            title: 'What is an LLM?' },
-  { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
-  { code_id: '03-tool-use',          title: 'Tool Use / Agent Loop' },
-  { code_id: '04-claude-desktop',    title: 'Claude Desktop' },
-  { code_id: '05-browser-control',   title: 'Browser Control (Playwright)' },
-  { code_id: '06-workspace-setup',   title: 'Workspace Setup' },
-  { code_id: '07-workspace-concepts', title: 'Workspace Concepts' },
-  { code_id: '08-appendix',          title: 'Tech Landscape (Appendix)' },
-]
 
 function seed() {
   let pres = db.prepare("SELECT id FROM presentations WHERE name = 'LLM & Agent Basics'").get() as { id: number } | undefined

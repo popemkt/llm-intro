@@ -1,4 +1,70 @@
-/* Theme CSS variables for DB-backed slides */
+/* ─── App shell themes (applied via data-app-theme on <html>) ─────────────────
+   Override the --color-* vars from @theme in index.css.
+   dark-green is the default (no override needed).
+   Code-backed slides use hardcoded T.* tokens and are unaffected.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+html[data-app-theme="dark-blue"] {
+  --color-bg:          #0c0e14;
+  --color-surface:     #121620;
+  --color-border:      #1d2540;
+  --color-muted:       #2e3d6b;
+  --color-text:        #e0e8ff;
+  --color-text-dim:    #7a8fcc;
+  --color-accent:      #4c9fff;
+  --color-accent-dim:  #2272c3;
+  --color-highlight:   #7dd3ff;
+}
+
+html[data-app-theme="light"] {
+  --color-bg:          #f4f6f5;
+  --color-surface:     #ffffff;
+  --color-border:      #d8e0dc;
+  --color-muted:       #a8bab2;
+  --color-text:        #1a2420;
+  --color-text-dim:    #5a7060;
+  --color-accent:      #1a9448;
+  --color-accent-dim:  #0f6030;
+  --color-highlight:   #00c060;
+}
+
+html[data-app-theme="neon"] {
+  --color-bg:          #050505;
+  --color-surface:     #0f0f0f;
+  --color-border:      #2a0a2a;
+  --color-muted:       #4a1a4a;
+  --color-text:        #f0d0f0;
+  --color-text-dim:    #a060a0;
+  --color-accent:      #ff00ff;
+  --color-accent-dim:  #aa00aa;
+  --color-highlight:   #ff80ff;
+}
+
+html[data-app-theme="warm"] {
+  --color-bg:          #1a1208;
+  --color-surface:     #241a0e;
+  --color-border:      #3d2d18;
+  --color-muted:       #5a4530;
+  --color-text:        #f2e4c4;
+  --color-text-dim:    #9e8060;
+  --color-accent:      #e8a030;
+  --color-accent-dim:  #b07820;
+  --color-highlight:   #ffc84a;
+}
+
+html[data-app-theme="ocean"] {
+  --color-bg:          #080f18;
+  --color-surface:     #0d1a28;
+  --color-border:      #152a40;
+  --color-muted:       #1e4060;
+  --color-text:        #c8e8f4;
+  --color-text-dim:    #5a9ab8;
+  --color-accent:      #00d4aa;
+  --color-accent-dim:  #009980;
+  --color-highlight:   #40ffdd;
+}
+
+/* ─── Slide content themes (applied via data-theme on slide containers) ─────── */
 /* Code slides use hardcoded T.* tokens and are unaffected */
 
 [data-theme="dark-green"] {
@@ -47,4 +113,28 @@
   --theme-accent:     #ff00ff;
   --theme-accent-dim: #aa00aa;
   --theme-highlight:  #ff80ff;
+}
+
+[data-theme="warm"] {
+  --theme-bg:         #1a1208;
+  --theme-surface:    #241a0e;
+  --theme-border:     #3d2d18;
+  --theme-muted:      #5a4530;
+  --theme-text:       #f2e4c4;
+  --theme-text-dim:   #9e8060;
+  --theme-accent:     #e8a030;
+  --theme-accent-dim: #b07820;
+  --theme-highlight:  #ffc84a;
+}
+
+[data-theme="ocean"] {
+  --theme-bg:         #080f18;
+  --theme-surface:    #0d1a28;
+  --theme-border:     #152a40;
+  --theme-muted:      #1e4060;
+  --theme-text:       #c8e8f4;
+  --theme-text-dim:   #5a9ab8;
+  --theme-accent:     #00d4aa;
+  --theme-accent-dim: #009980;
+  --theme-highlight:  #40ffdd;
 }

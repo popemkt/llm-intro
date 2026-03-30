@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { OverviewGrid } from '@/components/OverviewGrid'
 import { PresentationView } from '@/components/PresentationView'
+import { FullscreenView } from '@/components/FullscreenView'
 import { codeSlideRegistry } from '@/slides/registry'
 import { api } from '@/api/client'
 import type { UnifiedSlide, ApiSlide, ApiPresentation } from '@/types'
@@ -12,7 +13,6 @@ function toUnified(slide: ApiSlide, theme: ApiPresentation['theme']): UnifiedSli
     const component = codeSlideRegistry[slide.code_id ?? '']
     if (!component) {
       console.warn(`Unknown code_id: ${slide.code_id}`)
-      // Fall back to a db-style empty slide so the app doesn't crash
       return { kind: 'db', id: slide.id, title: slide.title, blocks: [], theme }
     }
     return { kind: 'code', id: slide.id, title: slide.title, component }
@@ -25,7 +25,7 @@ export function PresentationPage() {
   const navigate = useNavigate()
   const pid = Number(id)
 
-  const [mode, setMode] = useState<'overview' | 'presentation'>('overview')
+  const [mode, setMode] = useState<'overview' | 'presentation' | 'fullscreen'>('overview')
   const [activeIndex, setActiveIndex] = useState(0)
   const [slides, setSlides] = useState<UnifiedSlide[]>([])
   const [presentation, setPresentation] = useState<ApiPresentation | null>(null)
@@ -43,12 +43,15 @@ export function PresentationPage() {
       .finally(() => setLoading(false))
   }, [id, pid])
 
+  // Keyboard handler for regular presentation mode only
+  // (fullscreen mode handles its own keys)
   useEffect(() => {
     if (mode !== 'presentation') return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, slides.length - 1)) }
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)) }
       else if (e.key === 'Escape') setMode('overview')
+      else if (e.key === 'f' || e.key === 'F') setMode('fullscreen')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -69,9 +72,21 @@ export function PresentationPage() {
     await api.slides.reorder(presentation.id, ids)
   }, [presentation])
 
-  const handleSlideUpdated = useCallback((updated: ApiSlide) => {
+  const handleEditSlide = useCallback((slideId: number) => {
+    navigate(`/p/${pid}/edit/${slideId}`)
+  }, [navigate, pid])
+
+  const handleDeleteSlide = useCallback(async (slideId: number) => {
     if (!presentation) return
-    setSlides(prev => prev.map(s => s.id === updated.id ? toUnified(updated, presentation.theme) : s))
+    if (!confirm('Delete this slide?')) return
+    await api.slides.delete(presentation.id, slideId)
+    setSlides(prev => prev.filter(s => s.id !== slideId))
+  }, [presentation])
+
+  const handleRenameSlide = useCallback(async (slideId: number, newTitle: string) => {
+    if (!presentation) return
+    await api.slides.update(presentation.id, slideId, { title: newTitle })
+    setSlides(prev => prev.map(s => s.id === slideId ? { ...s, title: newTitle } : s))
   }, [presentation])
 
   if (loading) return (
@@ -100,10 +115,12 @@ export function PresentationPage() {
             onSelectSlide={i => { setActiveIndex(i); setMode('presentation') }}
             onAddSlide={handleAddSlide}
             onReorder={handleReorder}
-            onSlideUpdated={handleSlideUpdated}
+            onEditSlide={handleEditSlide}
+            onDeleteSlide={handleDeleteSlide}
+            onRenameSlide={handleRenameSlide}
             onGoHome={() => navigate('/')}
           />
-        ) : (
+        ) : mode === 'presentation' ? (
           <PresentationView
             key="presentation"
             slides={slides}
@@ -111,6 +128,15 @@ export function PresentationPage() {
             onExit={() => setMode('overview')}
             onNavigate={setActiveIndex}
             onGoHome={() => navigate('/')}
+            onEnterFullscreen={() => setMode('fullscreen')}
+          />
+        ) : (
+          <FullscreenView
+            key="fullscreen"
+            slides={slides}
+            activeIndex={activeIndex}
+            onNavigate={setActiveIndex}
+            onExit={() => setMode('overview')}
           />
         )}
       </AnimatePresence>

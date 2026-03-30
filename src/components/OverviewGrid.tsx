@@ -1,15 +1,15 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion } from 'motion/react'
-import { Plus, Pencil, Home } from 'lucide-react'
+import { Plus, Pencil, Home, Trash2, Settings } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { UnifiedSlide, ApiSlide, ThemeName } from '@/types'
+import type { UnifiedSlide, ThemeName } from '@/types'
 import { DbSlideRenderer } from './DbSlideRenderer'
-import { SlideEditor } from './SlideEditor'
+import { useNavigate } from 'react-router-dom'
 
 interface OverviewGridProps {
   slides: UnifiedSlide[]
@@ -19,21 +19,27 @@ interface OverviewGridProps {
   onSelectSlide: (index: number) => void
   onAddSlide: () => void
   onReorder: (ids: number[]) => void
-  onSlideUpdated: (updated: ApiSlide) => void
+  onEditSlide: (slideId: number) => void
+  onDeleteSlide: (slideId: number) => void
+  onRenameSlide: (slideId: number, newTitle: string) => void
   onGoHome: () => void
 }
 
 const LOGICAL_W = 1000
 const LOGICAL_H = 562.5
 
-function ThumbnailCell({ slide, index, onSelect, onEdit }: {
+function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename }: {
   slide: UnifiedSlide
   index: number
   onSelect: (i: number) => void
-  onEdit: (i: number) => void
+  onEdit: (slideId: number) => void
+  onDelete: (slideId: number) => void
+  onRename: (slideId: number, newTitle: string) => void
 }) {
   const outerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.3)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [draftTitle, setDraftTitle] = useState('')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: slide.id })
 
@@ -45,21 +51,35 @@ function ThumbnailCell({ slide, index, onSelect, onEdit }: {
     return () => ro.disconnect()
   }, [])
 
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDraftTitle(slide.title)
+    setIsRenaming(true)
+  }
+
+  const commitRename = () => {
+    const trimmed = draftTitle.trim()
+    if (trimmed && trimmed !== slide.title) onRename(slide.id, trimmed)
+    setIsRenaming(false)
+  }
+
+  const cancelRename = () => setIsRenaming(false)
+
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined }}
-      className="relative"
+      className="relative group"
     >
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.15 }}
-        onClick={() => onSelect(index)}
-        className="group relative rounded-xl overflow-hidden border border-(--color-border) hover:border-(--color-accent)/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) transition-colors text-left w-full"
-        style={{ background: 'var(--color-surface)', cursor: 'grab' }}
+        onClick={() => { if (!isRenaming) onSelect(index) }}
+        className="relative rounded-xl overflow-hidden border border-(--color-border) hover:border-(--color-accent)/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) transition-colors text-left w-full"
+        style={{ background: 'var(--color-surface)', cursor: isRenaming ? 'default' : 'grab' }}
         {...attributes}
-        {...listeners}
+        {...(isRenaming ? {} : listeners)}
       >
         <div ref={outerRef} style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: LOGICAL_W, height: LOGICAL_H, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
@@ -70,24 +90,64 @@ function ThumbnailCell({ slide, index, onSelect, onEdit }: {
           </div>
         </div>
         <div className="px-3 py-2 border-t border-(--color-border) flex items-center gap-2">
-          <span className="text-xs font-mono text-(--color-text-dim)">{String(index + 1).padStart(2, '0')}</span>
-          <span className="text-xs font-medium text-(--color-text) truncate flex-1">{slide.title}</span>
-          {slide.kind === 'db' && (
+          <span className="text-xs font-mono text-(--color-text-dim)" style={{ flexShrink: 0 }}>{String(index + 1).padStart(2, '0')}</span>
+          {isRenaming ? (
+            <input
+              autoFocus
+              value={draftTitle}
+              onChange={e => setDraftTitle(e.target.value)}
+              onKeyDown={e => {
+                e.stopPropagation()
+                if (e.key === 'Enter') commitRename()
+                else if (e.key === 'Escape') cancelRename()
+              }}
+              onBlur={commitRename}
+              onClick={e => e.stopPropagation()}
+              onPointerDown={e => e.stopPropagation()}
+              className="flex-1 min-w-0 text-xs font-medium bg-transparent focus:outline-none"
+              style={{ color: 'var(--color-text)', boxShadow: '0 1px 0 0 var(--color-accent)' }}
+            />
+          ) : (
+            <>
+              <span className="text-xs font-medium text-(--color-text) truncate flex-1">{slide.title}</span>
+              <button
+                onClick={startRename}
+                onPointerDown={e => e.stopPropagation()}
+                className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity"
+                style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                title="Rename slide"
+              >
+                <Pencil size={10} />
+              </button>
+            </>
+          )}
+          {slide.kind === 'db' && !isRenaming && (
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-              style={{ background: 'var(--color-muted)', color: 'var(--color-text-dim)' }}>db</span>
+              style={{ background: 'var(--color-muted)', color: 'var(--color-text-dim)', flexShrink: 0 }}>db</span>
           )}
         </div>
       </motion.button>
 
-      {slide.kind === 'db' && (
-        <button
-          onClick={e => { e.stopPropagation(); onEdit(index) }}
-          className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)' }}
-          title="Edit slide"
-        >
-          <Pencil size={12} />
-        </button>
+      {/* Edit + delete buttons — visible on hover, db slides only */}
+      {slide.kind === 'db' && !isRenaming && (
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={e => { e.stopPropagation(); onEdit(slide.id) }}
+            className="p-1.5 rounded-lg"
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)', cursor: 'pointer' }}
+            title="Edit slide"
+          >
+            <Pencil size={12} />
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(slide.id) }}
+            className="p-1.5 rounded-lg"
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: '#ff6b6b', cursor: 'pointer' }}
+            title="Delete slide"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
       )}
     </div>
   )
@@ -108,8 +168,8 @@ function AddCard({ onClick }: { onClick: () => void }) {
   )
 }
 
-export function OverviewGrid({ slides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onSlideUpdated, onGoHome }: OverviewGridProps) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+export function OverviewGrid({ slides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onEditSlide, onDeleteSlide, onRenameSlide, onGoHome }: OverviewGridProps) {
+  const navigate = useNavigate()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
@@ -121,8 +181,6 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
     reordered.splice(to, 0, reordered.splice(from, 1)[0])
     onReorder(reordered.map(s => s.id))
   }, [slides, onReorder])
-
-  const editingSlide = editingIndex !== null ? slides[editingIndex] : null
 
   return (
     <motion.div
@@ -149,6 +207,14 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
         <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-text-dim)' }}>
           {slides.length} slides · click to present
         </span>
+        <button
+          onClick={() => navigate(`/p/${presentationId}/settings`)}
+          title="Presentation settings"
+          className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+          style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <Settings size={14} />
+        </button>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -160,23 +226,15 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
                 slide={slide}
                 index={i}
                 onSelect={onSelectSlide}
-                onEdit={setEditingIndex}
+                onEdit={onEditSlide}
+                onDelete={onDeleteSlide}
+                onRename={onRenameSlide}
               />
             ))}
             <AddCard onClick={onAddSlide} />
           </div>
         </SortableContext>
       </DndContext>
-
-      {editingSlide?.kind === 'db' && (
-        <SlideEditor
-          pid={presentationId}
-          slide={{ id: editingSlide.id, title: editingSlide.title, blocks: editingSlide.blocks }}
-          theme={editingSlide.theme}
-          onClose={() => setEditingIndex(null)}
-          onSaved={updated => { onSlideUpdated(updated); setEditingIndex(null) }}
-        />
-      )}
     </motion.div>
   )
 }

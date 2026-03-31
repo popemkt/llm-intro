@@ -434,52 +434,24 @@ function LearnChart({
   )
 }
 
-// ─── Context chip — two-phase FLIP from dot position to natural chip position ─
-// Phase 1: invisible span at natural position, used only for DOM measurement.
-// setState in useLayoutEffect triggers a sync re-render before browser paints,
-// so the first visible frame is already Phase 2 (chip at dot position).
-function ContextChip({ word, dotPos, containerRef, index }: {
+// ─── Context chip — morphs from dot via shared layoutId ─────────────────────
+function ContextChip({ word, id, index }: {
   word: string
-  dotPos: { x: number; y: number } | null
-  containerRef: React.RefObject<HTMLDivElement | null>
+  id: string
   index: number
 }) {
-  const chipRef = useRef<HTMLSpanElement>(null)
-  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null)
-
-  useLayoutEffect(() => {
-    if (!dotPos || !chipRef.current || !containerRef.current) {
-      setOffset({ x: 0, y: 0 })
-      return
-    }
-    const cr = chipRef.current.getBoundingClientRect()
-    const nr = containerRef.current.getBoundingClientRect()
-    const cx = cr.left - nr.left + cr.width  / 2
-    const cy = cr.top  - nr.top  + cr.height / 2
-    setOffset({ x: dotPos.x - cx, y: dotPos.y - cy })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const chipStyle: React.CSSProperties = {
-    display:'inline-flex', alignItems:'center', padding:'5px 11px',
-    fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:500,
-    background:T.surface, border:`1.5px solid ${T.accent}`, color:T.accent,
-  }
-
-  // Phase 1 — invisible, natural position, for measurement only
-  if (offset === null) {
-    return <span ref={chipRef} style={{...chipStyle, opacity:0, borderRadius:8}}>{word}</span>
-  }
-
-  // Phase 2 — spring from dot position (circle) to chip position (rounded rect)
   return (
     <motion.span
-      initial={{ x: offset.x, y: offset.y, borderRadius:'50%' }}
-      animate={{ x: 0, y: 0, borderRadius:'8px' }}
-      transition={{ ...DOT_SPRING, delay: index * 0.07 }}
-      style={chipStyle}>
+      layoutId={`dot-${id}`}
+      transition={{ type:'spring', stiffness:200, damping:14, delay: 0.5 + index * 0.15 }}
+      style={{
+        display:'inline-flex', alignItems:'center', padding:'5px 11px',
+        fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:500,
+        background:T.surface, border:`1.5px solid ${T.accent}`, color:T.accent,
+        borderRadius:8,
+      }}>
       <motion.span initial={{opacity:0}} animate={{opacity:1}}
-        transition={{delay: index*0.07 + 1.2, duration:.3}}>
+        transition={{delay: 0.5 + index*0.15 + 0.3, duration:.2}}>
         {word}
       </motion.span>
     </motion.span>
@@ -487,16 +459,14 @@ function ContextChip({ word, dotPos, containerRef, index }: {
 }
 
 // ─── Part C: token prediction ─────────────────────────────────────────────────
-function TokenPredict({ pts, dotPositions, containerRef }: {
+function TokenPredict({ pts }: {
   pts: Pt[]
-  dotPositions: { x: number; y: number }[]
-  containerRef: React.RefObject<HTMLDivElement | null>
 }) {
   const count = Math.min(pts.length, SENTENCE.length)
   const [predicted, setPredicted] = useState(0)
   const [latestIdx, setLatestIdx] = useState(-1)
 
-  const buttonDelay = count * 0.07 + 1.6
+  const buttonDelay = 0.5 + count * 0.15 + 0.8
 
   const predict = () => {
     setLatestIdx((count + predicted) % SENTENCE.length)
@@ -529,8 +499,7 @@ function TokenPredict({ pts, dotPositions, containerRef }: {
               <ContextChip
                 key={pts[i].id}
                 word={word}
-                dotPos={dotPositions[i] ?? null}
-                containerRef={containerRef}
+                id={pts[i].id}
                 index={i}
               />
             )
@@ -621,12 +590,7 @@ export default function LinearRegression({ isActive: _isActive }: SlideProps) {
             <LearnChart key="learn" svgRef={svgRef} pts={pts} setPts={setPts}/>
           )}
           {part==='tokens' && (
-            <TokenPredict key="tokens" pts={pts} containerRef={containerRef}
-              dotPositions={pts.map(p => ({
-                x: (svgRelRect?.left ?? 0) + (scx(p.x)/CW) * (svgRelRect?.width  ?? 0),
-                y: (svgRelRect?.top  ?? 0) + (scy(p.y)/CH) * (svgRelRect?.height ?? 0),
-              }))}
-            />
+            <TokenPredict key="tokens" pts={pts}/>
           )}
         </AnimatePresence>
 

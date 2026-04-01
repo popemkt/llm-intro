@@ -235,7 +235,7 @@ export function OverviewGrid({ slides, canManageSlides, presentationId, presenta
 
       <DndContext sensors={canManageSlides ? sensors : undefined} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={slides.map(s => s.id)} strategy={rectSortingStrategy}>
-          <div className="grid gap-5 p-8" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <div className="grid gap-5 p-8" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             {slides.map((slide, i) => (
               <ThumbnailCell
                 key={slide.id}

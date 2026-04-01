@@ -30,9 +30,7 @@ export function createPresentationsService(presentationsRepo: PresentationsRepos
     },
 
     delete(id: number) {
-      const presentation = this.get(id)
-      if (presentation.is_system) throw new AppError(403, 'built-in presentations cannot be deleted')
-
+      this.get(id)
       presentationsRepo.delete(id)
     },
   }

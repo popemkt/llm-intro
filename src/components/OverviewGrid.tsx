@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom'
 
 interface OverviewGridProps {
   slides: UnifiedSlide[]
-  canManageSlides: boolean
   presentationId: number
   presentationTheme: ThemeName
   title: string
@@ -114,7 +113,7 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
           ) : (
             <>
               <span className="text-xs font-medium text-(--color-text) truncate flex-1">{slide.title}</span>
-              {sortableEnabled && slide.kind === 'db' && (
+              {sortableEnabled && (
                 <button
                   onClick={startRename}
                   onPointerDown={e => e.stopPropagation()}
@@ -181,7 +180,7 @@ function AddCard({ onClick }: { onClick: () => void }) {
   )
 }
 
-export function OverviewGrid({ slides, canManageSlides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onEditSlide, onDeleteSlide, onRenameSlide, onGoHome }: OverviewGridProps) {
+export function OverviewGrid({ slides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onEditSlide, onDeleteSlide, onRenameSlide, onGoHome }: OverviewGridProps) {
   const navigate = useNavigate()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -218,22 +217,20 @@ export function OverviewGrid({ slides, canManageSlides, presentationId, presenta
           {presentationTheme}
         </span>
         <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-text-dim)' }}>
-          {slides.length} slides · {canManageSlides ? 'click to present' : 'read-only'}
+          {slides.length} slides · click to present
         </span>
-        {canManageSlides && (
-          <button
-            onClick={() => navigate(`/p/${presentationId}/settings`)}
-            aria-label="Presentation settings"
-            title="Presentation settings"
-            className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
-            style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            <Settings size={14} />
-          </button>
-        )}
+        <button
+          onClick={() => navigate(`/p/${presentationId}/settings`)}
+          aria-label="Presentation settings"
+          title="Presentation settings"
+          className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+          style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <Settings size={14} />
+        </button>
       </div>
 
-      <DndContext sensors={canManageSlides ? sensors : undefined} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={slides.map(s => s.id)} strategy={rectSortingStrategy}>
           <div className="grid gap-5 p-8" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             {slides.map((slide, i) => (
@@ -241,14 +238,14 @@ export function OverviewGrid({ slides, canManageSlides, presentationId, presenta
                 key={slide.id}
                 slide={slide}
                 index={i}
-                sortableEnabled={canManageSlides}
+                sortableEnabled
                 onSelect={onSelectSlide}
                 onEdit={onEditSlide}
                 onDelete={onDeleteSlide}
                 onRename={onRenameSlide}
               />
             ))}
-            {canManageSlides && <AddCard onClick={onAddSlide} />}
+            <AddCard onClick={onAddSlide} />
           </div>
         </SortableContext>
       </DndContext>

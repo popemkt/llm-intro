@@ -165,7 +165,6 @@ export function PresentationPage() {
           <OverviewGrid
             key="overview"
             slides={slides}
-            canManageSlides={!presentation.is_system}
             presentationId={presentation.id}
             presentationTheme={presentation.theme}
             title={presentation.name}

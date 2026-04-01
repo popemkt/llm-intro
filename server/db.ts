@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const DB_PATH = path.join(__dirname, 'data', 'app.db')
 
-export const SYSTEM_PRESENTATION_KEY = 'llm-intro'
+const SEED_PRESENTATION_NAME = 'LLM & Agent Basics'
 
 const BUILT_IN_SLIDES = [
   { code_id: '01-opener', title: 'What is an LLM?' },
@@ -82,11 +82,6 @@ function migrate(db: Database.Database) {
     } catch {
       // Column already exists.
     }
-    db.exec(`
-      CREATE UNIQUE INDEX IF NOT EXISTS presentations_system_key_unique
-      ON presentations(system_key)
-      WHERE system_key IS NOT NULL
-    `)
     db.pragma('user_version = 3')
   }
 
@@ -121,9 +116,11 @@ function normalizeSlidePositions(db: Database.Database) {
 }
 
 function seedSystemPresentation(db: Database.Database) {
-  const existing = db
-    .prepare('SELECT id, name, theme FROM presentations WHERE system_key=?')
-    .get(SYSTEM_PRESENTATION_KEY) as { id: number; name: string; theme: string } | undefined
+  // Find by name, or by legacy system_key, or create new
+  const existing = (
+    db.prepare('SELECT id FROM presentations WHERE name=?').get(SEED_PRESENTATION_NAME) ??
+    db.prepare('SELECT id FROM presentations WHERE system_key=?').get('llm-intro')
+  ) as { id: number } | undefined
 
   let presentationId: number
 
@@ -131,8 +128,8 @@ function seedSystemPresentation(db: Database.Database) {
     presentationId = existing.id
   } else {
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)')
-      .run('LLM & Agent Basics', 'dark-green', SYSTEM_PRESENTATION_KEY)
+      .prepare('INSERT INTO presentations (name, theme) VALUES (?, ?)')
+      .run(SEED_PRESENTATION_NAME, 'dark-green')
     presentationId = Number(lastInsertRowid)
   }
 

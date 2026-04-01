@@ -5,16 +5,12 @@ type PresentationRow = {
   id: number
   name: string
   theme: ThemeName
-  system_key: string | null
   created_at: string
   updated_at: string
 }
 
 function mapPresentation(row: PresentationRow): ApiPresentation {
-  return {
-    ...row,
-    is_system: row.system_key !== null,
-  }
+  return { ...row }
 }
 
 export function createPresentationsRepository(db: Database.Database) {

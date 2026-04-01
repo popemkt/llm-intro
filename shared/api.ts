@@ -28,8 +28,6 @@ export interface ApiPresentation {
   id: number
   name: string
   theme: ThemeName
-  system_key: string | null
-  is_system: boolean
   created_at: string
   updated_at: string
 }

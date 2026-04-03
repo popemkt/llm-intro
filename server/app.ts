@@ -3,6 +3,7 @@ import cors from 'cors'
 import { AppError } from './errors.js'
 import { createPresentationsRouter } from './routes/presentations.js'
 import { createSlidesRouter } from './routes/slides.js'
+import { createExportHandler } from './routes/export.js'
 import type { createPresentationsService } from './services/presentations.js'
 import type { createSlidesService } from './services/slides.js'
 
@@ -18,6 +19,7 @@ export function createApp(services: {
   app.use(cors())
   app.use(express.json())
 
+  app.post('/api/presentations/:pid/export', createExportHandler(services.presentationsService, services.slidesService))
   app.use('/api/presentations', createPresentationsRouter(services.presentationsService))
   app.use('/api/presentations/:pid/slides', createSlidesRouter(services.slidesService))
 

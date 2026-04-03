@@ -4,7 +4,7 @@ Interactive slide deck app for teaching LLM and agent concepts.
 
 The app has two presentation modes:
 
-- A built-in, read-only system deck seeded from code-backed slides.
+- A seeded starter deck backed by code slides and SQLite metadata.
 - User-created decks backed by SQLite and editable in the browser.
 
 ## Stack
@@ -38,8 +38,8 @@ The backend is intentionally split into layers:
 
 Key rules:
 
-- Built-in presentations are identified by `system_key`, not by mutable names.
-- Built-in presentations are read-only for slide mutations.
+- The seeded presentation keeps a durable `system_key` so it can be re-bootstrapped without duplicating after rename.
+- Code slides can be renamed and reordered, but their content cannot be edited or deleted.
 - Slide reorder validates that every slide ID is present exactly once.
 
 ### Client
@@ -67,6 +67,7 @@ Client themes are split in two:
 - `name`
 - `theme`
 - `system_key` nullable unique key for built-in decks
+- `system_key` nullable unique key for the seeded deck
 - timestamps
 
 ### slides
@@ -98,14 +99,14 @@ The repo has two test layers:
 
 The Playwright suite covers:
 
-- home page and built-in deck visibility
-- built-in deck read-only behavior
+- home page and seeded deck visibility
 - user deck creation
-- slide creation, rename, edit, reorder, theme update, and deletion
+- slide creation, rename, edit, reorder, export, theme update, and deletion
 - deck deletion
 
 ## Notes
 
-- The built-in deck is seeded automatically at startup.
+- The seeded deck is recreated automatically after deletion on the next server bootstrap.
 - User decks can be fully edited in the overview and editor flows.
 - The initial route bundle is split, but the presentation chunk still contains the code-backed slide modules.
+- GitHub Actions runs `pnpm test`, `pnpm build`, and `pnpm test:e2e` on pull requests and pushes to `main`.

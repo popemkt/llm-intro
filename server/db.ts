@@ -6,20 +6,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const DB_PATH = path.join(__dirname, 'data', 'app.db')
 
-export const SYSTEM_PRESENTATION_KEY = 'llm-intro'
+const SEED_PRESENTATION_KEY = 'llm-intro'
+const SEED_PRESENTATION_NAME = 'LLM & Agent Basics'
 
 const BUILT_IN_SLIDES = [
   { code_id: '01-opener', title: 'What is an LLM?' },
   { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
-  { code_id: '03-tool-use', title: 'Tool Use / Agent Loop' },
-  { code_id: '04-claude-desktop', title: 'Claude Desktop' },
-  { code_id: '05-browser-control', title: 'Browser Control (Playwright)' },
-  { code_id: '06-workspace-setup', title: 'Workspace Setup' },
-  { code_id: '07-workspace-concepts', title: 'Workspace Concepts' },
-  { code_id: '08-appendix', title: 'Tech Landscape (Appendix)' },
+  { code_id: '03-context', title: 'Context Window' },
+  { code_id: '04-tool-use', title: 'Tool Use / Agent Loop' },
+  { code_id: '05-claude-desktop', title: 'Claude Desktop' },
+  { code_id: '06-browser-control', title: 'Browser Control (Playwright)' },
+  { code_id: '07-workspace-setup', title: 'Workspace Setup' },
+  { code_id: '08-workspace-concepts', title: 'Workspace Concepts' },
+  { code_id: '09-appendix', title: 'Tech Landscape (Appendix)' },
 ] as const
 
-export function openDatabase(filePath = DB_PATH) {
+export function openDatabase(filePath = process.env.LLM_INTRO_DB_PATH ?? DB_PATH) {
   const db = new Database(filePath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
@@ -81,11 +83,6 @@ function migrate(db: Database.Database) {
     } catch {
       // Column already exists.
     }
-    db.exec(`
-      CREATE UNIQUE INDEX IF NOT EXISTS presentations_system_key_unique
-      ON presentations(system_key)
-      WHERE system_key IS NOT NULL
-    `)
     db.pragma('user_version = 3')
   }
 
@@ -99,6 +96,15 @@ function migrate(db: Database.Database) {
       WHERE code_id IS NOT NULL
     `)
     db.pragma('user_version = 4')
+  }
+
+  if (version < 5) {
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS presentations_system_key_unique
+      ON presentations(system_key)
+      WHERE system_key IS NOT NULL
+    `)
+    db.pragma('user_version = 5')
   }
 }
 
@@ -120,18 +126,24 @@ function normalizeSlidePositions(db: Database.Database) {
 }
 
 function seedSystemPresentation(db: Database.Database) {
-  const existing = db
-    .prepare('SELECT id, name, theme FROM presentations WHERE system_key=?')
-    .get(SYSTEM_PRESENTATION_KEY) as { id: number; name: string; theme: string } | undefined
+  const selectBySystemKey = db.prepare('SELECT id FROM presentations WHERE system_key=?')
+  const selectByName = db.prepare('SELECT id FROM presentations WHERE name=?')
+  const attachSystemKey = db.prepare('UPDATE presentations SET system_key=? WHERE id=?')
+
+  const existing = (
+    selectBySystemKey.get(SEED_PRESENTATION_KEY) ??
+    selectByName.get(SEED_PRESENTATION_NAME)
+  ) as { id: number } | undefined
 
   let presentationId: number
 
   if (existing) {
     presentationId = existing.id
+    attachSystemKey.run(SEED_PRESENTATION_KEY, presentationId)
   } else {
     const { lastInsertRowid } = db
       .prepare('INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)')
-      .run('LLM & Agent Basics', 'dark-green', SYSTEM_PRESENTATION_KEY)
+      .run(SEED_PRESENTATION_NAME, 'dark-green', SEED_PRESENTATION_KEY)
     presentationId = Number(lastInsertRowid)
   }
 

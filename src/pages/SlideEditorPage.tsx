@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid'
 import ReactMarkdown from 'react-markdown'
 import type { Block, ShapeBlock, ThemeName } from '@/types'
 import { api, getErrorMessage } from '@/api/client'
+import { data } from '@/data'
 import { C } from '@/design/tokens'
 import { getReadableTextColor } from '@/lib/color'
 
@@ -70,7 +71,7 @@ export function SlideEditorPage() {
   useEffect(() => {
     setLoading(true)
     setLoadError(null)
-    Promise.all([api.presentations.get(pid), api.slides.list(pid)])
+    Promise.all([data.presentations.get(pid), data.slides.list(pid)])
       .then(([pres, slides]) => {
         const slide = slides.find(s => s.id === sid)
         if (!slide) {

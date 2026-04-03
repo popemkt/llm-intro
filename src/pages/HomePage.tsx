@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Plus, Trash2, Presentation, Settings } from 'lucide-react'
 import { api, getErrorMessage } from '@/api/client'
+import { data } from '@/data'
 import { THEME_NAMES, type ApiPresentation, type ThemeName } from '@/types'
 import { C } from '@/design/tokens'
 
@@ -20,7 +21,7 @@ export function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      setPresentations(await api.presentations.list())
+      setPresentations(await data.presentations.list())
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -145,32 +146,25 @@ export function HomePage() {
               <motion.div key={pres.id} whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
                 <button
                   onClick={() => navigate(`/p/${pres.id}`)}
-                  aria-label={pres.is_system ? `Open built-in ${pres.name}` : `Open ${pres.name}`}
+                  aria-label={`Open ${pres.name}`}
                   style={{ width: '100%', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', textAlign: 'left', cursor: 'pointer', display: 'block' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <Presentation size={14} style={{ color: C.accent }} />
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{pres.name}</span>
-                    {pres.is_system && (
-                      <span style={{ fontSize: 9, color: C.textDim, fontFamily: 'JetBrains Mono, monospace', padding: '2px 6px', borderRadius: 999, border: `1px solid ${C.border}` }}>
-                        Built-in
-                      </span>
-                    )}
                   </div>
                   <div style={{ fontSize: 10, color: C.muted, fontFamily: 'JetBrains Mono, monospace' }}>
                     slides theme: {pres.theme}
                   </div>
                 </button>
-                {!pres.is_system && (
-                  <button
-                    onClick={e => { e.stopPropagation(); void remove(pres.id) }}
-                    aria-label={`Delete ${pres.name}`}
-                    style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4, borderRadius: 6 }}
-                    title="Delete"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                )}
+                <button
+                  onClick={e => { e.stopPropagation(); void remove(pres.id) }}
+                  aria-label={`Delete ${pres.name}`}
+                  style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4, borderRadius: 6 }}
+                  title="Delete"
+                >
+                  <Trash2 size={13} />
+                </button>
               </motion.div>
             ))}
           </div>

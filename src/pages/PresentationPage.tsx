@@ -6,6 +6,7 @@ import { PresentationView } from '@/components/PresentationView'
 import { FullscreenView } from '@/components/FullscreenView'
 import { codeSlideRegistry } from '@/slides/registry'
 import { api, getErrorMessage } from '@/api/client'
+import { data } from '@/data'
 import type { UnifiedSlide, ApiSlide, ApiPresentation } from '@/types'
 
 function toUnified(slide: ApiSlide, theme: ApiPresentation['theme']): UnifiedSlide {
@@ -47,7 +48,7 @@ export function PresentationPage() {
     setLoading(true)
     setError(null)
     try {
-      const [pres, apiSlides] = await Promise.all([api.presentations.get(pid), api.slides.list(pid)])
+      const [pres, apiSlides] = await Promise.all([data.presentations.get(pid), data.slides.list(pid)])
       setPresentation(pres)
       hydrateSlides(apiSlides, pres)
     } catch {
@@ -117,9 +118,9 @@ export function PresentationPage() {
     navigate(`/p/${pid}/edit/${slideId}`)
   }, [navigate, pid])
 
-  const handleDeleteSlide = useCallback(async (slideId: number) => {
+  const handleDeleteSlide = useCallback(async (slideId: number, options?: { confirm?: boolean }) => {
     if (!presentation) return
-    if (!confirm('Delete this slide?')) return
+    if (options?.confirm !== false && !confirm('Delete this slide?')) return
     setNotice(null)
     try {
       await api.slides.delete(presentation.id, slideId)
@@ -165,7 +166,6 @@ export function PresentationPage() {
           <OverviewGrid
             key="overview"
             slides={slides}
-            canManageSlides={!presentation.is_system}
             presentationId={presentation.id}
             presentationTheme={presentation.theme}
             title={presentation.name}

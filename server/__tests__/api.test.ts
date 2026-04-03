@@ -31,8 +31,7 @@ describe('Presentations API', () => {
     expect(res.status).toBe(201)
     expect(res.body.name).toBe('Test')
     expect(res.body.theme).toBe('dark-blue')
-    expect(res.body.is_system).toBe(false)
-    expect(res.body.system_key).toBeNull()
+    expect(res.body.id).toBeDefined()
   })
 
   it('POST / rejects missing name', async () => {
@@ -127,10 +126,9 @@ describe('Slides API', () => {
 })
 
 describe('System presentation bootstrap', () => {
-  it('seeds one built-in presentation and does not duplicate it after rename', () => {
+  it('keeps a renamed seed deck stable across re-bootstrap', () => {
     const db = new Database(':memory:')
     bootstrapDatabase(db)
-
     db.prepare("UPDATE presentations SET name='Renamed Built-in' WHERE system_key='llm-intro'").run()
     bootstrapDatabase(db)
 
@@ -139,17 +137,37 @@ describe('System presentation bootstrap', () => {
     expect(rows[0]).toEqual({ name: 'Renamed Built-in', system_key: 'llm-intro' })
   })
 
-  it('prevents deleting the built-in presentation and mutating its slides', async () => {
+  it('allows reordering and renaming code slides but blocks deleting them', async () => {
     const { app } = createTestContext()
 
-    const builtIn = (await request(app).get('/api/presentations')).body.find(
-      (presentation: { is_system: boolean }) => presentation.is_system,
-    ) as { id: number }
+    const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
+    const pid = presentations[0].id
 
-    const slides = (await request(app).get(`/api/presentations/${builtIn.id}/slides`)).body as Array<{ id: number }>
+    const slides = (await request(app).get(`/api/presentations/${pid}/slides`)).body as Array<{ id: number; kind: string }>
+    const codeSlide = slides.find(s => s.kind === 'code')!
 
-    expect((await request(app).delete(`/api/presentations/${builtIn.id}`)).status).toBe(403)
-    expect((await request(app).post(`/api/presentations/${builtIn.id}/slides`).send({ title: 'Nope' })).status).toBe(403)
-    expect((await request(app).delete(`/api/presentations/${builtIn.id}/slides/${slides[0].id}`)).status).toBe(403)
+    // Rename works
+    expect((await request(app).patch(`/api/presentations/${pid}/slides/${codeSlide.id}`).send({ title: 'Renamed' })).status).toBe(200)
+    // Delete blocked
+    expect((await request(app).delete(`/api/presentations/${pid}/slides/${codeSlide.id}`)).status).toBe(403)
+  })
+
+  it('exports a filtered HTML deck', async () => {
+    const { app } = createTestContext()
+
+    const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
+    const pid = presentations[0].id
+    const slides = (await request(app).get(`/api/presentations/${pid}/slides`)).body as Array<{ id: number }>
+    const subsetIds = slides.slice(0, 2).map(slide => slide.id)
+
+    const res = await request(app)
+      .post(`/api/presentations/${pid}/export`)
+      .send({ slideIds: subsetIds })
+
+    expect(res.status).toBe(200)
+    expect(res.headers['content-type']).toMatch(/^text\/html/)
+    expect(res.headers['content-disposition']).toContain('.html')
+    expect(res.text).toContain('02-linear-regression')
+    expect(res.text).not.toContain('03-context')
   })
 })

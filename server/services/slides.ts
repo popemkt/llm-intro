@@ -23,8 +23,7 @@ export function createSlidesService(
     },
 
     create(presentationId: number, input: { title: string; blocks: Block[] }) {
-      const presentation = getPresentation(presentationId)
-      if (presentation.is_system) throw new AppError(403, 'built-in presentations are read-only')
+      getPresentation(presentationId)
       return slidesRepo.create(presentationId, input)
     },
 
@@ -32,7 +31,7 @@ export function createSlidesService(
       getPresentation(presentationId)
       const slide = slidesRepo.getById(presentationId, slideId)
       if (!slide) throw new AppError(404, 'slide not found')
-      if (slide.kind === 'code') throw new AppError(403, 'code slides are read-only')
+      if (slide.kind === 'code' && patch.blocks) throw new AppError(403, 'code slide content is read-only')
 
       return slidesRepo.update(presentationId, slideId, {
         title: patch.title ?? slide.title,
@@ -41,20 +40,16 @@ export function createSlidesService(
     },
 
     delete(presentationId: number, slideId: number) {
-      const presentation = getPresentation(presentationId)
-      if (presentation.is_system) throw new AppError(403, 'built-in presentations are read-only')
-
+      getPresentation(presentationId)
       const slide = slidesRepo.getById(presentationId, slideId)
       if (!slide) throw new AppError(404, 'slide not found')
-      if (slide.kind === 'code') throw new AppError(403, 'code slides are read-only')
+      if (slide.kind === 'code') throw new AppError(403, 'code slides cannot be deleted')
 
       slidesRepo.delete(presentationId, slideId)
     },
 
     reorder(presentationId: number, ids: number[]) {
-      const presentation = getPresentation(presentationId)
-      if (presentation.is_system) throw new AppError(403, 'built-in presentations are read-only')
-
+      getPresentation(presentationId)
       const slides = slidesRepo.listByPresentationId(presentationId)
       const slideIds = slides.map((slide) => slide.id)
 

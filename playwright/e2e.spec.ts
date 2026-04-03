@@ -21,20 +21,13 @@ async function openDeckSettings(page: Page) {
 }
 
 test.describe('Home page', () => {
-  test('shows the built-in presentation card', async ({ page }) => {
+  test('shows the seeded presentation card', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByText('Decks')).toBeVisible()
-    await expect(page.getByText('Built-in')).toBeVisible()
-    await expect(page.getByLabel(/Open built-in/i)).toBeVisible()
-  })
-
-  test('built-in deck is read-only', async ({ page }) => {
-    await page.goto('/')
-    await page.getByLabel(/Open built-in/i).click()
-
-    await expect(page.getByText(/read-only/i)).toBeVisible()
-    await expect(page.getByLabel('Add slide')).toHaveCount(0)
-    await expect(page.getByTitle('Presentation settings')).toHaveCount(0)
+    await expect(page.getByLabel('Open LLM & Agent Basics')).toBeVisible()
+    await page.getByLabel('Open LLM & Agent Basics').click()
+    await expect(page).toHaveURL(/\/p\/\d+$/)
+    await expect(page.getByTitle('Presentation settings')).toBeVisible()
   })
 })
 

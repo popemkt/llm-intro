@@ -35,6 +35,11 @@ pnpm-debug.log*
 # Test screenshots (Playwright verification only)
 *.png
 
+# Export temp files
+.export-tmp/
+vite.config.export.ts
+index.export.html
+
 # SQLite database
 server/data/*.db
 server/data/*.db-shm

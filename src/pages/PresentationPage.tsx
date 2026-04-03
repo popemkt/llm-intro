@@ -6,6 +6,7 @@ import { PresentationView } from '@/components/PresentationView'
 import { FullscreenView } from '@/components/FullscreenView'
 import { codeSlideRegistry } from '@/slides/registry'
 import { api, getErrorMessage } from '@/api/client'
+import { data } from '@/data'
 import type { UnifiedSlide, ApiSlide, ApiPresentation } from '@/types'
 
 function toUnified(slide: ApiSlide, theme: ApiPresentation['theme']): UnifiedSlide {
@@ -47,7 +48,7 @@ export function PresentationPage() {
     setLoading(true)
     setError(null)
     try {
-      const [pres, apiSlides] = await Promise.all([api.presentations.get(pid), api.slides.list(pid)])
+      const [pres, apiSlides] = await Promise.all([data.presentations.get(pid), data.slides.list(pid)])
       setPresentation(pres)
       hydrateSlides(apiSlides, pres)
     } catch {

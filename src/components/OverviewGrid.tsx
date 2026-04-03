@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { motion } from 'motion/react'
-import { Plus, Pencil, Home, Trash2, Settings } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Plus, Pencil, Home, Trash2, Settings, ChevronDown, Download, CheckSquare, X, Check } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -28,7 +28,7 @@ interface OverviewGridProps {
 const LOGICAL_W = 1000
 const LOGICAL_H = 562.5
 
-function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sortableEnabled }: {
+function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sortableEnabled, selectMode, selected, onToggleSelect }: {
   slide: UnifiedSlide
   index: number
   onSelect: (i: number) => void
@@ -36,13 +36,16 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
   onDelete: (slideId: number) => void
   onRename: (slideId: number, newTitle: string) => void
   sortableEnabled: boolean
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (slideId: number) => void
 }) {
   const outerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.3)
   const [isRenaming, setIsRenaming] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: slide.id, disabled: !sortableEnabled || isRenaming })
+    useSortable({ id: slide.id, disabled: !sortableEnabled || isRenaming || selectMode })
 
   useEffect(() => {
     const el = outerRef.current
@@ -71,18 +74,25 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined, cursor: sortableEnabled && !isRenaming ? (isDragging ? 'grabbing' : 'grab') : undefined }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined, cursor: selectMode ? 'pointer' : sortableEnabled && !isRenaming ? (isDragging ? 'grabbing' : 'grab') : undefined }}
       className="relative group"
     >
       <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.15 }}
-        onClick={() => { if (!isRenaming) onSelect(index) }}
-        aria-label={`Open slide ${index + 1}: ${slide.title}`}
+        onClick={() => {
+          if (selectMode && onToggleSelect) onToggleSelect(slide.id)
+          else if (!isRenaming) onSelect(index)
+        }}
+        aria-label={selectMode ? `${selected ? 'Deselect' : 'Select'} slide ${index + 1}` : `Open slide ${index + 1}: ${slide.title}`}
         data-testid="slide-thumbnail"
-        className="relative rounded-xl overflow-hidden border border-(--color-border) hover:border-(--color-accent)/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) transition-colors text-left w-full"
-        style={{ background: 'var(--color-surface)' }}
+        className="relative rounded-xl overflow-hidden border transition-colors text-left w-full"
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: selectMode && selected ? 'var(--color-accent)' : 'var(--color-border)',
+          boxShadow: selectMode && selected ? '0 0 0 2px var(--color-accent)' : undefined,
+        }}
       >
         <div ref={outerRef} style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: LOGICAL_W, height: LOGICAL_H, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
@@ -134,8 +144,23 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
         </div>
       </motion.div>
 
+      {/* Selection indicator */}
+      {selectMode && (
+        <div
+          className="absolute top-2 left-2 rounded-md flex items-center justify-center"
+          style={{
+            width: 22, height: 22,
+            background: selected ? 'var(--color-accent)' : 'rgba(0,0,0,0.5)',
+            border: selected ? 'none' : '2px solid var(--color-text-dim)',
+            pointerEvents: 'none',
+          }}
+        >
+          {selected && <Check size={14} style={{ color: '#fff' }} />}
+        </div>
+      )}
+
       {/* Edit + delete buttons — visible on hover, db slides only */}
-      {sortableEnabled && slide.kind === 'db' && !isRenaming && (
+      {!selectMode && sortableEnabled && slide.kind === 'db' && !isRenaming && (
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={e => { e.stopPropagation(); onEdit(slide.id) }}
@@ -180,9 +205,137 @@ function AddCard({ onClick }: { onClick: () => void }) {
   )
 }
 
+async function exportPresentation(presentationId: number, slideIds?: number[]) {
+  const body = slideIds ? JSON.stringify({ slideIds }) : undefined
+  const headers: Record<string, string> = {}
+  if (body) headers['Content-Type'] = 'application/json'
+  const res = await fetch(`/api/presentations/${presentationId}/export`, { method: 'POST', body, headers })
+  if (!res.ok) throw new Error(await res.text())
+  const blob = await res.blob()
+  const filename = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] ?? 'presentation.html'
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+function CommandMenu({ presentationId, onEnterSelectMode }: { presentationId: number; onEnterSelectMode: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onClick); document.removeEventListener('keydown', onKey) }
+  }, [open])
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      await exportPresentation(presentationId)
+    } catch (err) {
+      alert(`Export failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+    } finally {
+      setExporting(false)
+      setOpen(false)
+    }
+  }
+
+  return (
+    <div ref={menuRef} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-label="Commands"
+        title="Commands"
+        className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+        style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+      >
+        <ChevronDown size={14} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="rounded-lg border border-(--color-border) overflow-hidden"
+            style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, minWidth: 180, background: 'var(--color-surface)', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,.4)' }}
+          >
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors hover:bg-(--color-border) disabled:opacity-50"
+              style={{ color: 'var(--color-text)', background: 'none', border: 'none', cursor: exporting ? 'wait' : 'pointer', textAlign: 'left' }}
+            >
+              <Download size={13} style={{ color: 'var(--color-text-dim)' }} />
+              {exporting ? 'Exporting…' : 'Export all as HTML'}
+            </button>
+            <button
+              onClick={() => { setOpen(false); onEnterSelectMode() }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors hover:bg-(--color-border)"
+              style={{ color: 'var(--color-text)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+            >
+              <CheckSquare size={13} style={{ color: 'var(--color-text-dim)' }} />
+              Select slides
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export function OverviewGrid({ slides, presentationId, presentationTheme, title, onSelectSlide, onAddSlide, onReorder, onEditSlide, onDeleteSlide, onRenameSlide, onGoHome }: OverviewGridProps) {
   const navigate = useNavigate()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [bulkExporting, setBulkExporting] = useState(false)
+
+  const toggleSelect = useCallback((slideId: number) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(slideId)) next.delete(slideId)
+      else next.add(slideId)
+      return next
+    })
+  }, [])
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false)
+    setSelected(new Set())
+  }, [])
+
+  const selectAll = useCallback(() => {
+    setSelected(new Set(slides.map(s => s.id)))
+  }, [slides])
+
+  const handleBulkExport = useCallback(async () => {
+    if (selected.size === 0) return
+    setBulkExporting(true)
+    try {
+      await exportPresentation(presentationId, Array.from(selected))
+    } catch (err) {
+      alert(`Export failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+    } finally {
+      setBulkExporting(false)
+    }
+  }, [presentationId, selected])
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selected.size === 0) return
+    if (!confirm(`Delete ${selected.size} slide${selected.size > 1 ? 's' : ''}?`)) return
+    for (const id of selected) await onDeleteSlide(id)
+    exitSelectMode()
+  }, [selected, onDeleteSlide, exitSelectMode])
 
   const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return
@@ -216,18 +369,44 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
         <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--color-surface)', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)' }}>
           {presentationTheme}
         </span>
-        <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-text-dim)' }}>
-          {slides.length} slides · click to present
-        </span>
-        <button
-          onClick={() => navigate(`/p/${presentationId}/settings`)}
-          aria-label="Presentation settings"
-          title="Presentation settings"
-          className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
-          style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
-        >
-          <Settings size={14} />
-        </button>
+        {selectMode ? (
+          <>
+            <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-accent)' }}>
+              {selected.size} of {slides.length} selected
+            </span>
+            <button
+              onClick={selectAll}
+              className="text-xs px-2 py-1 rounded-lg transition-colors hover:bg-(--color-border)"
+              style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Select all
+            </button>
+            <button
+              onClick={exitSelectMode}
+              className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+              style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+              title="Cancel selection"
+            >
+              <X size={14} />
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="text-xs font-mono ml-auto" style={{ color: 'var(--color-text-dim)' }}>
+              {slides.length} slides · click to present
+            </span>
+            <button
+              onClick={() => navigate(`/p/${presentationId}/settings`)}
+              aria-label="Presentation settings"
+              title="Presentation settings"
+              className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+              style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <Settings size={14} />
+            </button>
+            <CommandMenu presentationId={presentationId} onEnterSelectMode={() => setSelectMode(true)} />
+          </>
+        )}
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -238,17 +417,62 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
                 key={slide.id}
                 slide={slide}
                 index={i}
-                sortableEnabled
+                sortableEnabled={!selectMode}
+                selectMode={selectMode}
+                selected={selected.has(slide.id)}
+                onToggleSelect={toggleSelect}
                 onSelect={onSelectSlide}
                 onEdit={onEditSlide}
                 onDelete={onDeleteSlide}
                 onRename={onRenameSlide}
               />
             ))}
-            <AddCard onClick={onAddSlide} />
+            {!selectMode && <AddCard onClick={onAddSlide} />}
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Bulk action bar */}
+      <AnimatePresence>
+        {selectMode && selected.size > 0 && (
+          <motion.div
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-(--color-border)"
+            style={{ background: 'var(--color-surface)', zIndex: 50, boxShadow: '0 8px 32px rgba(0,0,0,.5)' }}
+          >
+            <span className="text-xs font-mono mr-2" style={{ color: 'var(--color-text-dim)' }}>
+              {selected.size} selected
+            </span>
+            <button
+              onClick={handleBulkExport}
+              disabled={bulkExporting}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-(--color-border) disabled:opacity-50"
+              style={{ color: 'var(--color-text)', background: 'none', border: 'none', cursor: bulkExporting ? 'wait' : 'pointer' }}
+            >
+              <Download size={13} />
+              {bulkExporting ? 'Exporting…' : 'Export'}
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+              style={{ color: '#ff6b6b', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <Trash2 size={13} />
+              Delete
+            </button>
+            <button
+              onClick={exitSelectMode}
+              className="text-xs px-2 py-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+              style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

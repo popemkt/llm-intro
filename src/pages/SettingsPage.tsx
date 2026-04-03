@@ -4,6 +4,7 @@ import { ArrowLeft, Check } from 'lucide-react'
 import type { ThemeName } from '@/types'
 import { THEME_NAMES } from '@/types'
 import { api, getErrorMessage } from '@/api/client'
+import { data } from '@/data'
 import { C } from '@/design/tokens'
 import { THEME_META } from '@/lib/themeMeta'
 
@@ -28,7 +29,7 @@ export function SettingsPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    api.presentations.get(pid)
+    data.presentations.get(pid)
       .then(p => { setName(p.name); setSlideTheme(p.theme) })
       .catch(err => setError(getErrorMessage(err)))
       .finally(() => setLoading(false))

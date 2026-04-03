@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Plus, Trash2, Presentation, Settings } from 'lucide-react'
 import { api, getErrorMessage } from '@/api/client'
+import { data } from '@/data'
 import { THEME_NAMES, type ApiPresentation, type ThemeName } from '@/types'
 import { C } from '@/design/tokens'
 
@@ -20,7 +21,7 @@ export function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      setPresentations(await api.presentations.list())
+      setPresentations(await data.presentations.list())
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {

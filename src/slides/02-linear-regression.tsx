@@ -73,11 +73,6 @@ const SENTENCE = [
   'the','sequence','then','loop','back','to','generate','text',
 ]
 
-// ─── dot spring — same transition used on both ends of the layoutId morph ────
-const DOT_SPRING = { type: 'spring' as const, stiffness: 28, damping: 14 }
-// seconds the dots hold in place before morphing to tokens
-const HOLD = 0.5
-
 // ─── Part A: intro ────────────────────────────────────────────────────────────
 function Intro() {
   const [hovered, setHovered] = useState<'algo'|'model'|null>(null)
@@ -499,7 +494,7 @@ function TokenPredict({ pts }: {
               <ContextChip
                 key={pts[i].id}
                 word={word}
-                id={pts[i].id}
+                id={String(pts[i].id)}
                 index={i}
               />
             )

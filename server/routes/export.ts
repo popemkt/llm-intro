@@ -1,8 +1,8 @@
 import type express from 'express'
+import { execFileSync } from 'child_process'
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import fs from 'fs'
-import { execSync } from 'child_process'
 import type { createPresentationsService } from '../services/presentations.js'
 import type { createSlidesService } from '../services/slides.js'
 
@@ -11,7 +11,6 @@ type SlidesService = ReturnType<typeof createSlidesService>
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '../..')
-const EXPORT_TMP = path.join(ROOT, '.export-tmp')
 
 function toVarName(codeId: string): string {
   return 'S' + codeId.replace(/-/g, '_')
@@ -40,7 +39,7 @@ createRoot(document.getElementById('root')!).render(<ExportViewer />)
 `
 }
 
-function generateViteConfig(): string {
+function generateViteConfig(tempDir: string): string {
   return `\
 import path from 'path'
 import { defineConfig } from 'vite'
@@ -49,12 +48,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
 export default defineConfig({
+  root: ${JSON.stringify(tempDir)},
   plugins: [react(), tailwindcss(), viteSingleFile()],
-  resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+  resolve: { alias: { '@': ${JSON.stringify(path.join(ROOT, 'src'))} } },
   build: {
-    outDir: '.export-tmp/dist',
+    outDir: ${JSON.stringify(path.join(tempDir, 'dist'))},
     emptyOutDir: true,
-    rollupOptions: { input: path.resolve(__dirname, '.export-tmp/index.html') },
+    rollupOptions: { input: ${JSON.stringify(path.join(tempDir, 'index.html'))} },
   },
 })
 `
@@ -67,9 +67,22 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
 <body><div id="root"></div><script type="module" src="./entry.tsx"></script></body>
 </html>`
 
-function cleanup() {
-  try { fs.rmSync(EXPORT_TMP, { recursive: true, force: true }) } catch {}
-  try { fs.unlinkSync(path.join(ROOT, 'vite.config.export.ts')) } catch {}
+function createExportWorkspace() {
+  const tempDir = fs.mkdtempSync(path.join(ROOT, '.export-tmp-'))
+  const configPath = path.join(tempDir, 'vite.config.export.ts')
+  const entryPath = path.join(tempDir, 'entry.tsx')
+  const indexPath = path.join(tempDir, 'index.html')
+  const distHtmlPath = path.join(tempDir, 'dist', 'index.html')
+
+  return { tempDir, configPath, entryPath, indexPath, distHtmlPath }
+}
+
+function cleanup(tempDir: string) {
+  try {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  } catch {
+    // Best-effort cleanup for ephemeral export workspaces.
+  }
 }
 
 export function createExportHandler(
@@ -78,6 +91,7 @@ export function createExportHandler(
 ): express.RequestHandler {
   return async (req, res, next) => {
     const pid = Number(req.params.pid)
+    let tempDir: string | null = null
 
     try {
       const presentation = presentationsService.get(pid)
@@ -88,33 +102,37 @@ export function createExportHandler(
         slides = slides.filter(s => idSet.has(s.id))
       }
       const codeIds = slides.filter(s => s.kind === 'code' && s.code_id).map(s => s.code_id as string)
+      const workspace = createExportWorkspace()
+      tempDir = workspace.tempDir
 
-      // Generate temp files
-      fs.mkdirSync(EXPORT_TMP, { recursive: true })
-      fs.writeFileSync(path.join(EXPORT_TMP, 'entry.tsx'), generateEntryFile(codeIds, JSON.stringify(presentation), JSON.stringify(slides)))
-      fs.writeFileSync(path.join(EXPORT_TMP, 'index.html'), HTML_TEMPLATE)
-      fs.writeFileSync(path.join(ROOT, 'vite.config.export.ts'), generateViteConfig())
+      fs.writeFileSync(
+        workspace.entryPath,
+        generateEntryFile(codeIds, JSON.stringify(presentation), JSON.stringify(slides)),
+      )
+      fs.writeFileSync(workspace.indexPath, HTML_TEMPLATE)
+      fs.writeFileSync(workspace.configPath, generateViteConfig(workspace.tempDir))
 
-      // Run vite build
       try {
-        execSync('npx vite build --config vite.config.export.ts', { cwd: ROOT, stdio: 'pipe', timeout: 60_000 })
+        execFileSync('pnpm', ['exec', 'vite', 'build', '--config', workspace.configPath], {
+          cwd: ROOT,
+          stdio: 'pipe',
+          timeout: 60_000,
+        })
       } catch (buildErr: any) {
         const msg = buildErr?.stderr?.toString() || buildErr?.stdout?.toString() || 'unknown error'
         throw new Error(`Export build failed: ${msg}`)
       }
 
-      // Read + send
-      // Vite preserves input directory structure, so output is nested
-      const distHtml = path.join(EXPORT_TMP, 'dist', '.export-tmp', 'index.html')
-      if (!fs.existsSync(distHtml)) throw new Error('Export build produced no output')
+      if (!fs.existsSync(workspace.distHtmlPath)) throw new Error('Export build produced no output')
 
-      const html = fs.readFileSync(distHtml, 'utf-8')
+      const html = fs.readFileSync(workspace.distHtmlPath, 'utf-8')
       res.setHeader('Content-Type', 'text/html')
       res.setHeader('Content-Disposition', `attachment; filename="${presentation.name}.html"`)
       res.send(html)
-      cleanup()
+      cleanup(workspace.tempDir)
+      tempDir = null
     } catch (err) {
-      cleanup()
+      if (tempDir) cleanup(tempDir)
       next(err)
     }
   }

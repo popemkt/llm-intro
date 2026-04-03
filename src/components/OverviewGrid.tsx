@@ -20,7 +20,7 @@ interface OverviewGridProps {
   onAddSlide: () => void
   onReorder: (ids: number[]) => void
   onEditSlide: (slideId: number) => void
-  onDeleteSlide: (slideId: number) => void
+  onDeleteSlide: (slideId: number, options?: { confirm?: boolean }) => Promise<void>
   onRenameSlide: (slideId: number, newTitle: string) => void
   onGoHome: () => void
 }
@@ -46,6 +46,9 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
   const [draftTitle, setDraftTitle] = useState('')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: slide.id, disabled: !sortableEnabled || isRenaming || selectMode })
+  const dragHandleProps = sortableEnabled && !isRenaming && !selectMode
+    ? { ...attributes, ...listeners }
+    : {}
 
   useEffect(() => {
     const el = outerRef.current
@@ -70,13 +73,12 @@ function ThumbnailCell({ slide, index, onSelect, onEdit, onDelete, onRename, sor
   const cancelRename = () => setIsRenaming(false)
 
   return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined, cursor: selectMode ? 'pointer' : sortableEnabled && !isRenaming ? (isDragging ? 'grabbing' : 'grab') : undefined }}
-      className="relative group"
-    >
+      <div
+        ref={setNodeRef}
+        {...dragHandleProps}
+        style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined, cursor: selectMode ? 'pointer' : sortableEnabled && !isRenaming ? (isDragging ? 'grabbing' : 'grab') : undefined }}
+        className="relative group"
+      >
       <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -299,6 +301,8 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkExporting, setBulkExporting] = useState(false)
+  const selectedSlides = slides.filter(slide => selected.has(slide.id))
+  const selectedDbSlides = selectedSlides.filter((slide): slide is Extract<UnifiedSlide, { kind: 'db' }> => slide.kind === 'db')
 
   const toggleSelect = useCallback((slideId: number) => {
     setSelected(prev => {
@@ -331,11 +335,14 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
   }, [presentationId, selected])
 
   const handleBulkDelete = useCallback(async () => {
-    if (selected.size === 0) return
-    if (!confirm(`Delete ${selected.size} slide${selected.size > 1 ? 's' : ''}?`)) return
-    for (const id of selected) await onDeleteSlide(id)
+    if (selectedDbSlides.length === 0) {
+      alert('Select at least one editable slide to delete.')
+      return
+    }
+    if (!confirm(`Delete ${selectedDbSlides.length} slide${selectedDbSlides.length > 1 ? 's' : ''}?`)) return
+    for (const slide of selectedDbSlides) await onDeleteSlide(slide.id, { confirm: false })
     exitSelectMode()
-  }, [selected, onDeleteSlide, exitSelectMode])
+  }, [selectedDbSlides, onDeleteSlide, exitSelectMode])
 
   const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return
@@ -457,8 +464,9 @@ export function OverviewGrid({ slides, presentationId, presentationTheme, title,
             </button>
             <button
               onClick={handleBulkDelete}
+              disabled={selectedDbSlides.length === 0}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
-              style={{ color: '#ff6b6b', background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{ color: '#ff6b6b', background: 'none', border: 'none', cursor: selectedDbSlides.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedDbSlides.length === 0 ? 0.45 : 1 }}
             >
               <Trash2 size={13} />
               Delete

@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const DB_PATH = path.join(__dirname, 'data', 'app.db')
 
+const SEED_PRESENTATION_KEY = 'llm-intro'
 const SEED_PRESENTATION_NAME = 'LLM & Agent Basics'
 
 const BUILT_IN_SLIDES = [
@@ -20,7 +21,7 @@ const BUILT_IN_SLIDES = [
   { code_id: '09-appendix', title: 'Tech Landscape (Appendix)' },
 ] as const
 
-export function openDatabase(filePath = DB_PATH) {
+export function openDatabase(filePath = process.env.LLM_INTRO_DB_PATH ?? DB_PATH) {
   const db = new Database(filePath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
@@ -96,6 +97,15 @@ function migrate(db: Database.Database) {
     `)
     db.pragma('user_version = 4')
   }
+
+  if (version < 5) {
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS presentations_system_key_unique
+      ON presentations(system_key)
+      WHERE system_key IS NOT NULL
+    `)
+    db.pragma('user_version = 5')
+  }
 }
 
 function normalizeSlidePositions(db: Database.Database) {
@@ -116,20 +126,24 @@ function normalizeSlidePositions(db: Database.Database) {
 }
 
 function seedSystemPresentation(db: Database.Database) {
-  // Find by name, or by legacy system_key, or create new
+  const selectBySystemKey = db.prepare('SELECT id FROM presentations WHERE system_key=?')
+  const selectByName = db.prepare('SELECT id FROM presentations WHERE name=?')
+  const attachSystemKey = db.prepare('UPDATE presentations SET system_key=? WHERE id=?')
+
   const existing = (
-    db.prepare('SELECT id FROM presentations WHERE name=?').get(SEED_PRESENTATION_NAME) ??
-    db.prepare('SELECT id FROM presentations WHERE system_key=?').get('llm-intro')
+    selectBySystemKey.get(SEED_PRESENTATION_KEY) ??
+    selectByName.get(SEED_PRESENTATION_NAME)
   ) as { id: number } | undefined
 
   let presentationId: number
 
   if (existing) {
     presentationId = existing.id
+    attachSystemKey.run(SEED_PRESENTATION_KEY, presentationId)
   } else {
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO presentations (name, theme) VALUES (?, ?)')
-      .run(SEED_PRESENTATION_NAME, 'dark-green')
+      .prepare('INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)')
+      .run(SEED_PRESENTATION_NAME, 'dark-green', SEED_PRESENTATION_KEY)
     presentationId = Number(lastInsertRowid)
   }
 

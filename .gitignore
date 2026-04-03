@@ -34,9 +34,12 @@ pnpm-debug.log*
 
 # Test screenshots (Playwright verification only)
 *.png
+playwright-report/
+test-results/
 
 # Export temp files
 .export-tmp/
+.export-tmp-*/
 vite.config.export.ts
 index.export.html
 

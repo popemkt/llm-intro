@@ -126,14 +126,15 @@ describe('Slides API', () => {
 })
 
 describe('System presentation bootstrap', () => {
-  it('seeds code slides and does not duplicate them on re-bootstrap', () => {
+  it('keeps a renamed seed deck stable across re-bootstrap', () => {
     const db = new Database(':memory:')
     bootstrapDatabase(db)
+    db.prepare("UPDATE presentations SET name='Renamed Built-in' WHERE system_key='llm-intro'").run()
     bootstrapDatabase(db)
 
-    const rows = db.prepare('SELECT name FROM presentations').all() as Array<{ name: string }>
+    const rows = db.prepare('SELECT name, system_key FROM presentations').all() as Array<{ name: string; system_key: string | null }>
     expect(rows).toHaveLength(1)
-    expect(rows[0].name).toBe('LLM & Agent Basics')
+    expect(rows[0]).toEqual({ name: 'Renamed Built-in', system_key: 'llm-intro' })
   })
 
   it('allows reordering and renaming code slides but blocks deleting them', async () => {
@@ -149,5 +150,24 @@ describe('System presentation bootstrap', () => {
     expect((await request(app).patch(`/api/presentations/${pid}/slides/${codeSlide.id}`).send({ title: 'Renamed' })).status).toBe(200)
     // Delete blocked
     expect((await request(app).delete(`/api/presentations/${pid}/slides/${codeSlide.id}`)).status).toBe(403)
+  })
+
+  it('exports a filtered HTML deck', async () => {
+    const { app } = createTestContext()
+
+    const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
+    const pid = presentations[0].id
+    const slides = (await request(app).get(`/api/presentations/${pid}/slides`)).body as Array<{ id: number }>
+    const subsetIds = slides.slice(0, 2).map(slide => slide.id)
+
+    const res = await request(app)
+      .post(`/api/presentations/${pid}/export`)
+      .send({ slideIds: subsetIds })
+
+    expect(res.status).toBe(200)
+    expect(res.headers['content-type']).toMatch(/^text\/html/)
+    expect(res.headers['content-disposition']).toContain('.html')
+    expect(res.text).toContain('02-linear-regression')
+    expect(res.text).not.toContain('03-context')
   })
 })

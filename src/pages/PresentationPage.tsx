@@ -118,9 +118,9 @@ export function PresentationPage() {
     navigate(`/p/${pid}/edit/${slideId}`)
   }, [navigate, pid])
 
-  const handleDeleteSlide = useCallback(async (slideId: number) => {
+  const handleDeleteSlide = useCallback(async (slideId: number, options?: { confirm?: boolean }) => {
     if (!presentation) return
-    if (!confirm('Delete this slide?')) return
+    if (options?.confirm !== false && !confirm('Delete this slide?')) return
     setNotice(null)
     try {
       await api.slides.delete(presentation.id, slideId)

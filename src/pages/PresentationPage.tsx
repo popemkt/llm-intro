@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { OverviewGrid } from '@/components/OverviewGrid'
 import { PresentationView } from '@/components/PresentationView'
 import { FullscreenView } from '@/components/FullscreenView'
@@ -32,7 +32,8 @@ export function PresentationPage() {
   const [presentation, setPresentation] = useState<ApiPresentation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{ msg: string; type: 'error' | 'success' } | null>(null)
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const hydrateSlides = useCallback((apiSlides: ApiSlide[], pres: ApiPresentation) => {
     setSlides(apiSlides.map(slide => toUnified(slide, pres.theme)))
@@ -85,21 +86,25 @@ export function PresentationPage() {
     setActiveIndex(index => Math.min(index, slides.length - 1))
   }, [mode, slides.length])
 
+  const showNotice = useCallback((msg: string, type: 'error' | 'success' = 'error') => {
+    setNotice({ msg, type })
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    noticeTimerRef.current = setTimeout(() => setNotice(null), type === 'success' ? 2500 : 5000)
+  }, [])
+
   const handleAddSlide = useCallback(async () => {
     if (!presentation) return
-    setNotice(null)
     try {
       const slide = await api.slides.create(presentation.id)
       setSlides(prev => [...prev, toUnified(slide, presentation.theme)])
     } catch (err) {
-      setNotice(getErrorMessage(err))
+      showNotice(getErrorMessage(err))
     }
-  }, [presentation])
+  }, [presentation, showNotice])
 
   const handleReorder = useCallback(async (ids: number[]) => {
     if (!presentation) return
     const previousSlides = slides
-    setNotice(null)
     setSlides(prev => {
       const map = new Map(prev.map(slide => [slide.id, slide]))
       return ids.map((slideId) => map.get(slideId)!).filter(Boolean)
@@ -110,9 +115,9 @@ export function PresentationPage() {
       hydrateSlides(reordered, presentation)
     } catch (err) {
       setSlides(previousSlides)
-      setNotice(getErrorMessage(err))
+      showNotice(getErrorMessage(err))
     }
-  }, [hydrateSlides, presentation, slides])
+  }, [hydrateSlides, presentation, slides, showNotice])
 
   const handleEditSlide = useCallback((slideId: number) => {
     navigate(`/p/${pid}/edit/${slideId}`)
@@ -121,25 +126,23 @@ export function PresentationPage() {
   const handleDeleteSlide = useCallback(async (slideId: number, options?: { confirm?: boolean }) => {
     if (!presentation) return
     if (options?.confirm !== false && !confirm('Delete this slide?')) return
-    setNotice(null)
     try {
       await api.slides.delete(presentation.id, slideId)
       setSlides(prev => prev.filter(slide => slide.id !== slideId))
     } catch (err) {
-      setNotice(getErrorMessage(err))
+      showNotice(getErrorMessage(err))
     }
-  }, [presentation])
+  }, [presentation, showNotice])
 
   const handleRenameSlide = useCallback(async (slideId: number, newTitle: string) => {
     if (!presentation) return
-    setNotice(null)
     try {
       const updatedSlide = await api.slides.update(presentation.id, slideId, { title: newTitle })
       setSlides(prev => prev.map(slide => slide.id === slideId ? toUnified(updatedSlide, presentation.theme) : slide))
     } catch (err) {
-      setNotice(getErrorMessage(err))
+      showNotice(getErrorMessage(err))
     }
-  }, [presentation])
+  }, [presentation, showNotice])
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0f0e', color: '#7a9985', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
@@ -156,11 +159,21 @@ export function PresentationPage() {
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
-      {notice && (
-        <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 20, maxWidth: 320, padding: '10px 12px', borderRadius: 10, background: 'rgba(20, 26, 23, 0.95)', border: '1px solid var(--color-border)', color: '#ff9b9b', fontSize: 12 }}>
-          {notice}
-        </div>
-      )}
+      <AnimatePresence>
+        {notice && (
+          <motion.div
+            key={notice.msg}
+            initial={{ opacity: 0, y: -8, x: 8 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -8, x: 8 }}
+            transition={{ duration: 0.18 }}
+            style={{ position: 'fixed', top: 16, right: 16, zIndex: 100, maxWidth: 320, padding: '10px 14px', borderRadius: 10, background: 'rgba(20, 26, 23, 0.97)', border: `1px solid ${notice.type === 'error' ? '#ff6b6b55' : 'var(--color-accent)'}`, color: notice.type === 'error' ? '#ff9b9b' : 'var(--color-accent)', fontSize: 12, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,.5)' }}
+            onClick={() => setNotice(null)}
+          >
+            {notice.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence mode="wait">
         {mode === 'overview' ? (
           <OverviewGrid

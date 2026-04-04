@@ -50,6 +50,8 @@ const inp: React.CSSProperties = {
   fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box',
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 export function SlideEditorPage() {
   const { id: pidStr, sid: sidStr } = useParams<{ id: string; sid: string }>()
   const navigate = useNavigate()
@@ -60,13 +62,22 @@ export function SlideEditorPage() {
   const [blocks, setBlocks]     = useState<Block[]>([])
   const [theme, setTheme]       = useState<ThemeName>('dark-green')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [saving, setSaving]     = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [loading, setLoading]   = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const dragRef   = useRef<DragState | null>(null)
+  const hasLoadedRef = useRef(false)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Current values ref (for keyboard handler)
+  const blocksRef = useRef(blocks)
+  const titleRef = useRef(title)
+  useEffect(() => { blocksRef.current = blocks }, [blocks])
+  useEffect(() => { titleRef.current = title }, [title])
 
   useEffect(() => {
     setLoading(true)
@@ -85,6 +96,7 @@ export function SlideEditorPage() {
         setTitle(slide.title)
         setBlocks(slide.blocks)
         setTheme(pres.theme)
+        hasLoadedRef.current = true
       })
       .catch(err => setLoadError(getErrorMessage(err)))
       .finally(() => setLoading(false))
@@ -130,6 +142,65 @@ export function SlideEditorPage() {
     }
   }, [])
 
+  // Auto-save: trigger on blocks/title changes after initial load
+  useEffect(() => {
+    if (!hasLoadedRef.current || loading) return
+    setSaveStatus('idle')
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setSaveStatus('saving')
+      setSaveError(null)
+      try {
+        await api.slides.update(pid, sid, { title: titleRef.current, blocks: blocksRef.current })
+        setSaveStatus('saved')
+        if (savedStatusTimerRef.current) clearTimeout(savedStatusTimerRef.current)
+        savedStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
+      } catch (err) {
+        setSaveStatus('error')
+        setSaveError(getErrorMessage(err))
+      }
+    }, 1500)
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, title, pid, sid, loading])
+
+  const saveAndExit = useCallback(async () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    setSaveStatus('saving')
+    setSaveError(null)
+    try {
+      await api.slides.update(pid, sid, { title: titleRef.current, blocks: blocksRef.current })
+      navigate(`/p/${pid}`)
+    } catch (err) {
+      setSaveStatus('error')
+      setSaveError(getErrorMessage(err))
+    }
+  }, [pid, sid, navigate])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Cmd/Ctrl+S — save and exit
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        void saveAndExit()
+        return
+      }
+      // Delete/Backspace — delete selected block (not when editing text inputs)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        const target = e.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+        e.preventDefault()
+        setBlocks(prev => prev.filter(b => b.id !== selectedId))
+        setSelectedId(null)
+      }
+      // Escape — deselect
+      if (e.key === 'Escape') setSelectedId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [saveAndExit, selectedId])
+
   const startDrag = (e: React.PointerEvent, block: Block, mode: DragMode = 'move') => {
     e.stopPropagation()
     setSelectedId(block.id)
@@ -156,20 +227,17 @@ export function SlideEditorPage() {
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...patch } as Block : b))
   }, [])
 
-  const save = async () => {
-    setSaving(true)
-    setSaveError(null)
-    try {
-      await api.slides.update(pid, sid, { title, blocks })
-      navigate(`/p/${pid}`)
-    } catch (err) {
-      setSaveError(getErrorMessage(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const selectedBlock = blocks.find(b => b.id === selectedId) ?? null
+
+  const saveStatusLabel = saveStatus === 'saving' ? 'Saving…'
+    : saveStatus === 'saved' ? 'Saved'
+    : saveStatus === 'error' ? 'Error'
+    : null
+
+  const saveStatusColor = saveStatus === 'saving' ? C.textDim
+    : saveStatus === 'saved' ? C.accent
+    : saveStatus === 'error' ? '#ff8a8a'
+    : undefined
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, color: C.textDim, fontSize: 13 }}>
@@ -201,6 +269,12 @@ export function SlideEditorPage() {
           placeholder="Slide title"
         />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Auto-save status */}
+          {saveStatusLabel && (
+            <span style={{ fontSize: 11, color: saveStatusColor, fontFamily: 'JetBrains Mono, monospace', transition: 'color 0.2s' }}>
+              {saveStatusLabel}
+            </span>
+          )}
           <button
             onClick={() => navigate(`/p/${pid}/settings`)}
             style={{ color: C.textDim, background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', padding: '6px 12px', borderRadius: 8, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
@@ -208,11 +282,12 @@ export function SlideEditorPage() {
             <Settings size={13} /> Theme
           </button>
           <button
-            onClick={save}
-            disabled={saving}
-            style={{ padding: '8px 20px', borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, background: C.accent, border: 'none', color: C.bg, opacity: saving ? 0.6 : 1 }}
+            onClick={saveAndExit}
+            disabled={saveStatus === 'saving'}
+            title="Save and exit (⌘S)"
+            style={{ padding: '8px 20px', borderRadius: 8, cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, background: C.accent, border: 'none', color: C.bg, opacity: saveStatus === 'saving' ? 0.6 : 1 }}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saveStatus === 'saving' ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
@@ -392,7 +467,8 @@ export function SlideEditorPage() {
               </>
             ) : (
               <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 11, color: C.muted, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6 }}>
-                click a block<br />to select &amp; edit
+                click a block<br />to select &amp; edit<br /><br />
+                <span style={{ fontSize: 10, opacity: 0.6 }}>Del · delete selected<br />⌘S · save &amp; exit</span>
               </div>
             )}
           </div>

@@ -18,11 +18,10 @@ const variants = {
 }
 
 export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Props) {
-  const containerRef   = useRef<HTMLDivElement>(null)
-  const directionRef   = useRef(1)
-  const transitioning  = useRef(false)
+  const containerRef  = useRef<HTMLDivElement>(null)
+  const directionRef  = useRef(1)
+  const transitioning = useRef(false)
 
-  // Enter browser fullscreen
   useEffect(() => {
     containerRef.current?.requestFullscreen().catch(() => {})
     return () => {
@@ -30,7 +29,6 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
     }
   }, [])
 
-  // Exit when browser fullscreen ends (ESC, etc.)
   useEffect(() => {
     const onFSChange = () => { if (!document.fullscreenElement) onExit() }
     document.addEventListener('fullscreenchange', onFSChange)
@@ -45,7 +43,6 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
     onNavigate(next)
   }, [activeIndex, slides.length, onNavigate])
 
-  // Keyboard navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); go(activeIndex + 1) }
@@ -59,10 +56,7 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
 
   if (!slide) {
     return (
-      <div
-        ref={containerRef}
-        style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
-      >
+      <div ref={containerRef} style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
         No slides available.
       </div>
     )

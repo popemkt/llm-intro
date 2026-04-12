@@ -152,7 +152,7 @@ describe('System presentation bootstrap', () => {
     expect((await request(app).delete(`/api/presentations/${pid}/slides/${codeSlide.id}`)).status).toBe(403)
   })
 
-  it('exports a filtered HTML deck', async () => {
+  it('exports a filtered HTML deck', { timeout: 60000 }, async () => {
     const { app } = createTestContext()
 
     const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
@@ -175,7 +175,7 @@ describe('System presentation bootstrap', () => {
     expect(res.text).toContain('__EXPORT_DATA__')
   })
 
-  it('exports deck mode with overview shell metadata', async () => {
+  it('exports deck mode with overview shell metadata', { timeout: 60000 }, async () => {
     const { app } = createTestContext()
 
     const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>

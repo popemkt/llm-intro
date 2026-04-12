@@ -47,3 +47,4 @@ index.export.html
 server/data/*.db
 server/data/*.db-shm
 server/data/*.db-wal
+.worktrees/

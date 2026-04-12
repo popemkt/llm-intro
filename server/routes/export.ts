@@ -8,15 +8,39 @@ import type { createSlidesService } from '../services/slides.js'
 
 type PresentationsService = ReturnType<typeof createPresentationsService>
 type SlidesService = ReturnType<typeof createSlidesService>
+type ExportMode = 'player' | 'deck'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '../..')
+const EXPORT_ARTIFACT_VERSION = 1
+const EXPORT_DATA_VERSION = 1
+
+let cachedSourceCommit: string | null = null
 
 function toVarName(codeId: string): string {
   return 'S' + codeId.replace(/-/g, '_')
 }
 
-function generateEntryFile(codeIds: string[], presJson: string, slidesJson: string): string {
+function getSourceCommit(): string {
+  if (cachedSourceCommit) return cachedSourceCommit
+
+  try {
+    cachedSourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: ROOT,
+      stdio: 'pipe',
+    }).toString().trim()
+  } catch {
+    cachedSourceCommit = 'unknown'
+  }
+
+  return cachedSourceCommit
+}
+
+function parseExportMode(input: unknown): ExportMode {
+  return input === 'deck' ? 'deck' : 'player'
+}
+
+function generateEntryFile(codeIds: string[], exportDataJson: string, exportMetaJson: string): string {
   const imports = codeIds.map(id => `import ${toVarName(id)} from '@/slides/${id}'`).join('\n')
   const entries = codeIds.map(id => `  '${id}': ${toVarName(id)},`).join('\n')
 
@@ -31,24 +55,22 @@ ${imports}
 const __EXPORT_REGISTRY__: Record<string, ComponentType<SlideProps>> = {
 ${entries}
 }
-const __EXPORT_PRESENTATION__: ApiPresentation = ${presJson}
-const __EXPORT_SLIDES__: ApiSlide[] = ${slidesJson}
+const __EXPORT_DATA__: { version: number; presentation: ApiPresentation; slides: ApiSlide[] } = ${exportDataJson}
+const __EXPORT_META__ = ${exportMetaJson}
 
-Object.assign(window, { __EXPORT_REGISTRY__, __EXPORT_PRESENTATION__, __EXPORT_SLIDES__ })
+Object.assign(window, { __EXPORT_REGISTRY__, __EXPORT_DATA__, __EXPORT_META__ })
 createRoot(document.getElementById('root')!).render(<ExportViewer />)
 `
 }
 
 function generateViteConfig(tempDir: string): string {
   return `\
-import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
 export default defineConfig({
-  root: ${JSON.stringify(tempDir)},
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: { alias: { '@': ${JSON.stringify(path.join(ROOT, 'src'))} } },
   build: {
@@ -73,8 +95,9 @@ function createExportWorkspace() {
   const entryPath = path.join(tempDir, 'entry.tsx')
   const indexPath = path.join(tempDir, 'index.html')
   const distHtmlPath = path.join(tempDir, 'dist', 'index.html')
+  const nestedDistHtmlPath = path.join(tempDir, 'dist', path.relative(ROOT, indexPath))
 
-  return { tempDir, configPath, entryPath, indexPath, distHtmlPath }
+  return { tempDir, configPath, entryPath, indexPath, distHtmlPath, nestedDistHtmlPath }
 }
 
 function cleanup(tempDir: string) {
@@ -97,17 +120,32 @@ export function createExportHandler(
       const presentation = presentationsService.get(pid)
       let slides = slidesService.list(pid)
       const slideIds: number[] | undefined = req.body?.slideIds
+      const exportMode = parseExportMode(req.body?.mode)
       if (Array.isArray(slideIds) && slideIds.length > 0) {
         const idSet = new Set(slideIds)
         slides = slides.filter(s => idSet.has(s.id))
       }
       const codeIds = slides.filter(s => s.kind === 'code' && s.code_id).map(s => s.code_id as string)
+      const exportData = {
+        version: EXPORT_DATA_VERSION,
+        presentation,
+        slides,
+      }
+      const exportMeta = {
+        artifactVersion: EXPORT_ARTIFACT_VERSION,
+        dataVersion: EXPORT_DATA_VERSION,
+        exportMode,
+        exportedAt: new Date().toISOString(),
+        sourceCommit: getSourceCommit(),
+        sourcePresentationId: presentation.id,
+        slideCount: slides.length,
+      }
       const workspace = createExportWorkspace()
       tempDir = workspace.tempDir
 
       fs.writeFileSync(
         workspace.entryPath,
-        generateEntryFile(codeIds, JSON.stringify(presentation), JSON.stringify(slides)),
+        generateEntryFile(codeIds, JSON.stringify(exportData), JSON.stringify(exportMeta)),
       )
       fs.writeFileSync(workspace.indexPath, HTML_TEMPLATE)
       fs.writeFileSync(workspace.configPath, generateViteConfig(workspace.tempDir))
@@ -123,9 +161,13 @@ export function createExportHandler(
         throw new Error(`Export build failed: ${msg}`)
       }
 
-      if (!fs.existsSync(workspace.distHtmlPath)) throw new Error('Export build produced no output')
+      const builtHtmlPath =
+        fs.existsSync(workspace.distHtmlPath) ? workspace.distHtmlPath :
+        fs.existsSync(workspace.nestedDistHtmlPath) ? workspace.nestedDistHtmlPath :
+        null
+      if (!builtHtmlPath) throw new Error('Export build produced no output')
 
-      const html = fs.readFileSync(workspace.distHtmlPath, 'utf-8')
+      const html = fs.readFileSync(builtHtmlPath, 'utf-8')
       res.setHeader('Content-Type', 'text/html')
       res.setHeader('Content-Disposition', `attachment; filename="${presentation.name}.html"`)
       res.send(html)

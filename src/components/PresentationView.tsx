@@ -12,6 +12,8 @@ interface PresentationViewProps {
   onNavigate: (index: number) => void
   onGoHome?: () => void
   onEnterFullscreen?: () => void
+  showOverviewButton?: boolean
+  showCounter?: boolean
 }
 
 const variants = {
@@ -34,7 +36,16 @@ const SHORTCUTS = [
   { key: '?', desc: 'Toggle shortcuts' },
 ]
 
-export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGoHome, onEnterFullscreen }: PresentationViewProps) {
+export function PresentationView({
+  slides,
+  activeIndex,
+  onExit,
+  onNavigate,
+  onGoHome,
+  onEnterFullscreen,
+  showOverviewButton = true,
+  showCounter = true,
+}: PresentationViewProps) {
   const directionRef = useRef(1)
   const isTransitioning = useRef(false)
   const [controlsVisible, setControlsVisible] = useState(true)
@@ -59,7 +70,6 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
     }
   }, [resetHideTimer])
 
-  // Keep controls visible while shortcuts overlay is open
   useEffect(() => {
     if (showShortcuts) {
       setControlsVisible(true)
@@ -67,7 +77,6 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
     }
   }, [showShortcuts])
 
-  // ? key toggles shortcuts overlay
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === '?' && (e.target as HTMLElement).tagName !== 'INPUT') {
@@ -179,15 +188,17 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
             )}
 
             {/* Back to overview */}
-            <button
-              onClick={onExit}
-              className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
-              style={{ color: 'var(--color-text-dim)' }}
-            >
-              <Grid2X2 size={13} />
-              <span className="hidden sm:inline">Overview</span>
-              <span className="text-[10px] opacity-50 hidden sm:inline">ESC</span>
-            </button>
+            {showOverviewButton && (
+              <button
+                onClick={onExit}
+                className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+                style={{ color: 'var(--color-text-dim)' }}
+              >
+                <Grid2X2 size={13} />
+                <span className="hidden sm:inline">Overview</span>
+                <span className="text-[10px] opacity-50 hidden sm:inline">ESC</span>
+              </button>
+            )}
 
             {/* Prev */}
             <button
@@ -233,16 +244,18 @@ export function PresentationView({ slides, activeIndex, onExit, onNavigate, onGo
             </button>
 
             {/* Counter + slide title */}
-            <div className="flex flex-col items-end" style={{ minWidth: '4.5rem' }}>
-              <span className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
-                {activeIndex + 1} / {slides.length}
-              </span>
-              {activeSlide.title && (
-                <span className="text-[10px] truncate max-w-[6rem]" style={{ color: 'var(--color-muted)' }} title={activeSlide.title}>
-                  {activeSlide.title}
+            {showCounter && (
+              <div className="flex flex-col items-end" style={{ minWidth: '4.5rem' }}>
+                <span className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
+                  {activeIndex + 1} / {slides.length}
                 </span>
-              )}
-            </div>
+                {activeSlide.title && (
+                  <span className="text-[10px] truncate max-w-[6rem]" style={{ color: 'var(--color-muted)' }} title={activeSlide.title}>
+                    {activeSlide.title}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Keyboard shortcuts toggle */}
             <button

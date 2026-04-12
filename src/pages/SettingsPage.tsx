@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { Check } from 'lucide-react'
 import type { ThemeName } from '@/types'
 import { THEME_NAMES } from '@/types'
 import { api, getErrorMessage } from '@/api/client'
 import { data } from '@/data'
 import { C } from '@/design/tokens'
 import { THEME_META } from '@/lib/themeMeta'
+import { Breadcrumb } from '@/components/Breadcrumb'
 
 const inp: React.CSSProperties = {
   width: '100%', background: C.bg, border: `1px solid ${C.border}`,
@@ -16,7 +17,6 @@ const inp: React.CSSProperties = {
 
 export function SettingsPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const pid = Number(id)
 
   const [name,       setName]  = useState('')
@@ -53,11 +53,11 @@ export function SettingsPage() {
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       {/* Header */}
       <div style={{ height: 56, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', background: C.surface }}>
-        <button aria-label="Back to presentation" onClick={() => navigate(`/p/${pid}`)}
-          style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
-          <ArrowLeft size={16} />
-        </button>
-        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Presentation Settings</span>
+        <Breadcrumb segments={[
+          { label: 'Home', to: '/' },
+          { label: name || 'Deck', to: `/p/${pid}` },
+          { label: 'Settings' },
+        ]} />
         <div style={{ marginLeft: 'auto' }}>
           <button
             onClick={save}

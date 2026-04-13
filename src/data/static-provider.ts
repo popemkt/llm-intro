@@ -1,9 +1,10 @@
-import type { ApiPresentation, ApiSlide } from '@/types'
+import type { ApiPresentation, ApiSlide, ApiSlideGroup } from '@/types'
 import type { DataProvider } from './types'
 
 export interface ExportData {
   presentation: ApiPresentation
   slides: ApiSlide[]
+  groups?: ApiSlideGroup[]
 }
 
 declare global {
@@ -13,6 +14,7 @@ declare global {
 }
 
 export function createStaticProvider(data: ExportData): DataProvider {
+  const groups = data.groups ?? []
   return {
     presentations: {
       get:  (id) => {
@@ -25,6 +27,12 @@ export function createStaticProvider(data: ExportData): DataProvider {
       list: (pid) => {
         if (pid !== data.presentation.id) return Promise.resolve([])
         return Promise.resolve(data.slides)
+      },
+    },
+    groups: {
+      list: (pid) => {
+        if (pid !== data.presentation.id) return Promise.resolve([])
+        return Promise.resolve(groups)
       },
     },
   }

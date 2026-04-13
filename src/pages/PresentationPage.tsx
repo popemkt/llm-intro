@@ -7,18 +7,19 @@ import { FullscreenView } from '@/components/FullscreenView'
 import { codeSlideRegistry } from '@/slides/registry'
 import { api, getErrorMessage } from '@/api/client'
 import { data } from '@/data'
-import type { UnifiedSlide, ApiSlide, ApiPresentation } from '@/types'
+import type { UnifiedSlide, ApiSlide, ApiSlideGroup, ApiPresentation, LayoutInput } from '@/types'
 
 function toUnified(slide: ApiSlide, theme: ApiPresentation['theme']): UnifiedSlide {
+  const groupId = slide.group_id ?? null
   if (slide.kind === 'code') {
     const component = codeSlideRegistry[slide.code_id ?? '']
     if (!component) {
       console.warn(`Unknown code_id: ${slide.code_id}`)
-      return { kind: 'db', id: slide.id, title: slide.title, blocks: [], theme }
+      return { kind: 'db', id: slide.id, groupId, title: slide.title, blocks: [], theme }
     }
-    return { kind: 'code', id: slide.id, title: slide.title, component }
+    return { kind: 'code', id: slide.id, groupId, title: slide.title, component }
   }
-  return { kind: 'db', id: slide.id, title: slide.title, blocks: slide.blocks, theme }
+  return { kind: 'db', id: slide.id, groupId, title: slide.title, blocks: slide.blocks, theme }
 }
 
 export function PresentationPage() {
@@ -29,6 +30,7 @@ export function PresentationPage() {
   const [mode, setMode] = useState<'overview' | 'presentation' | 'fullscreen'>('overview')
   const [activeIndex, setActiveIndex] = useState(0)
   const [slides, setSlides] = useState<UnifiedSlide[]>([])
+  const [groups, setGroups] = useState<ApiSlideGroup[]>([])
   const [presentation, setPresentation] = useState<ApiPresentation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,8 +51,13 @@ export function PresentationPage() {
     setLoading(true)
     setError(null)
     try {
-      const [pres, apiSlides] = await Promise.all([data.presentations.get(pid), data.slides.list(pid)])
+      const [pres, apiSlides, apiGroups] = await Promise.all([
+        data.presentations.get(pid),
+        data.slides.list(pid),
+        data.groups.list(pid),
+      ])
       setPresentation(pres)
+      setGroups(apiGroups)
       hydrateSlides(apiSlides, pres)
     } catch {
       setError('Presentation not found')
@@ -102,22 +109,94 @@ export function PresentationPage() {
     }
   }, [presentation, showNotice])
 
-  const handleReorder = useCallback(async (ids: number[]) => {
+  const handleLayoutChange = useCallback(async (layout: LayoutInput) => {
     if (!presentation) return
     const previousSlides = slides
-    setSlides(prev => {
-      const map = new Map(prev.map(slide => [slide.id, slide]))
-      return ids.map((slideId) => map.get(slideId)!).filter(Boolean)
-    })
+    // Optimistic: rebuild slides in new layout order with updated groupId
+    const map = new Map(slides.map(slide => [slide.id, slide]))
+    const nextOrdered: UnifiedSlide[] = []
+    for (const id of layout.ungrouped) {
+      const s = map.get(id)
+      if (s) nextOrdered.push({ ...s, groupId: null } as UnifiedSlide)
+    }
+    for (const group of layout.groups) {
+      for (const id of group.slideIds) {
+        const s = map.get(id)
+        if (s) nextOrdered.push({ ...s, groupId: group.id } as UnifiedSlide)
+      }
+    }
+    setSlides(nextOrdered)
 
     try {
-      const reordered = await api.slides.reorder(presentation.id, ids)
-      hydrateSlides(reordered, presentation)
+      const updated = await api.slides.layout(presentation.id, layout)
+      hydrateSlides(updated, presentation)
     } catch (err) {
       setSlides(previousSlides)
       showNotice(getErrorMessage(err))
     }
   }, [hydrateSlides, presentation, slides, showNotice])
+
+  const handleAddSlideToGroup = useCallback(async (groupId: number) => {
+    if (!presentation) return
+    try {
+      const slide = await api.slides.create(presentation.id)
+      // New slide is created in ungrouped; move it into the target group.
+      const unified = toUnified(slide, presentation.theme)
+      const nextSlides = [...slides, unified]
+      setSlides(nextSlides)
+      const layout: LayoutInput = {
+        ungrouped: nextSlides.filter(s => s.groupId == null && s.id !== slide.id).map(s => s.id),
+        groups: groups.map(g => ({
+          id: g.id,
+          slideIds: [
+            ...nextSlides.filter(s => s.groupId === g.id && s.id !== slide.id).map(s => s.id),
+            ...(g.id === groupId ? [slide.id] : []),
+          ],
+        })),
+      }
+      const updated = await api.slides.layout(presentation.id, layout)
+      hydrateSlides(updated, presentation)
+    } catch (err) {
+      showNotice(getErrorMessage(err))
+    }
+  }, [presentation, slides, groups, hydrateSlides, showNotice])
+
+  const handleCreateGroup = useCallback(async () => {
+    if (!presentation) return
+    try {
+      const group = await api.groups.create(presentation.id, 'New group')
+      setGroups(prev => [...prev, group])
+    } catch (err) {
+      showNotice(getErrorMessage(err))
+    }
+  }, [presentation, showNotice])
+
+  const handleUpdateGroup = useCallback(async (gid: number, patch: { title?: string; collapsed?: boolean }) => {
+    if (!presentation) return
+    const previousGroups = groups
+    setGroups(prev => prev.map(g => g.id === gid ? { ...g, ...patch } : g))
+    try {
+      const updated = await api.groups.update(presentation.id, gid, patch)
+      setGroups(prev => prev.map(g => g.id === gid ? updated : g))
+    } catch (err) {
+      setGroups(previousGroups)
+      showNotice(getErrorMessage(err))
+    }
+  }, [presentation, groups, showNotice])
+
+  const handleDeleteGroup = useCallback(async (gid: number) => {
+    if (!presentation) return
+    if (!confirm('Delete this group? Its slides will move to ungrouped.')) return
+    try {
+      await api.groups.delete(presentation.id, gid)
+      setGroups(prev => prev.filter(g => g.id !== gid))
+      // Slides had group_id set to null server-side; refetch to sync.
+      const apiSlides = await data.slides.list(presentation.id)
+      hydrateSlides(apiSlides, presentation)
+    } catch (err) {
+      showNotice(getErrorMessage(err))
+    }
+  }, [presentation, hydrateSlides, showNotice])
 
   const handleEditSlide = useCallback((slideId: number) => {
     navigate(`/p/${pid}/edit/${slideId}`)
@@ -179,12 +258,17 @@ export function PresentationPage() {
           <OverviewGrid
             key="overview"
             slides={slides}
+            groups={groups}
             presentationId={presentation.id}
             presentationTheme={presentation.theme}
             title={presentation.name}
             onSelectSlide={i => { setActiveIndex(i); setMode('presentation') }}
             onAddSlide={handleAddSlide}
-            onReorder={handleReorder}
+            onAddSlideToGroup={handleAddSlideToGroup}
+            onLayoutChange={handleLayoutChange}
+            onCreateGroup={handleCreateGroup}
+            onUpdateGroup={handleUpdateGroup}
+            onDeleteGroup={handleDeleteGroup}
             onEditSlide={handleEditSlide}
             onDeleteSlide={handleDeleteSlide}
             onRenameSlide={handleRenameSlide}

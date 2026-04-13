@@ -6,7 +6,7 @@
  */
 import { useState } from 'react'
 import type { ComponentType } from 'react'
-import type { UnifiedSlide, SlideProps, ApiSlide, ApiPresentation } from '@/types'
+import type { UnifiedSlide, SlideProps, ApiSlide, ApiSlideGroup, ApiPresentation } from '@/types'
 import { PresentationView } from '@/components/PresentationView'
 import { OverviewGrid } from '@/components/OverviewGrid'
 
@@ -16,6 +16,7 @@ interface ExportDataArtifact {
   version: number
   presentation: ApiPresentation
   slides: ApiSlide[]
+  groups?: ApiSlideGroup[]
 }
 
 interface ExportMeta {
@@ -34,16 +35,18 @@ declare const __EXPORT_DATA__: ExportDataArtifact
 declare const __EXPORT_META__: ExportMeta
 
 function resolve(apiSlide: ApiSlide, pres: ApiPresentation, registry: Record<string, ComponentType<SlideProps>>): UnifiedSlide {
+  const groupId = apiSlide.group_id ?? null
   if (apiSlide.kind === 'code' && apiSlide.code_id && registry[apiSlide.code_id]) {
-    return { kind: 'code', id: apiSlide.id, title: apiSlide.title, component: registry[apiSlide.code_id] }
+    return { kind: 'code', id: apiSlide.id, groupId, title: apiSlide.title, component: registry[apiSlide.code_id] }
   }
 
-  return { kind: 'db', id: apiSlide.id, title: apiSlide.title, blocks: apiSlide.blocks, theme: pres.theme }
+  return { kind: 'db', id: apiSlide.id, groupId, title: apiSlide.title, blocks: apiSlide.blocks, theme: pres.theme }
 }
 
 export default function ExportViewer() {
   const presentation = __EXPORT_DATA__.presentation
   const slides = __EXPORT_DATA__.slides.map(slide => resolve(slide, presentation, __EXPORT_REGISTRY__))
+  const groups = __EXPORT_DATA__.groups ?? []
   const meta = __EXPORT_META__
 
   const [deckMode, setDeckMode] = useState<'overview' | 'presentation'>(
@@ -59,6 +62,7 @@ export default function ExportViewer() {
           readonly={true}
           simpleHeader={true}
           slides={slides}
+          groups={groups}
           presentationId={presentation.id}
           presentationTheme={presentation.theme}
           title={presentation.name}
@@ -67,7 +71,11 @@ export default function ExportViewer() {
             setDeckMode('presentation')
           }}
           onAddSlide={() => {}}
-          onReorder={() => {}}
+          onAddSlideToGroup={() => {}}
+          onLayoutChange={() => {}}
+          onCreateGroup={() => {}}
+          onUpdateGroup={() => {}}
+          onDeleteGroup={() => {}}
           onEditSlide={() => {}}
           onDeleteSlide={async () => {}}
           onRenameSlide={() => {}}

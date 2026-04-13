@@ -10,5 +10,8 @@ export function createApiProvider(): DataProvider {
     slides: {
       list: (pid) => api.slides.list(pid),
     },
+    groups: {
+      list: (pid) => api.groups.list(pid),
+    },
   }
 }

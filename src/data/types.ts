@@ -1,4 +1,4 @@
-import type { ApiPresentation, ApiSlide } from '@/types'
+import type { ApiPresentation, ApiSlide, ApiSlideGroup } from '@/types'
 
 /** Read-only data access interface — works against either the live API or embedded JSON. */
 export interface DataProvider {
@@ -8,5 +8,8 @@ export interface DataProvider {
   }
   slides: {
     list(pid: number): Promise<ApiSlide[]>
+  }
+  groups: {
+    list(pid: number): Promise<ApiSlideGroup[]>
   }
 }

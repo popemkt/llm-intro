@@ -5,9 +5,11 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { createPresentationsService } from '../services/presentations.js'
 import type { createSlidesService } from '../services/slides.js'
+import type { createGroupsService } from '../services/groups.js'
 
 type PresentationsService = ReturnType<typeof createPresentationsService>
 type SlidesService = ReturnType<typeof createSlidesService>
+type GroupsService = ReturnType<typeof createGroupsService>
 type ExportMode = 'player' | 'deck'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -48,14 +50,14 @@ function generateEntryFile(codeIds: string[], exportDataJson: string, exportMeta
 import '@/index.css'
 import { createRoot } from 'react-dom/client'
 import type { ComponentType } from 'react'
-import type { SlideProps, ApiPresentation, ApiSlide } from '@/types'
+import type { SlideProps, ApiPresentation, ApiSlide, ApiSlideGroup } from '@/types'
 import ExportViewer from '@/export-viewer'
 ${imports}
 
 const __EXPORT_REGISTRY__: Record<string, ComponentType<SlideProps>> = {
 ${entries}
 }
-const __EXPORT_DATA__: { version: number; presentation: ApiPresentation; slides: ApiSlide[] } = ${exportDataJson}
+const __EXPORT_DATA__: { version: number; presentation: ApiPresentation; slides: ApiSlide[]; groups: ApiSlideGroup[] } = ${exportDataJson}
 const __EXPORT_META__ = ${exportMetaJson}
 
 Object.assign(window, { __EXPORT_REGISTRY__, __EXPORT_DATA__, __EXPORT_META__ })
@@ -111,6 +113,7 @@ function cleanup(tempDir: string) {
 export function createExportHandler(
   presentationsService: PresentationsService,
   slidesService: SlidesService,
+  groupsService: GroupsService,
 ): express.RequestHandler {
   return async (req, res, next) => {
     const pid = Number(req.params.pid)
@@ -119,17 +122,21 @@ export function createExportHandler(
     try {
       const presentation = presentationsService.get(pid)
       let slides = slidesService.list(pid)
+      let groups = groupsService.list(pid)
       const slideIds: number[] | undefined = req.body?.slideIds
       const exportMode = parseExportMode(req.body?.mode)
       if (Array.isArray(slideIds) && slideIds.length > 0) {
         const idSet = new Set(slideIds)
         slides = slides.filter(s => idSet.has(s.id))
+        const retainedGroupIds = new Set(slides.map(s => s.group_id).filter((id): id is number => id != null))
+        groups = groups.filter(g => retainedGroupIds.has(g.id))
       }
       const codeIds = slides.filter(s => s.kind === 'code' && s.code_id).map(s => s.code_id as string)
       const exportData = {
         version: EXPORT_DATA_VERSION,
         presentation,
         slides,
+        groups,
       }
       const exportMeta = {
         artifactVersion: EXPORT_ARTIFACT_VERSION,

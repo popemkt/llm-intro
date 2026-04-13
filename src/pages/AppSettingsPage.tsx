@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import type { ThemeName } from '@/types'
 import { THEME_NAMES } from '@/types'
 import { applyAppTheme, getStoredAppTheme } from '@/lib/appTheme'
 import { C } from '@/design/tokens'
 import { THEME_META } from '@/lib/themeMeta'
+import { Breadcrumb } from '@/components/Breadcrumb'
 
 export function AppSettingsPage() {
-  const navigate = useNavigate()
   const [appTheme, setAppTheme] = useState<ThemeName>(getStoredAppTheme)
 
   const handleChange = (t: ThemeName) => {
@@ -19,11 +18,10 @@ export function AppSettingsPage() {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       <div style={{ height: 56, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', background: C.surface }}>
-        <button aria-label="Back home" onClick={() => navigate('/')}
-          style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
-          <ArrowLeft size={16} />
-        </button>
-        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>App Settings</span>
+        <Breadcrumb segments={[
+          { label: 'Home', to: '/' },
+          { label: 'App Settings' },
+        ]} />
       </div>
 
       <div style={{ maxWidth: 660, margin: '0 auto', padding: '40px 24px' }}>

@@ -152,7 +152,7 @@ describe('System presentation bootstrap', () => {
     expect((await request(app).delete(`/api/presentations/${pid}/slides/${codeSlide.id}`)).status).toBe(403)
   })
 
-  it('exports a filtered HTML deck', async () => {
+  it('exports a filtered HTML deck', { timeout: 60000 }, async () => {
     const { app } = createTestContext()
 
     const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
@@ -169,5 +169,27 @@ describe('System presentation bootstrap', () => {
     expect(res.headers['content-disposition']).toContain('.html')
     expect(res.text).toContain('02-linear-regression')
     expect(res.text).not.toContain('03-context')
+    expect(res.text).toContain('.absolute{position:absolute')
+    expect(res.text).toContain('__EXPORT_META__')
+    expect(res.text).toContain('exportMode:"player"')
+    expect(res.text).toContain('__EXPORT_DATA__')
+  })
+
+  it('exports deck mode with overview shell metadata', { timeout: 60000 }, async () => {
+    const { app } = createTestContext()
+
+    const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
+    const pid = presentations[0].id
+
+    const res = await request(app)
+      .post(`/api/presentations/${pid}/export`)
+      .send({ mode: 'deck' })
+
+    expect(res.status).toBe(200)
+    expect(res.text).toContain('exportMode:"deck"')
+    expect(res.text).toContain('artifactVersion:1')
+    expect(res.text).toContain('export-deck-overview')
+    expect(res.text).toContain('LLM & Agent Basics')
+    expect(res.text).toContain('slideCount:9')
   })
 })

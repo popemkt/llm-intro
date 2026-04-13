@@ -1,29 +1,23 @@
-import path from 'path'
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig, mergeConfig } from 'vitest/config'
+import { baseConfig } from './vite.config.base'
 
 const apiProxyTarget = process.env.LLM_INTRO_API_PROXY_TARGET ?? 'http://localhost:3001'
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: apiProxyTarget,
-        changeOrigin: true,
+export default defineConfig(
+  mergeConfig(baseConfig, {
+    server: {
+      proxy: {
+        '/api': {
+          target: apiProxyTarget,
+          changeOrigin: true,
+        },
       },
     },
-  },
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test-setup.ts'],
-    exclude: ['playwright/**', 'node_modules/**'],
-  },
-})
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./src/test-setup.ts'],
+      exclude: ['playwright/**', 'node_modules/**', '.worktrees/**'],
+    },
+  }),
+)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Type, Image as ImageIcon, Globe, Square, Trash2, Settings, Circle, Pill } from 'lucide-react'
+import { Type, Image as ImageIcon, Globe, Square, Trash2, Settings, Circle, Pill } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import ReactMarkdown from 'react-markdown'
 import type { Block, ShapeBlock, ThemeName } from '@/types'
@@ -8,6 +8,7 @@ import { api, getErrorMessage } from '@/api/client'
 import { data } from '@/data'
 import { C } from '@/design/tokens'
 import { getReadableTextColor } from '@/lib/color'
+import { Breadcrumb } from '@/components/Breadcrumb'
 
 type DragMode = 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br'
 
@@ -59,6 +60,7 @@ export function SlideEditorPage() {
   const sid = Number(sidStr)
 
   const [title, setTitle]       = useState('Untitled')
+  const [presName, setPresName] = useState('')
   const [blocks, setBlocks]     = useState<Block[]>([])
   const [theme, setTheme]       = useState<ThemeName>('dark-green')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -93,6 +95,7 @@ export function SlideEditorPage() {
           setLoadError('Only custom slides can be edited here')
           return
         }
+        setPresName(pres.name)
         setTitle(slide.title)
         setBlocks(slide.blocks)
         setTheme(pres.theme)
@@ -258,9 +261,11 @@ export function SlideEditorPage() {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, overflow: 'hidden' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px', flexShrink: 0, background: C.surface }}>
-        <button aria-label="Back to presentation" onClick={() => navigate(`/p/${pid}`)} style={{ color: C.textDim, background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
-          <ArrowLeft size={16} />
-        </button>
+        <Breadcrumb segments={[
+          { label: 'Home', to: '/' },
+          { label: presName || 'Deck', to: `/p/${pid}` },
+          { label: title },
+        ]} />
         <div style={{ width: 1, height: 20, background: C.border }} />
         <input
           value={title}

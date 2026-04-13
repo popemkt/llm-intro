@@ -85,10 +85,10 @@ test.describe('User deck flow', () => {
     await page.getByRole('button', { name: /neon/i }).click()
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.getByText('Saved')).toBeVisible()
-    await page.getByLabel('Back to presentation').click()
+    await page.getByTestId('breadcrumb').getByRole('link').filter({ hasText: deckName }).click()
     await expect(page.getByText('neon', { exact: true })).toBeVisible()
 
-    await page.getByRole('button', { name: /home/i }).click()
+    await page.getByTestId('breadcrumb').getByRole('link', { name: 'Home' }).click()
     page.once('dialog', dialog => dialog.accept())
     await page.getByLabel(`Delete ${deckName}`).click()
     await expect(page.getByText(deckName)).toHaveCount(0)

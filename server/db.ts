@@ -22,6 +22,23 @@ const BUILT_IN_SLIDES = [
   { code_id: '09-appendix', title: 'Tech Landscape (Appendix)' },
 ] as const
 
+// One-time seed for the system presentation's group layout. Applied only
+// when the presentation has no groups yet, so user customisations on
+// existing databases are preserved.
+const SEED_LAYOUT = {
+  ungrouped: ['06-browser-control', '08-workspace-concepts'] as string[],
+  groups: [
+    {
+      title: 'How it works from a visible standpoint',
+      slides: ['01-opener', '02-linear-regression', '04-tool-use', '03-context'],
+    },
+    { title: 'Indepth theory', slides: ['10-word-dimensions'] },
+    { title: 'Claude code', slides: ['05-claude-desktop', '07-workspace-setup'] },
+    { title: 'Advanced tools and workflows', slides: ['09-appendix'] },
+    { title: 'Cowork', slides: [] as string[] },
+  ],
+} as const
+
 export function openDatabase(filePath = process.env.LLM_INTRO_DB_PATH ?? DB_PATH) {
   const db = new Database(filePath)
   db.pragma('journal_mode = WAL')
@@ -198,5 +215,34 @@ function seedSystemPresentation(db: Database.Database) {
       }
     })
     deleteMissing.run(presentationId, ...BUILT_IN_SLIDES.map((slide) => slide.code_id))
+  })()
+
+  seedSystemLayout(db, presentationId)
+}
+
+function seedSystemLayout(db: Database.Database, presentationId: number) {
+  const existingGroupCount = db
+    .prepare('SELECT COUNT(*) as n FROM slide_groups WHERE presentation_id=?')
+    .get(presentationId) as { n: number }
+  if (existingGroupCount.n > 0) return
+
+  const insertGroup = db.prepare(
+    'INSERT INTO slide_groups (presentation_id, title, position, collapsed) VALUES (?, ?, ?, 0)',
+  )
+  const setSlide = db.prepare(
+    'UPDATE slides SET position=?, group_id=? WHERE presentation_id=? AND code_id=?',
+  )
+
+  db.transaction(() => {
+    SEED_LAYOUT.ungrouped.forEach((codeId, index) => {
+      setSlide.run(index, null, presentationId, codeId)
+    })
+    SEED_LAYOUT.groups.forEach((group, groupIndex) => {
+      const { lastInsertRowid } = insertGroup.run(presentationId, group.title, groupIndex)
+      const groupId = Number(lastInsertRowid)
+      group.slides.forEach((codeId, index) => {
+        setSlide.run(index, groupId, presentationId, codeId)
+      })
+    })
   })()
 }

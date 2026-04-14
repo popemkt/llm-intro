@@ -224,8 +224,9 @@ describe('System presentation bootstrap', () => {
 
     const presentations = (await request(app).get('/api/presentations')).body as Array<{ id: number }>
     const pid = presentations[0].id
-    const slides = (await request(app).get(`/api/presentations/${pid}/slides`)).body as Array<{ id: number }>
-    const subsetIds = slides.slice(0, 2).map(slide => slide.id)
+    const slides = (await request(app).get(`/api/presentations/${pid}/slides`)).body as Array<{ id: number; code_id: string | null }>
+    const subsetIds = ['01-opener', '02-linear-regression']
+      .map(code => slides.find(s => s.code_id === code)!.id)
 
     const res = await request(app)
       .post(`/api/presentations/${pid}/export`)

@@ -1,9 +1,9 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Plus, Pencil, Trash2, Settings, ChevronDown, ChevronRight, Download, CheckSquare, X, Check, AlertTriangle, Loader2, RotateCcw, FolderPlus, LayoutGrid } from 'lucide-react'
+import { Plus, Pencil, Trash2, Settings, ChevronDown, ChevronRight, Download, CheckSquare, X, Check, AlertTriangle, Loader2, RotateCcw, FolderPlus, LayoutGrid, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import {
-  DndContext, closestCorners, PointerSensor, useSensor, useSensors, useDroppable,
-  type DragEndEvent,
+  DndContext, pointerWithin, rectIntersection, PointerSensor, useSensor, useSensors, useDroppable,
+  type DragEndEvent, type DragOverEvent, type DragStartEvent, type CollisionDetection,
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -680,7 +680,7 @@ function CommandMenu({
 }
 
 function BucketDrop({ id, children, empty }: { id: string; children: React.ReactNode; empty: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
+  const { setNodeRef } = useDroppable({ id })
   return (
     <div
       ref={setNodeRef}
@@ -688,10 +688,6 @@ function BucketDrop({ id, children, empty }: { id: string; children: React.React
       style={{
         gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
         minHeight: empty ? 80 : undefined,
-        outline: isOver ? '2px dashed var(--color-accent)' : 'none',
-        outlineOffset: 4,
-        borderRadius: 12,
-        padding: empty ? 12 : 0,
       }}
     >
       {children}
@@ -835,6 +831,7 @@ export function OverviewGrid({
   const [exportState, setExportState] = useState<ExportState>({ status: 'idle' })
   const [confirmDeleteSlides, setConfirmDeleteSlides] = useState<{ id: number; title: string }[] | null>(null)
   const [pickForGroupId, setPickForGroupId] = useState<number | null>(null)
+  const [ungroupedCollapsed, setUngroupedCollapsed] = useState(false)
   const selectedSlides = slides.filter(slide => selected.has(slide.id))
   const selectedDbSlides = selectedSlides.filter((slide): slide is Extract<UnifiedSlide, { kind: 'db' }> => slide.kind === 'db')
   const breadcrumbSegments = breadcrumbs ?? [
@@ -900,7 +897,8 @@ export function OverviewGrid({
 
   // Buckets derived from (slides, groups). `slides` is assumed to come back
   // from the API already in layout order: ungrouped first, then per-group.
-  const buckets = useMemo(() => {
+  type Buckets = { ungrouped: UnifiedSlide[]; byGroup: Map<number, UnifiedSlide[]> }
+  const propsBuckets = useMemo<Buckets>(() => {
     const ungrouped: UnifiedSlide[] = []
     const byGroup = new Map<number, UnifiedSlide[]>()
     for (const g of groups) byGroup.set(g.id, [])
@@ -911,70 +909,94 @@ export function OverviewGrid({
     return { ungrouped, byGroup }
   }, [slides, groups])
 
-  const slideIdToBucketKey = useMemo(() => {
-    const map = new Map<number, string>()
-    for (const s of buckets.ungrouped) map.set(s.id, UNGROUPED_KEY)
-    for (const [gid, list] of buckets.byGroup) for (const s of list) map.set(s.id, groupBucketKey(gid))
-    return map
-  }, [buckets])
+  // Ephemeral drag state: while an item is mid-drag across buckets, we mutate
+  // a local snapshot so Sortable can animate seamlessly. null when idle.
+  const [dragBuckets, setDragBuckets] = useState<Buckets | null>(null)
+  const buckets = dragBuckets ?? propsBuckets
 
-  const buildLayoutFromBuckets = (
-    ungrouped: UnifiedSlide[],
-    byGroup: Map<number, UnifiedSlide[]>,
-  ): LayoutInput => ({
-    ungrouped: ungrouped.map(s => s.id),
-    groups: groups.map(g => ({ id: g.id, slideIds: (byGroup.get(g.id) ?? []).map(s => s.id) })),
+  const buildLayoutFromBuckets = (b: Buckets): LayoutInput => ({
+    ungrouped: b.ungrouped.map(s => s.id),
+    groups: groups.map(g => ({ id: g.id, slideIds: (b.byGroup.get(g.id) ?? []).map(s => s.id) })),
   })
 
-  const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
+  const cloneBuckets = (b: Buckets): Buckets => ({
+    ungrouped: [...b.ungrouped],
+    byGroup: new Map([...b.byGroup].map(([k, v]) => [k, [...v]])),
+  })
+
+  const readBucket = (b: Buckets, key: string): UnifiedSlide[] =>
+    key === UNGROUPED_KEY ? b.ungrouped : b.byGroup.get(Number(key.slice('bucket:'.length)))!
+
+  const groupIdForKey = (key: string) =>
+    key === UNGROUPED_KEY ? null : Number(key.slice('bucket:'.length))
+
+  const resolveBucketFromOver = (b: Buckets, overId: string | number): string | null => {
+    if (typeof overId === 'string' && overId.startsWith('bucket:')) return overId
+    const id = Number(overId)
+    if (Number.isNaN(id)) return null
+    if (b.ungrouped.some(s => s.id === id)) return UNGROUPED_KEY
+    for (const [gid, list] of b.byGroup) if (list.some(s => s.id === id)) return groupBucketKey(gid)
+    return null
+  }
+
+  const handleDragStart = useCallback((_e: DragStartEvent) => {
     if (readonly) return
-    if (!over) return
+    setDragBuckets(cloneBuckets(propsBuckets))
+  }, [readonly, propsBuckets])
+
+  const handleDragOver = useCallback(({ active, over }: DragOverEvent) => {
+    if (readonly || !over) return
     const activeId = Number(active.id)
     if (Number.isNaN(activeId)) return
 
-    const fromBucketKey = slideIdToBucketKey.get(activeId)
-    if (!fromBucketKey) return
+    setDragBuckets(prev => {
+      if (!prev) return prev
+      const fromKey = resolveBucketFromOver(prev, activeId)
+      const toKey = resolveBucketFromOver(prev, over.id as string | number)
+      if (!fromKey || !toKey) return prev
+      if (fromKey === toKey) return prev // Sortable handles in-bucket animation
 
-    // Resolve target bucket from over target (slide id or bucket droppable id)
-    let toBucketKey: string
-    let targetSlideId: number | null = null
-    if (typeof over.id === 'string' && over.id.startsWith('bucket:')) {
-      toBucketKey = over.id
-    } else {
-      const overSlideId = Number(over.id)
-      if (Number.isNaN(overSlideId)) return
-      toBucketKey = slideIdToBucketKey.get(overSlideId) ?? UNGROUPED_KEY
-      targetSlideId = overSlideId
+      const next = cloneBuckets(prev)
+      const fromList = readBucket(next, fromKey)
+      const fromIdx = fromList.findIndex(s => s.id === activeId)
+      if (fromIdx < 0) return prev
+      const [moved] = fromList.splice(fromIdx, 1)
+
+      const toList = readBucket(next, toKey)
+      let insertAt = toList.length
+      if (typeof over.id === 'number' || (typeof over.id === 'string' && !over.id.startsWith('bucket:'))) {
+        const overSlideId = Number(over.id)
+        const idx = toList.findIndex(s => s.id === overSlideId)
+        if (idx >= 0) insertAt = idx
+      }
+      toList.splice(insertAt, 0, { ...moved, groupId: groupIdForKey(toKey) } as UnifiedSlide)
+      return next
+    })
+  }, [readonly])
+
+  const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
+    if (readonly || !dragBuckets) { setDragBuckets(null); return }
+    const activeId = Number(active.id)
+    if (Number.isNaN(activeId) || !over) { setDragBuckets(null); return }
+
+    // Apply any final in-bucket reorder (Sortable animated it visually; we
+    // need to commit it to the snapshot before building the layout).
+    const fromKey = resolveBucketFromOver(dragBuckets, activeId)
+    const toKey = resolveBucketFromOver(dragBuckets, over.id as string | number)
+    const next = cloneBuckets(dragBuckets)
+    if (fromKey && toKey && fromKey === toKey && typeof over.id !== 'string') {
+      const list = readBucket(next, fromKey)
+      const fromIdx = list.findIndex(s => s.id === activeId)
+      const toIdx = list.findIndex(s => s.id === Number(over.id))
+      if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+        const [moved] = list.splice(fromIdx, 1)
+        list.splice(toIdx, 0, moved)
+      }
     }
 
-    if (fromBucketKey === toBucketKey && targetSlideId === activeId) return
-
-    // Snapshot buckets
-    const nextUngrouped = [...buckets.ungrouped]
-    const nextByGroup = new Map<number, UnifiedSlide[]>()
-    for (const [gid, list] of buckets.byGroup) nextByGroup.set(gid, [...list])
-
-    const readBucket = (key: string): UnifiedSlide[] =>
-      key === UNGROUPED_KEY ? nextUngrouped : nextByGroup.get(Number(key.slice('bucket:'.length)))!
-
-    const fromList = readBucket(fromBucketKey)
-    const fromIndex = fromList.findIndex(s => s.id === activeId)
-    if (fromIndex < 0) return
-    const [moved] = fromList.splice(fromIndex, 1)
-
-    const toList = readBucket(toBucketKey)
-    let insertAt = toList.length
-    if (targetSlideId != null) {
-      const idx = toList.findIndex(s => s.id === targetSlideId)
-      insertAt = idx < 0 ? toList.length : idx
-    }
-    // Update slide's groupId so subsequent drags resolve the right bucket
-    const targetGroupId =
-      toBucketKey === UNGROUPED_KEY ? null : Number(toBucketKey.slice('bucket:'.length))
-    toList.splice(insertAt, 0, { ...moved, groupId: targetGroupId } as UnifiedSlide)
-
-    onLayoutChange(buildLayoutFromBuckets(nextUngrouped, nextByGroup))
-  }, [readonly, slideIdToBucketKey, buckets, groups, onLayoutChange])
+    onLayoutChange(buildLayoutFromBuckets(next))
+    setDragBuckets(null)
+  }, [readonly, dragBuckets, onLayoutChange, groups])
 
   const moveSlideToGroup = useCallback((slideId: number, targetGroupId: number) => {
     const nextUngrouped = buckets.ungrouped.filter(s => s.id !== slideId).map(s => s.id)
@@ -985,6 +1007,20 @@ export function OverviewGrid({
     })
     onLayoutChange({ ungrouped: nextUngrouped, groups: nextGroups })
   }, [buckets, groups, onLayoutChange])
+
+  // Multi-container collision detection: prefer item (slide) collisions via
+  // pointerWithin, then bucket-container collisions via pointerWithin, then
+  // fall back to rectIntersection. This fixes cross-bucket drops where
+  // closestCorners would sometimes snap back to the source container.
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const pointerHits = pointerWithin(args)
+    if (pointerHits.length > 0) {
+      const itemHits = pointerHits.filter(c => typeof c.id === 'number')
+      if (itemHits.length > 0) return itemHits
+      return pointerHits
+    }
+    return rectIntersection(args)
+  }, [])
 
   const handleReorderGroup = useCallback((groupId: number, direction: -1 | 1) => {
     const index = groups.findIndex(g => g.id === groupId)
@@ -1061,6 +1097,24 @@ export function OverviewGrid({
                 commit {commitLabel}
               </span>
             )}
+            {!readonly && groups.length > 0 && (() => {
+              const allCollapsed = ungroupedCollapsed && groups.every(g => g.collapsed)
+              return (
+                <button
+                  onClick={() => {
+                    const next = !allCollapsed
+                    setUngroupedCollapsed(next)
+                    groups.forEach(g => { if (g.collapsed !== next) onUpdateGroup(g.id, { collapsed: next }) })
+                  }}
+                  aria-label={allCollapsed ? 'Expand all' : 'Collapse all'}
+                  title={allCollapsed ? 'Expand all' : 'Collapse all'}
+                  className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+                  style={{ color: 'var(--color-text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {allCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+                </button>
+              )
+            })()}
             {!readonly && (
               <button
                 onClick={onCreateGroup}
@@ -1095,9 +1149,40 @@ export function OverviewGrid({
         )}
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setDragBuckets(null)}
+      >
         <div className="flex flex-col gap-6 p-8">
           {/* Ungrouped bucket */}
+          <div className="flex flex-col gap-3">
+            <div
+              className="flex items-center gap-2 py-2 px-1 border-b border-(--color-border)/60"
+              style={{ color: 'var(--color-text)' }}
+            >
+              <button
+                onClick={() => setUngroupedCollapsed(c => !c)}
+                aria-label={ungroupedCollapsed ? 'Expand ungrouped' : 'Collapse ungrouped'}
+                className="p-1 rounded hover:bg-(--color-border)"
+                style={{ background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer' }}
+              >
+                {ungroupedCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+              </button>
+              <span
+                className="text-sm font-semibold"
+                style={{ color: 'var(--color-accent)', letterSpacing: '0.02em' }}
+              >
+                Ungrouped
+              </span>
+              <span className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
+                {buckets.ungrouped.length} slide{buckets.ungrouped.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            {!ungroupedCollapsed && (
           <SortableContext items={buckets.ungrouped.map(s => s.id)} strategy={rectSortingStrategy}>
             <BucketDrop id={UNGROUPED_KEY} empty={buckets.ungrouped.length === 0 && groups.length > 0}>
               {buckets.ungrouped.map((slide) => {
@@ -1122,6 +1207,8 @@ export function OverviewGrid({
               {!selectMode && !readonly && <AddCard onClick={onAddSlide} />}
             </BucketDrop>
           </SortableContext>
+            )}
+          </div>
 
           {/* Groups */}
           {groups.map((group, gIdx) => {

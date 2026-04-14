@@ -112,6 +112,7 @@ export function PresentationPage() {
   const handleLayoutChange = useCallback(async (layout: LayoutInput) => {
     if (!presentation) return
     const previousSlides = slides
+    const previousGroups = groups
     // Optimistic: rebuild slides in new layout order with updated groupId
     const map = new Map(slides.map(slide => [slide.id, slide]))
     const nextOrdered: UnifiedSlide[] = []
@@ -126,15 +127,26 @@ export function PresentationPage() {
       }
     }
     setSlides(nextOrdered)
+    // Optimistic: reorder groups state to match layout's group order
+    const groupMap = new Map(groups.map(g => [g.id, g]))
+    const nextGroups = layout.groups
+      .map(g => groupMap.get(g.id))
+      .filter((g): g is typeof groups[number] => !!g)
+    setGroups(nextGroups)
 
     try {
-      const updated = await api.slides.layout(presentation.id, layout)
-      hydrateSlides(updated, presentation)
+      const [updatedSlides, updatedGroups] = await Promise.all([
+        api.slides.layout(presentation.id, layout),
+        api.groups.list(presentation.id),
+      ])
+      setGroups(updatedGroups)
+      hydrateSlides(updatedSlides, presentation)
     } catch (err) {
       setSlides(previousSlides)
+      setGroups(previousGroups)
       showNotice(getErrorMessage(err))
     }
-  }, [hydrateSlides, presentation, slides, showNotice])
+  }, [hydrateSlides, presentation, slides, groups, showNotice])
 
   const handleAddSlideToGroup = useCallback(async (groupId: number) => {
     if (!presentation) return

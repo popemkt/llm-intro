@@ -85,32 +85,6 @@ export default function Opener({ isActive }: SlideProps) {
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: '0 80px' }}>
-        {/* Eyebrow */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '6px 14px',
-            borderRadius: 999,
-            border: '1px solid #25d36633',
-            background: '#25d36610',
-            color: '#25d366',
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            marginBottom: 36,
-            fontFamily: 'JetBrains Mono, monospace',
-          }}
-        >
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#25d366' }} />
-          Session 01
-        </motion.div>
-
         {/* Title */}
         <motion.h1
           variants={{ show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } } }}
@@ -182,21 +156,6 @@ export default function Opener({ isActive }: SlideProps) {
         llm · intro
       </div>
 
-      {/* Bottom-right corner counter */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          right: 48,
-          bottom: 36,
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: 11,
-          color: '#3a4d42',
-          letterSpacing: '0.12em',
-        }}
-      >
-        01 / 10
-      </div>
     </div>
   )
 }

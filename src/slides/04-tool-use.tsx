@@ -197,12 +197,27 @@ const BLOCK_DELAY = 0.3
 export default function ToolUse({ isActive }: SlideProps) {
   const { user, llm, output, match, tool, result } = nodes
   const [step, setStep] = useState(0)
+  // Context window lags a beat behind `step` so the flow diagram (node
+  // highlights, arrow re-fires, flying result, output display) gets to
+  // play first, then the chip lands in the lane.
+  const [ctxStep, setCtxStep] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<{ x: number; scrollLeft: number } | null>(null)
   const draggedRef = useRef(false)
 
-  useEffect(() => { if (!isActive) setStep(0) }, [isActive])
+  useEffect(() => { if (!isActive) { setStep(0); setCtxStep(0) } }, [isActive])
   const advance = () => setStep(s => Math.min(s + 1, MAX_STEP))
+
+  // Context window delay: longer delay for result chips (the flying arc
+  // takes ~1.1s) so the result hits the context after it visually lands
+  // in the LLM.
+  useEffect(() => {
+    const lastIdx = step - 1
+    const last = lastIdx >= 0 && lastIdx < TIMELINE.length ? TIMELINE[lastIdx] : null
+    const delay = last?.kind === 'result' ? 900 : 380
+    const t = setTimeout(() => setCtxStep(step), delay)
+    return () => clearTimeout(t)
+  }, [step])
 
   // Click-and-drag horizontal scrolling for the context window. The slide's
   // root still advances on click, so we swallow the click if the pointer
@@ -235,7 +250,12 @@ export default function ToolUse({ isActive }: SlideProps) {
     }
   }
 
+  // `visibleCount` drives the flow diagram (immediate). `ctxVisibleCount`
+  // drives the context window + chat (delayed). The lastChip for the
+  // diagram always reflects the most recent step so the diagram can
+  // highlight + animate right away.
   const visibleCount = Math.min(step, TIMELINE.length)
+  const ctxVisibleCount = Math.min(ctxStep, TIMELINE.length)
   const showInsight  = step > TIMELINE.length
   const lastChip = visibleCount > 0 ? TIMELINE[visibleCount - 1] : null
 
@@ -248,7 +268,7 @@ export default function ToolUse({ isActive }: SlideProps) {
     const el = scrollRef.current
     if (!el) return
     el.scrollTo({ left: el.scrollWidth - el.clientWidth, behavior: 'smooth' })
-  }, [visibleCount])
+  }, [ctxVisibleCount])
 
   const inCycle2 = visibleCount > CYCLE1_LAST + 1
   const cycleKey = inCycle2 ? 1 : 0
@@ -374,10 +394,10 @@ export default function ToolUse({ isActive }: SlideProps) {
           </div>
 
           {/* CSS grid gives each chip its own auto-sized column so text
-              never overlaps. The scroll container is overflow-x auto, but
-              the scrollbar is hidden so it doesn't steal layout space —
-              you can still scroll horizontally via wheel/drag to rewind. */}
-          <style>{`.assembly-scroll::-webkit-scrollbar{display:none}`}</style>
+              never overlaps. Scrollbar is visible (so the user sees the
+              scrollable affordance) but scrollbar-gutter:stable reserves
+              its space so content doesn't shift when it appears. */}
+          <style>{`.assembly-scroll::-webkit-scrollbar{height:6px}.assembly-scroll::-webkit-scrollbar-track{background:transparent}.assembly-scroll::-webkit-scrollbar-thumb{background:${T.muted};border-radius:3px}.assembly-scroll::-webkit-scrollbar-thumb:hover{background:${T.textDim}}`}</style>
           <div
             ref={scrollRef}
             className="assembly-scroll"
@@ -391,11 +411,10 @@ export default function ToolUse({ isActive }: SlideProps) {
               overflowX: 'auto',
               overflowY: 'hidden',
               scrollBehavior: 'smooth',
-              scrollbarWidth: 'none',
+              scrollbarGutter: 'stable',
               cursor: 'grab',
               touchAction: 'pan-x',
-              // Subtle left-edge fade hints that older chips exist to the
-              // left and can be scrolled/dragged back to.
+              // Subtle left-edge fade hints at older chips offscreen.
               WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 100%)',
               maskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 100%)',
             }}
@@ -437,7 +456,7 @@ export default function ToolUse({ isActive }: SlideProps) {
                   height: '100%',
                 }}
               >
-                {TIMELINE.slice(0, visibleCount).map((it, i) => {
+                {TIMELINE.slice(0, ctxVisibleCount).map((it, i) => {
                   const col = colorFor(it.kind)
                   return (
                     <motion.div
@@ -475,7 +494,7 @@ export default function ToolUse({ isActive }: SlideProps) {
       </div>
 
       {/* Chat window — user prompts and assistant answers only */}
-      <ChatWindow visibleCount={visibleCount} />
+      <ChatWindow visibleCount={ctxVisibleCount} />
       </div>
 
       {/* ═══════ Flow diagram ═══════ */}

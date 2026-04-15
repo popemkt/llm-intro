@@ -1157,7 +1157,7 @@ export function OverviewGrid({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setDragBuckets(null)}
       >
-        <div className="flex flex-col gap-6 p-8">
+        <div className="flex flex-col gap-6 p-8 mx-auto w-full" style={{ maxWidth: 1600 }}>
           {/* Ungrouped bucket */}
           <div className="flex flex-col gap-3">
             {!readonly && (

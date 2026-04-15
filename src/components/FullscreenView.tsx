@@ -67,26 +67,28 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
       ref={containerRef}
       style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
     >
-      <div style={{ position: 'relative', width: '100%', height: '100%', maxWidth: 'calc(100vh * 16 / 9)' }}>
-        <AnimatePresence mode="wait" custom={directionRef.current}>
-          <motion.div
-            key={activeIndex}
-            custom={directionRef.current}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            onAnimationComplete={() => { transitioning.current = false }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            {slide.kind === 'code' ? (
-              <SlideShell><slide.component isActive={true} /></SlideShell>
-            ) : (
-              <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+      <div style={{ width: '100%', maxWidth: 'calc(100vh * 16/9)' }}>
+        <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', overflow: 'hidden' }}>
+          <AnimatePresence mode="wait" custom={directionRef.current}>
+            <motion.div
+              key={activeIndex}
+              custom={directionRef.current}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              onAnimationComplete={() => { transitioning.current = false }}
+              style={{ position: 'absolute', inset: 0 }}
+            >
+              {slide.kind === 'code' ? (
+                <SlideShell><slide.component isActive={true} /></SlideShell>
+              ) : (
+                <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )

@@ -84,12 +84,19 @@ export default defineConfig({
 `
 }
 
-const HTML_TEMPLATE = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Presentation</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}</style></head>
-<body><div id="root"></div><script type="module" src="./entry.tsx"></script></body>
-</html>`
+// Read the project's index.html at export time and rewrite it so the export
+// build uses the same head (fonts, meta, favicon) as the dev/main build.
+// This keeps dev and export visually identical — any change to index.html
+// automatically propagates to exports.
+function buildHtmlFromIndex(): string {
+  const indexPath = path.join(ROOT, 'index.html')
+  let html = fs.readFileSync(indexPath, 'utf-8')
+  // Point the bundle entry at the export entry file in the temp workspace.
+  html = html.replace(/<script[^>]*src=["'][^"']*main\.tsx["'][^>]*><\/script>/, '<script type="module" src="./entry.tsx"></script>')
+  // Exports are one-off presentations — no scroll chrome.
+  html = html.replace(/<\/head>/, '<style>html,body,#root{height:100%;overflow:hidden;margin:0}*{box-sizing:border-box}</style></head>')
+  return html
+}
 
 function createExportWorkspace() {
   const tempDir = fs.mkdtempSync(path.join(ROOT, '.export-tmp-'))
@@ -154,7 +161,7 @@ export function createExportHandler(
         workspace.entryPath,
         generateEntryFile(codeIds, JSON.stringify(exportData), JSON.stringify(exportMeta)),
       )
-      fs.writeFileSync(workspace.indexPath, HTML_TEMPLATE)
+      fs.writeFileSync(workspace.indexPath, buildHtmlFromIndex())
       fs.writeFileSync(workspace.configPath, generateViteConfig(workspace.tempDir))
 
       try {

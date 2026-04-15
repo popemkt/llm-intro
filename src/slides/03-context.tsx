@@ -84,7 +84,7 @@ function MiniPhoto() {
 /* ── Main ── */
 export default function Context({ isActive }: SlideProps) {
   const [shown, setShown] = useState(0)
-  const [selModel, setSelModel] = useState(1) // Claude default
+  const [selModel, setSelModel] = useState(3) // Llama 3 default — small 128K ceiling so the demo can overflow
 
   useEffect(() => {
     if (!isActive) { setShown(0); setSelModel(1) }
@@ -503,7 +503,7 @@ export default function Context({ isActive }: SlideProps) {
             </AnimatePresence>
 
             {/* ── Click prompt ── */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {shown < LAYERS.length && (
                 <motion.div
                   key={`prompt-${shown}`}

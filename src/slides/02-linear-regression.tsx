@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useLayoutEffect } from 'react'
+import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import type { SlideProps } from '@/types'
 import { T } from '@/design/tokens'
@@ -69,8 +69,9 @@ const randomLine = () => ({ slope: (Math.random()-0.4)*90, intercept: Math.rando
 
 const SENTENCE = [
   'Large','language','models','predict','the','next',
-  'token','using','all','previous','context','in',
-  'the','sequence','then','loop','back','to','generate','text',
+  'token','using','all','previous','context','in','the','sequence',
+  'then','loop','back','to','generate','coherent','text','one','piece','at','a','time',
+  'until','the','whole','response','is','complete',
 ]
 
 // ─── Part A: intro ────────────────────────────────────────────────────────────
@@ -172,18 +173,20 @@ function Intro() {
 
 // ─── Part B: learning chart ───────────────────────────────────────────────────
 function LearnChart({
-  svgRef, pts, setPts,
+  svgRef, pts, setPts, line, setLine, predictX, setPredictX,
 }: {
   svgRef: React.RefObject<SVGSVGElement | null>
   pts: Pt[]
   setPts: (p: Pt[]) => void
+  line: { slope: number; intercept: number }
+  setLine: React.Dispatch<React.SetStateAction<{ slope: number; intercept: number }>>
+  predictX: number
+  setPredictX: React.Dispatch<React.SetStateAction<number>>
 }) {
-  const [line,     setLine]     = useState(randomLine)
   const [steps,    setSteps]    = useState(0)
   const [showRes,  setShowRes]  = useState(false)
   const [drag,     setDrag]     = useState<number|null>(null)
   const [dragPred, setDragPred] = useState(false)
-  const [predictX, setPredictX] = useState(13.5)
   const didDrag = useRef(false)
 
   const fit       = ols(pts)
@@ -254,7 +257,10 @@ function LearnChart({
 
   return (
     <motion.div initial={{opacity:0}} animate={{opacity:1}}
-      exit={{opacity:0, transition:{duration:.2}}}
+      // Exit shorter than CHIP_DELAY so the chart gracefully fades while
+      // the dots still linger on top of it. The dots then stay visible
+      // alone for a beat before the chip morph begins.
+      exit={{opacity:0, transition:{duration: LEARN_FADE_DURATION, ease: CHIP_EASE}}}
       transition={{duration:.25}}
       style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',
               alignItems:'center',justifyContent:'center',gap:8,overflow:'auto'}}>
@@ -327,13 +333,12 @@ function LearnChart({
               stroke="#f97316" strokeWidth={1.5} strokeDasharray="3 2" opacity={.65}/>
           ))}
 
-          {/* model line */}
-          <motion.line animate={{x1:scx(0),y1:scy(y0),x2:scx(MONTHS),y2:scy(yM),
-                                 stroke:converged?Y:T.accent}}
-            transition={{duration:.3}} strokeWidth={2}/>
-          <motion.line animate={{x1:scx(MONTHS),y1:scy(yM),x2:scx(X_EXT),y2:scy(yExt),
-                                 stroke:converged?Y:T.accent}}
-            transition={{duration:.3}} strokeWidth={1.5} strokeDasharray="5 3" opacity={.55}/>
+          {/* model line — instant updates so it stays in sync with the
+              yellow handle, dashed line, and (in Part C) the yellow chip. */}
+          <line x1={scx(0)} y1={scy(y0)} x2={scx(MONTHS)} y2={scy(yM)}
+            stroke={converged?Y:T.accent} strokeWidth={2}/>
+          <line x1={scx(MONTHS)} y1={scy(yM)} x2={scx(X_EXT)} y2={scy(yExt)}
+            stroke={converged?Y:T.accent} strokeWidth={1.5} strokeDasharray="5 3" opacity={.55}/>
           <text x={scx(X_EXT)-3}
                 y={Math.max(PT+12,Math.min(CH-PB-4,scy(yExt)-8))}
                 textAnchor="end" fontSize={9.5} fontFamily="JetBrains Mono,monospace" fontWeight={600}
@@ -341,12 +346,12 @@ function LearnChart({
             {converged?'model ✓':'model'}
           </text>
 
-          {/* prediction handle */}
+          {/* prediction handle — the yellow dot itself is rendered as an HTML
+              layoutId element in the parent's dots layer so it can morph to
+              the TokenPredict "next" chip. Here we only draw the guide line. */}
           <line x1={scx(predictX)} y1={scy(Math.max(0,Math.min(YMAX,pyC)))}
                 x2={scx(predictX)} y2={CH-PB}
                 stroke={Y} strokeWidth={1} strokeDasharray="4 3" opacity={.7}/>
-          <circle cx={scx(predictX)} cy={scy(Math.max(0,Math.min(YMAX,pyC)))}
-                  r={5} fill={Y} opacity={.9}/>
           <text x={scx(predictX)+7}
                 y={Math.max(PT+10,Math.min(CH-PB-4,scy(Math.max(0,Math.min(YMAX,pyC)))-6))}
                 fill={Y} fontSize={9} fontFamily="JetBrains Mono,monospace" fontWeight={600}>
@@ -430,50 +435,99 @@ function LearnChart({
 }
 
 // ─── Context chip — morphs from dot via shared layoutId ─────────────────────
-function ContextChip({ word, id, index }: {
+// Initial morph: dots linger (delay), then all move in unison, slow tween, no overshoot.
+// After the morph finishes, subsequent reflows (when Predict pushes new chips in)
+// use a fast spring so the row shifts immediately instead of drifting for 1.4s.
+const CHIP_DELAY = 2.0
+const CHIP_DURATION = 1.2
+const CHIP_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
+// Chart fade-out duration when leaving Part B for Part C. Shorter than
+// CHIP_DELAY so the dots stay visible for a beat after the chart is gone.
+const LEARN_FADE_DURATION = 1.3
+
+const MORPH_LAYOUT = { type: 'tween' as const, duration: CHIP_DURATION, ease: CHIP_EASE, delay: CHIP_DELAY }
+const SHIFT_LAYOUT = { type: 'spring' as const, stiffness: 320, damping: 34 }
+
+function ContextChip({ word, id, morphDone }: {
   word: string
   id: string
-  index: number
+  morphDone: boolean
 }) {
   return (
     <motion.span
+      layout
       layoutId={`dot-${id}`}
-      transition={{ type:'spring', stiffness:200, damping:14, delay: 0.5 + index * 0.15 }}
+      transition={{ layout: morphDone ? SHIFT_LAYOUT : MORPH_LAYOUT, default: MORPH_LAYOUT }}
       style={{
         display:'inline-flex', alignItems:'center', padding:'5px 11px',
         fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:500,
         background:T.surface, border:`1.5px solid ${T.accent}`, color:T.accent,
-        borderRadius:8,
+        borderRadius:8, whiteSpace:'nowrap', flexShrink:0,
       }}>
-      <motion.span initial={{opacity:0}} animate={{opacity:1}}
-        transition={{delay: 0.5 + index*0.15 + 0.3, duration:.2}}>
+      <span style={{ opacity: morphDone ? 1 : 0, transition: 'opacity .15s ease-out' }}>
         {word}
-      </motion.span>
+      </span>
     </motion.span>
   )
 }
 
 // ─── Part C: token prediction ─────────────────────────────────────────────────
+// Assembly-line layout: a single non-wrapping row where generated tokens
+// appear on the right and existing tokens shift leftward (falling off-screen
+// through a soft mask). The rightmost "next" chip is yellow and morphs from
+// the LearnChart prediction handle via layoutId="next-token".
 function TokenPredict({ pts }: {
   pts: Pt[]
 }) {
   const count = Math.min(pts.length, SENTENCE.length)
   const [predicted, setPredicted] = useState(0)
-  const [latestIdx, setLatestIdx] = useState(-1)
+  const [morphDone, setMorphDone] = useState(false)
 
-  const buttonDelay = 0.5 + count * 0.15 + 0.8
+  // Reveal the trailing chrome (button + footer) only after the morph is
+  // finished, so the eye stays on the dots first.
+  const BUTTON_DELAY = CHIP_DELAY + CHIP_DURATION + 0.4
 
-  const predict = () => {
-    setLatestIdx((count + predicted) % SENTENCE.length)
-    setPredicted(p => p+1)
-  }
+  useEffect(() => {
+    // Flip AFTER the tween fully completes. Switching transition.layout
+    // mid-animation causes Framer Motion to retarget with a different
+    // transition, which visibly desyncs chips (especially the yellow one
+    // because it starts from a different source). Wait for the whole thing.
+    const t = setTimeout(() => setMorphDone(true), (CHIP_DELAY + CHIP_DURATION + 0.05) * 1000)
+    return () => clearTimeout(t)
+  }, [])
+
+  const predict = () => setPredicted(p => p + 1)
+
+  // Infinite loop through SENTENCE so the demo keeps flowing.
+  const wordAt = (i: number) => SENTENCE[i % SENTENCE.length]
+  const totalVisible = count + predicted
+
+  // Single-line assembly: yellow "next" chip is anchored at the right
+  // (cells[0] under row-reverse). History trails left and overflows past
+  // the container's left edge — clipped only by the slide canvas edge.
+  type Cell =
+    | { kind: 'ctx'; id: string; word: string }
+    | { kind: 'gen'; idx: number; word: string }
+    | { kind: 'next'; word: string }
+  const chronological: Cell[] = []
+  for (let i = 0; i < count; i++) chronological.push({ kind: 'ctx', id: String(pts[i].id), word: wordAt(i) })
+  for (let i = 0; i < predicted; i++) chronological.push({ kind: 'gen', idx: count + i, word: wordAt(count + i) })
+  chronological.push({ kind: 'next', word: wordAt(totalVisible) })
+  const cells = chronological.slice().reverse()
+
+  // Full transcript string for the corner display
+  const transcriptWords: string[] = []
+  for (let i = 0; i < count; i++) transcriptWords.push(wordAt(i))
+  for (let i = 0; i < predicted; i++) transcriptWords.push(wordAt(count + i))
+  const transcript = transcriptWords.join(' ')
 
   return (
     <motion.div exit={{opacity:0, transition:{duration:.25}}}
       style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',
               alignItems:'center',justifyContent:'center',gap:22}}>
 
-      <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.3, duration:.25}}
+      <motion.p initial={{opacity:0}} animate={{opacity:1}}
+        transition={{delay: CHIP_DELAY + CHIP_DURATION - 0.2, duration:.3}}
         style={{fontSize:12,color:T.textDim,fontFamily:'Inter,sans-serif',
                 margin:0,textAlign:'center'}}>
         Each point became a{' '}
@@ -484,38 +538,79 @@ function TokenPredict({ pts }: {
         {' '}predicts what's next.
       </motion.p>
 
-      <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',maxWidth:600}}>
-        {SENTENCE.map((word, i) => {
-          const isPred = i >= count && (i-count) < predicted
-          const isLast = i === latestIdx
-
-          if (i < count) {
+      {/* Single-line assembly — yellow anchors right, history trails left.
+          No overflow clipping or masks so the chip morph can fly in from
+          anywhere in the slide. Older tokens naturally extend past the
+          container's left edge until they're clipped by the slide canvas. */}
+      <div style={{
+        width: '100%', maxWidth: 860,
+        display: 'flex', alignItems: 'center',
+        // In row-reverse, flex-start packs items toward the right edge,
+        // which is what anchors the yellow chip (cells[0]) there.
+        justifyContent: 'flex-start',
+        flexDirection: 'row-reverse',
+        gap: 8, padding: '4px 24px',
+      }}>
+        {cells.map((cell) => {
+          if (cell.kind === 'ctx') {
             return (
               <ContextChip
-                key={pts[i].id}
-                word={word}
-                id={String(pts[i].id)}
-                index={i}
+                key={`ctx-${cell.id}`}
+                word={cell.word}
+                id={cell.id}
+                morphDone={morphDone}
               />
             )
           }
-
+          if (cell.kind === 'gen') {
+            return (
+              <motion.span
+                key={`gen-${cell.idx}`}
+                layout
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{
+                  layout: SHIFT_LAYOUT,
+                  default: { type: 'spring', stiffness: 320, damping: 32 },
+                }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  padding: '5px 11px', borderRadius: 8,
+                  fontFamily: 'JetBrains Mono,monospace', fontSize: 13, fontWeight: 500,
+                  background: `${T.accent}12`,
+                  border: `1px solid ${T.accent}40`,
+                  color: T.accent,
+                  whiteSpace: 'nowrap', flexShrink: 0,
+                }}
+              >
+                {cell.word}
+              </motion.span>
+            )
+          }
+          // cell.kind === 'next' — the yellow "next to predict" chip
           return (
-            <motion.span key={i}
-              initial={{opacity:.1}} animate={{opacity: isPred ? 1 : .1}}
-              transition={{duration:.4}}
+            <motion.span
+              key="next"
+              layout
+              layoutId="next-token"
+              transition={{
+                layout: morphDone ? SHIFT_LAYOUT : MORPH_LAYOUT,
+                default: MORPH_LAYOUT,
+              }}
               style={{
-                display:'inline-flex', alignItems:'center',
-                padding:'5px 11px', borderRadius:8,
-                fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:500,
-                background: isLast ? YBG      : `${T.accent}10`,
-                border:`1px solid ${isLast ? YB : `${T.accent}30`}`,
-                color: isLast ? Y : T.accent,
-                transform: isLast ? 'scale(1.06)' : 'scale(1)',
-                boxShadow: isLast ? `0 0 14px ${Y}35` : 'none',
-                transition:'transform .3s, box-shadow .3s',
-              }}>
-              {word}
+                display: 'inline-flex', alignItems: 'center',
+                padding: '5px 12px', borderRadius: 8,
+                fontFamily: 'JetBrains Mono,monospace', fontSize: 13, fontWeight: 600,
+                background: YBG,
+                border: `1.5px solid ${YB}`,
+                color: Y,
+                whiteSpace: 'nowrap', flexShrink: 0,
+                boxShadow: `0 0 18px ${Y}30`,
+              }}
+            >
+              <span style={{ opacity: morphDone ? 1 : 0, transition: 'opacity .15s ease-out' }}>
+                {cell.word}
+              </span>
             </motion.span>
           )
         })}
@@ -523,7 +618,7 @@ function TokenPredict({ pts }: {
 
       <motion.button
         initial={{opacity:0, y:8}} animate={{opacity:1, y:0}}
-        transition={{delay: buttonDelay, duration:.4}}
+        transition={{delay: BUTTON_DELAY, duration:.4}}
         onClick={predict}
         style={{padding:'9px 30px',borderRadius:22,
                 border:`1.5px solid ${YB}`,background:YBG,
@@ -532,7 +627,35 @@ function TokenPredict({ pts }: {
         Predict next ✦
       </motion.button>
 
-      <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay: buttonDelay, duration:.25}}
+      {/* Transcript — subtle corner text box showing the full sentence so
+          far. Reveals with the rest of the chrome after the morph. */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: BUTTON_DELAY, duration: 0.3 }}
+        style={{
+          position: 'absolute',
+          left: 20, bottom: 20,
+          maxWidth: 260,
+          padding: '6px 10px',
+          border: `1px solid ${T.border}`,
+          borderRadius: 6,
+          background: `${T.surface}80`,
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: 9,
+          lineHeight: 1.5,
+          color: T.textDim,
+        }}
+      >
+        <div style={{ fontSize: 7.5, textTransform: 'uppercase', letterSpacing: '0.12em',
+                      color: T.muted, marginBottom: 2 }}>
+          transcript
+        </div>
+        <div>{transcript}</div>
+      </motion.div>
+
+      <motion.p initial={{opacity:0}} animate={{opacity:1}}
+        transition={{delay: BUTTON_DELAY, duration:.3}}
         style={{fontSize:11,color:T.textDim,fontFamily:'Inter,sans-serif',
                 textAlign:'center',maxWidth:420,lineHeight:1.7,margin:0}}>
         Regression predicts a number from inputs.
@@ -548,11 +671,18 @@ type Part = 'intro' | 'learn' | 'tokens'
 export default function LinearRegression({ isActive: _isActive }: SlideProps) {
   const [part, setPart] = useState<Part>('intro')
   const [pts,  setPts]  = useState<Pt[]>(INIT_PTS)
+  // Lifted from LearnChart so the yellow predict handle can render in the
+  // shared dots layer and participate in the morph to TokenPredict.
+  const [line, setLine] = useState(randomLine)
+  const [predictX, setPredictX] = useState(13.5)
   const svgRef       = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Store SVG position as fractions of the container (scale-invariant, so
+  // it works inside SlideShell's transform:scale canvas).
   const [svgRelRect, setSvgRelRect] = useState<{left:number,top:number,width:number,height:number}|null>(null)
 
-  // Track SVG position relative to the container so sibling dots stay aligned
+  const predictedY = Math.max(0, Math.min(YMAX, line.slope * predictX + line.intercept))
+
   useLayoutEffect(() => {
     if (part !== 'learn') { setSvgRelRect(null); return }
     const svgEl = svgRef.current
@@ -561,7 +691,13 @@ export default function LinearRegression({ isActive: _isActive }: SlideProps) {
     const update = () => {
       const sr = svgEl.getBoundingClientRect()
       const cr = conEl.getBoundingClientRect()
-      setSvgRelRect({ left: sr.left-cr.left, top: sr.top-cr.top, width: sr.width, height: sr.height })
+      if (cr.width === 0 || cr.height === 0) return
+      setSvgRelRect({
+        left:   (sr.left - cr.left) / cr.width,
+        top:    (sr.top  - cr.top)  / cr.height,
+        width:  sr.width  / cr.width,
+        height: sr.height / cr.height,
+      })
     }
     update()
     const ro = new ResizeObserver(update)
@@ -578,11 +714,13 @@ export default function LinearRegression({ isActive: _isActive }: SlideProps) {
     <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',
                  background:T.bg,padding:'20px 28px',boxSizing:'border-box'}}>
 
-      <div ref={containerRef} style={{flex:1,position:'relative',minHeight:0,overflow:'hidden'}}>
+      <div ref={containerRef} style={{flex:1,position:'relative',minHeight:0}}>
         <AnimatePresence mode="sync">
           {part==='intro'  && <Intro key="intro"/>}
           {part==='learn'  && (
-            <LearnChart key="learn" svgRef={svgRef} pts={pts} setPts={setPts}/>
+            <LearnChart key="learn" svgRef={svgRef} pts={pts} setPts={setPts}
+              line={line} setLine={setLine}
+              predictX={predictX} setPredictX={setPredictX}/>
           )}
           {part==='tokens' && (
             <TokenPredict key="tokens" pts={pts}/>
@@ -597,16 +735,38 @@ export default function LinearRegression({ isActive: _isActive }: SlideProps) {
               <motion.div
                 key={p.id}
                 layoutId={`dot-${p.id}`}
+                // Disable auto layout-animation so dragging a point tracks
+                // the pointer instantly instead of lagging behind a spring.
+                // The cross-element morph to TokenPredict chips still runs
+                // because it's driven by the target chip's transition.
+                transition={{ layout: { duration: 0 } }}
                 style={{
                   position: 'absolute',
-                  left: svgRelRect.left + (scx(p.x)/CW) * svgRelRect.width - 6,
-                  top:  svgRelRect.top  + (scy(p.y)/CH) * svgRelRect.height - 6,
+                  left: `${(svgRelRect.left + (scx(p.x)/CW) * svgRelRect.width) * 100}%`,
+                  top:  `${(svgRelRect.top  + (scy(p.y)/CH) * svgRelRect.height) * 100}%`,
+                  // Margin-based centering: transform would be clobbered by
+                  // Framer Motion's own layout transform.
+                  marginLeft: -6, marginTop: -6,
                   width: 12, height: 12, borderRadius: '50%',
                   background: T.surface,
                   border: `1.5px solid ${T.accent}`,
                 }}
               />
             ))}
+            {/* Yellow prediction-handle dot — morphs into the TokenPredict "next" chip. */}
+            <motion.div
+              layoutId="next-token"
+              transition={{ layout: { duration: 0 } }}
+              style={{
+                position: 'absolute',
+                left: `${(svgRelRect.left + (scx(predictX)/CW) * svgRelRect.width) * 100}%`,
+                top:  `${(svgRelRect.top  + (scy(predictedY)/CH) * svgRelRect.height) * 100}%`,
+                marginLeft: -7, marginTop: -7,
+                width: 14, height: 14, borderRadius: '50%',
+                background: Y,
+                boxShadow: `0 0 14px ${Y}80`,
+              }}
+            />
           </div>
         )}
       </div>

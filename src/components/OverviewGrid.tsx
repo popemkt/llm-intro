@@ -1160,29 +1160,31 @@ export function OverviewGrid({
         <div className="flex flex-col gap-6 p-8">
           {/* Ungrouped bucket */}
           <div className="flex flex-col gap-3">
-            <div
-              className="flex items-center gap-2 py-2 px-1 border-b border-(--color-border)/60"
-              style={{ color: 'var(--color-text)' }}
-            >
-              <button
-                onClick={() => setUngroupedCollapsed(c => !c)}
-                aria-label={ungroupedCollapsed ? 'Expand ungrouped' : 'Collapse ungrouped'}
-                className="p-1 rounded hover:bg-(--color-border)"
-                style={{ background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer' }}
+            {!readonly && (
+              <div
+                className="flex items-center gap-2 py-2 px-1 border-b border-(--color-border)/60"
+                style={{ color: 'var(--color-text)' }}
               >
-                {ungroupedCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-              </button>
-              <span
-                className="text-sm font-semibold"
-                style={{ color: 'var(--color-accent)', letterSpacing: '0.02em' }}
-              >
-                Ungrouped
-              </span>
-              <span className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
-                {buckets.ungrouped.length} slide{buckets.ungrouped.length === 1 ? '' : 's'}
-              </span>
-            </div>
-            {!ungroupedCollapsed && (
+                <button
+                  onClick={() => setUngroupedCollapsed(c => !c)}
+                  aria-label={ungroupedCollapsed ? 'Expand ungrouped' : 'Collapse ungrouped'}
+                  className="p-1 rounded hover:bg-(--color-border)"
+                  style={{ background: 'none', border: 'none', color: 'var(--color-text-dim)', cursor: 'pointer' }}
+                >
+                  {ungroupedCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                </button>
+                <span
+                  className="text-sm font-semibold"
+                  style={{ color: 'var(--color-accent)', letterSpacing: '0.02em' }}
+                >
+                  Ungrouped
+                </span>
+                <span className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
+                  {buckets.ungrouped.length} slide{buckets.ungrouped.length === 1 ? '' : 's'}
+                </span>
+              </div>
+            )}
+            {(!ungroupedCollapsed || readonly) && (
           <SortableContext items={buckets.ungrouped.map(s => s.id)} strategy={rectSortingStrategy}>
             <BucketDrop id={UNGROUPED_KEY} empty={buckets.ungrouped.length === 0 && groups.length > 0}>
               {buckets.ungrouped.map((slide) => {

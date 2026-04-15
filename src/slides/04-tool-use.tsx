@@ -80,6 +80,98 @@ const CYCLE2_FIRST = 13
 
 const MAX_STEP = TIMELINE.length + 1
 
+// ── chat window ─────────────────────────────────────────────────────────────
+// Filter the visible timeline down to user prompts + assistant output so
+// the right-side panel shows a conventional chat transcript — no thinking,
+// no tool calls, no results. Consecutive output tokens collapse into a
+// single assistant bubble.
+type ChatMsg = { role: 'user' | 'assistant'; text: string }
+function deriveChat(visibleCount: number): ChatMsg[] {
+  const out: ChatMsg[] = []
+  let buf = ''
+  for (let i = 0; i < visibleCount; i++) {
+    const c = TIMELINE[i]
+    if (c.kind === 'prompt') {
+      if (buf) { out.push({ role: 'assistant', text: buf.trim() }); buf = '' }
+      out.push({ role: 'user', text: c.text })
+    } else if (c.kind === 'output') {
+      buf += (buf ? ' ' : '') + c.text
+    }
+  }
+  if (buf) out.push({ role: 'assistant', text: buf.trim() })
+  return out
+}
+
+function ChatWindow({ visibleCount }: { visibleCount: number }) {
+  const messages = deriveChat(visibleCount)
+  return (
+    <div
+      style={{
+        width: 220,
+        flexShrink: 0,
+        border: `1px solid ${T.border}`,
+        borderRadius: 10,
+        background: `${T.surface}40`,
+        padding: '10px 12px 12px',
+        display: 'flex', flexDirection: 'column',
+        minHeight: 0,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 9,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: T.textDim,
+          fontFamily: 'JetBrains Mono, monospace',
+          marginBottom: 8,
+        }}
+      >
+        Chat
+      </div>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex', flexDirection: 'column',
+          gap: 6,
+          overflowY: 'auto',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {messages.length === 0 && (
+          <div style={{ fontSize: 10, color: T.muted, fontStyle: 'italic' }}>
+            (empty)
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <motion.div
+            key={`msg-${i}-${m.role}`}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '90%',
+              padding: '5px 8px',
+              borderRadius: 8,
+              background: m.role === 'user' ? `${T.accent}1c` : T.surface,
+              border: `1px solid ${m.role === 'user' ? `${T.accent}66` : T.border}`,
+              color: m.role === 'user' ? T.accent : T.text,
+              fontSize: 10,
+              fontFamily: 'Inter, sans-serif',
+              lineHeight: 1.35,
+              whiteSpace: 'normal',
+              wordBreak: 'break-word',
+            }}
+          >
+            {m.text}
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── SVG flow diagram (lower half) ───────────────────────────────────────────
 const DIAG_W = 800
 const DIAG_H = 260
@@ -228,15 +320,16 @@ export default function ToolUse({ isActive }: SlideProps) {
         </span>
       </motion.div>
 
-      {/* ═══════ Context window ═══════ */}
+      {/* ═══════ Context window + Chat window (row) ═══════ */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexShrink: 0, minHeight: 0 }}>
       <div
         style={{
+          flex: 1,
+          minWidth: 0,
           border: `1px dashed ${T.border}`,
           borderRadius: 10,
           background: `${T.surface}30`,
           padding: '10px 0 12px 0',
-          marginBottom: 10,
-          flexShrink: 0,
         }}
       >
         <div
@@ -301,6 +394,10 @@ export default function ToolUse({ isActive }: SlideProps) {
               scrollbarWidth: 'none',
               cursor: 'grab',
               touchAction: 'pan-x',
+              // Subtle left-edge fade hints that older chips exist to the
+              // left and can be scrolled/dragged back to.
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 100%)',
+              maskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 100%)',
             }}
           >
             <div
@@ -375,6 +472,10 @@ export default function ToolUse({ isActive }: SlideProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Chat window — user prompts and assistant answers only */}
+      <ChatWindow visibleCount={visibleCount} />
       </div>
 
       {/* ═══════ Flow diagram ═══════ */}

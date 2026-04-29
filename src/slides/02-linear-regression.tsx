@@ -425,8 +425,11 @@ function LearnChart({
             </span>
           </span>
           <motion.span animate={{opacity:converged?1:0}} transition={{duration:.5}}
-            style={{color:Y,fontWeight:600,whiteSpace:'nowrap'}}>
-            converged ✓
+            style={{color:T.textDim,fontWeight:600,whiteSpace:'nowrap'}}>
+            <span style={{color:Y}}>converged ✓</span>{'  '}y ={' '}
+            <span style={{color:Y}}>{line.slope.toFixed(1)}</span>x{' '}
+            {line.intercept >= 0 ? '+' : '−'}{' '}
+            <span style={{color:Y}}>{Math.abs(line.intercept).toFixed(0)}</span>
           </motion.span>
         </div>
       </div>

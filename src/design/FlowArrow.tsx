@@ -8,12 +8,13 @@ interface FlowArrowProps {
   dashed?: boolean
   markerEnd?: string
   hot?: boolean
+  accent?: boolean
 }
 
 export function FlowArrow({
-  d, delay = 0, isActive = true, dashed = false, markerEnd = 'url(#arrowhead)', hot = false,
+  d, delay = 0, isActive = true, dashed = false, markerEnd = 'url(#arrowhead)', hot = false, accent = false,
 }: FlowArrowProps) {
-  const stroke = hot ? T.highlight : T.muted
+  const stroke = hot ? T.highlight : accent ? T.accent : T.muted
   const width  = hot ? 2.4 : 1
   return (
     <motion.path

@@ -93,8 +93,8 @@ export default function Appendix({ isActive }: SlideProps) {
 
         {/* SVG flow */}
         <svg viewBox={`0 0 ${W} ${H}`} style={{ flex: '0 0 auto', width: '60%', maxWidth: W }} onClick={e => e.stopPropagation()}>
-          <ArrowDefs id="app" color={T.muted} />
-          <ArrowDefs id="app-a" color={T.accent} />
+          <ArrowDefs id="app" />
+          <ArrowDefs id="app-a" />
 
           {/* Arrows */}
           <FlowArrow d={`M${cx(NODES.dev)} ${cb(NODES.dev)} L${cx(NODES.stable)} ${ct(NODES.stable)}`} delay={0.5} isActive={isActive} accent markerEnd="url(#app-a)" />

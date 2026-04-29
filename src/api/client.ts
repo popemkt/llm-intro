@@ -1,4 +1,4 @@
-import type { ApiPresentation, ApiSlide, ThemeName } from '@/types'
+import type { ApiPresentation, ApiSlide, ApiSlideGroup, LayoutInput, ThemeName } from '@/types'
 
 export class ApiError extends Error {
   status: number
@@ -50,7 +50,17 @@ export const api = {
     update: (pid: number, sid: number, patch: { title?: string; blocks?: unknown[] }) =>
       request<ApiSlide>(`/api/presentations/${pid}/slides/${sid}`, { method: 'PATCH', body: JSON.stringify(patch) }),
     delete: (pid: number, sid: number)      => request<void>(`/api/presentations/${pid}/slides/${sid}`, { method: 'DELETE' }),
-    reorder:(pid: number, ids: number[])    =>
-      request<ApiSlide[]>(`/api/presentations/${pid}/slides/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+    layout: (pid: number, layout: LayoutInput) =>
+      request<ApiSlide[]>(`/api/presentations/${pid}/slides/layout`, { method: 'PUT', body: JSON.stringify(layout) }),
+  },
+
+  groups: {
+    list:   (pid: number)                      => request<ApiSlideGroup[]>(`/api/presentations/${pid}/groups`),
+    create: (pid: number, title?: string)      =>
+      request<ApiSlideGroup>(`/api/presentations/${pid}/groups`, { method: 'POST', body: JSON.stringify({ title }) }),
+    update: (pid: number, gid: number, patch: { title?: string; collapsed?: boolean }) =>
+      request<ApiSlideGroup>(`/api/presentations/${pid}/groups/${gid}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+    delete: (pid: number, gid: number)         =>
+      request<void>(`/api/presentations/${pid}/groups/${gid}`, { method: 'DELETE' }),
   },
 }

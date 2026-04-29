@@ -36,10 +36,26 @@ export interface ApiSlide {
   id: number
   presentation_id: number
   position: number
+  group_id: number | null
   kind: 'code' | 'db'
   code_id: string | null
   title: string
   blocks: Block[]
   created_at: string
   updated_at: string
+}
+
+export interface ApiSlideGroup {
+  id: number
+  presentation_id: number
+  title: string
+  position: number
+  collapsed: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface LayoutInput {
+  ungrouped: number[]
+  groups: Array<{ id: number; slideIds: number[] }>
 }

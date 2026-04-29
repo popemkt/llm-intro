@@ -1,133 +1,161 @@
-import { useMemo } from 'react'
 import { motion } from 'motion/react'
 import type { SlideProps } from '@/types'
 
-const PARTICLE_COUNT = 18
-
-interface Particle {
-  cx: number
-  cy: number
-  r: number
-  color: string
-  dur: number
-  dy: number
-}
-
-const COLORS = ['#25d366', '#00ffa3', '#1a9448', '#3a4d42', '#7a9985']
+// Authored for the 1000 × 562.5 canvas provided by SlideShell.
+// All sizes are logical px; no vw/vh/rem.
 
 export default function Opener({ isActive }: SlideProps) {
-  const particles = useMemo<Particle[]>(() => {
-    return Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      cx: 5 + ((i * 53) % 90),
-      cy: 5 + ((i * 37) % 90),
-      r: 1.5 + ((i * 17) % 4),
-      color: COLORS[i % COLORS.length],
-      dur: 4 + ((i * 1.3) % 6),
-      dy: 3 + ((i * 2.1) % 8),
-    }))
-  }, [])
-
   const words = ['What', 'is', 'an', 'LLM?']
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden"
-         style={{ background: 'var(--color-bg)' }}>
-
-      {/* Animated conic-gradient orb */}
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: '#0a0c0b',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'Inter, sans-serif',
+      }}
+    >
+      {/* Gradient-mesh background: three large blurred blobs + subtle grain */}
       <motion.div
-        animate={isActive ? { rotate: 360 } : { rotate: 0 }}
-        transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+        aria-hidden
+        animate={isActive ? { x: [0, 30, 0], y: [0, -20, 0] } : { x: 0, y: 0 }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
         style={{
           position: 'absolute',
-          width: '140%',
-          height: '140%',
-          background: 'conic-gradient(from 0deg at 50% 50%, #25d366 0%, #0d0f0e 25%, #00ffa3 50%, #0d0f0e 75%, #25d366 100%)',
+          width: 620,
+          height: 620,
+          left: -160,
+          top: -140,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 30% 30%, #25d36688 0%, transparent 60%)',
+          filter: 'blur(60px)',
+        }}
+      />
+      <motion.div
+        aria-hidden
+        animate={isActive ? { x: [0, -40, 0], y: [0, 25, 0] } : { x: 0, y: 0 }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          width: 720,
+          height: 720,
+          right: -220,
+          bottom: -220,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 50% 50%, #00ffa344 0%, transparent 65%)',
           filter: 'blur(80px)',
-          opacity: 0.18,
-          top: '-20%',
-          left: '-20%',
+        }}
+      />
+      <motion.div
+        aria-hidden
+        animate={isActive ? { opacity: [0.4, 0.7, 0.4] } : { opacity: 0.3 }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          width: 420,
+          height: 420,
+          left: '55%',
+          top: '30%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 50% 50%, #1a944855 0%, transparent 55%)',
+          filter: 'blur(70px)',
         }}
       />
 
-      {/* Floating particles */}
-      <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMid slice"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.6 }}
-      >
-        {particles.map((p, i) => (
-          <motion.circle
-            key={i}
-            cx={p.cx}
-            cy={p.cy}
-            r={p.r}
-            fill={p.color}
-            animate={isActive ? {
-              cy: [p.cy, p.cy - p.dy, p.cy],
-              opacity: [0.3, 0.8, 0.3],
-            } : { cy: p.cy, opacity: 0.3 }}
-            transition={{
-              duration: p.dur,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: i * 0.22,
-            }}
-          />
-        ))}
-      </svg>
+      {/* Thin grid overlay — subtle structure */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage:
+            'linear-gradient(to right, #ffffff08 1px, transparent 1px),' +
+            'linear-gradient(to bottom, #ffffff08 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(circle at 50% 50%, black 40%, transparent 80%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, black 40%, transparent 80%)',
+        }}
+      />
 
-      {/* Main text */}
-      <div className="relative z-10 text-center px-12">
-        <motion.div
-          variants={{ show: { transition: { staggerChildren: 0.1 } } }}
+      {/* Content */}
+      <div style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: '0 80px' }}>
+        {/* Title */}
+        <motion.h1
+          variants={{ show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } } }}
           initial="hidden"
           animate={isActive ? 'show' : 'hidden'}
-          style={{ display: 'flex', gap: '0.35em', justifyContent: 'center', flexWrap: 'wrap' }}
+          style={{
+            display: 'flex',
+            gap: 28,
+            justifyContent: 'center',
+            margin: 0,
+            fontSize: 96,
+            fontWeight: 900,
+            letterSpacing: '-0.035em',
+            lineHeight: 1,
+          }}
         >
           {words.map((word) => (
             <motion.span
               key={word}
               variants={{
-                hidden: { opacity: 0, y: 32 },
-                show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+                hidden: { opacity: 0, y: 28, filter: 'blur(8px)' },
+                show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
               }}
               style={{
-                fontSize: 'clamp(3rem, 8vw, 6rem)',
-                fontWeight: 900,
-                color: word === 'LLM?' ? 'var(--color-accent)' : 'var(--color-text)',
-                letterSpacing: '-0.03em',
-                lineHeight: 1.05,
+                color: word === 'LLM?' ? '#25d366' : '#e8f0eb',
+                display: 'inline-block',
               }}
             >
               {word}
             </motion.span>
           ))}
-        </motion.div>
+        </motion.h1>
 
+        {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
-          transition={{ duration: 0.5, delay: 0.6, ease: 'easeOut' }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+          transition={{ duration: 0.5, delay: 0.7, ease: 'easeOut' }}
           style={{
-            marginTop: '2rem',
-            color: 'var(--color-text-dim)',
-            fontSize: 'clamp(0.9rem, 2vw, 1.25rem)',
-            letterSpacing: '0.08em',
+            marginTop: 32,
+            color: '#7a9985',
+            fontSize: 18,
+            letterSpacing: '0.18em',
             textTransform: 'uppercase',
             fontWeight: 500,
           }}
         >
           Let's build some intuition
         </motion.p>
-
-        <motion.div
-          animate={isActive ? { y: [0, 8, 0], opacity: [0.4, 0.9, 0.4] } : { opacity: 0 }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          style={{ marginTop: '3rem', color: 'var(--color-accent)', fontSize: '1.5rem' }}
-        >
-          ↓
-        </motion.div>
       </div>
+
+      {/* Bottom-left corner sigil */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: 48,
+          bottom: 36,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: 11,
+          color: '#3a4d42',
+          letterSpacing: '0.12em',
+        }}
+      >
+        <span style={{ width: 24, height: 1, background: '#25d36655' }} />
+        llm · intro
+      </div>
+
     </div>
   )
 }

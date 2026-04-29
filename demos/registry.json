@@ -1,0 +1,6 @@
+{
+  "name": {
+    "description": "Input: any string. Output exactly: My name: HoangNguyenGia",
+    "code": "(input) => `My name: HoangNguyenGia`"
+  }
+}

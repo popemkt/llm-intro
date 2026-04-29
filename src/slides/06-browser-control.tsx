@@ -33,8 +33,8 @@ const ct = (n: typeof claud) => n.y
 function LoopDiagram({ isActive }: { isActive: boolean }) {
   return (
     <svg viewBox={`0 0 ${DW} ${DH}`} style={{ width: '100%', maxWidth: DW }}>
-      <ArrowDefs id="darr" color={T.muted} />
-      <ArrowDefs id="darr-a" color={T.accent} />
+      <ArrowDefs id="darr" />
+      <ArrowDefs id="darr-a" />
 
       <FlowNode {...claud}  label="Claude"    delay={0.1} isActive={isActive} accent />
       <FlowNode {...play}   label="Playwright" delay={0.3} isActive={isActive} />

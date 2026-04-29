@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import type { createSlidesService } from '../services/slides.js'
-import { parseSlideCreate, parseSlideOrder, parseSlidePatch } from '../validation.js'
+import { parseLayout, parseSlideCreate, parseSlidePatch } from '../validation.js'
 
 type SlidesService = ReturnType<typeof createSlidesService>
 
@@ -24,8 +24,8 @@ export function createSlidesRouter(slidesService: SlidesService) {
     res.status(204).send()
   })
 
-  router.put('/order', (req, res) => {
-    res.json(slidesService.reorder(Number(req.params.pid), parseSlideOrder(req.body).ids))
+  router.put('/layout', (req, res) => {
+    res.json(slidesService.applyLayout(Number(req.params.pid), parseLayout(req.body)))
   })
 
   return router

@@ -3,25 +3,30 @@ import cors from 'cors'
 import { AppError } from './errors.js'
 import { createPresentationsRouter } from './routes/presentations.js'
 import { createSlidesRouter } from './routes/slides.js'
+import { createGroupsRouter } from './routes/groups.js'
 import { createExportHandler } from './routes/export.js'
 import type { createPresentationsService } from './services/presentations.js'
 import type { createSlidesService } from './services/slides.js'
+import type { createGroupsService } from './services/groups.js'
 
 type PresentationsService = ReturnType<typeof createPresentationsService>
 type SlidesService = ReturnType<typeof createSlidesService>
+type GroupsService = ReturnType<typeof createGroupsService>
 
 export function createApp(services: {
   presentationsService: PresentationsService
   slidesService: SlidesService
+  groupsService: GroupsService
 }) {
   const app = express()
 
   app.use(cors())
   app.use(express.json())
 
-  app.post('/api/presentations/:pid/export', createExportHandler(services.presentationsService, services.slidesService))
+  app.post('/api/presentations/:pid/export', createExportHandler(services.presentationsService, services.slidesService, services.groupsService))
   app.use('/api/presentations', createPresentationsRouter(services.presentationsService))
   app.use('/api/presentations/:pid/slides', createSlidesRouter(services.slidesService))
+  app.use('/api/presentations/:pid/groups', createGroupsRouter(services.groupsService))
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }))
 

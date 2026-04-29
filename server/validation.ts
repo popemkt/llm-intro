@@ -149,18 +149,43 @@ export function parseSlidePatch(input: unknown) {
   return patch
 }
 
-export function parseSlideOrder(input: unknown) {
+function parseIdArray(value: unknown, field: string): number[] {
+  if (!Array.isArray(value) || value.some((id) => typeof id !== 'number' || !Number.isInteger(id) || id <= 0)) {
+    throw new AppError(400, `${field} must be an array of positive integers`)
+  }
+  return value as number[]
+}
+
+export function parseLayout(input: unknown) {
   const body = asRecord(input)
-  const { ids } = body
+  const ungrouped = parseIdArray(body.ungrouped ?? [], 'ungrouped')
+  if (!Array.isArray(body.groups)) throw new AppError(400, 'groups must be an array')
+  const groups = body.groups.map((entry, index) => {
+    const group = asRecord(entry)
+    if (typeof group.id !== 'number' || !Number.isInteger(group.id) || group.id <= 0) {
+      throw new AppError(400, `groups[${index}].id must be a positive integer`)
+    }
+    const slideIds = parseIdArray(group.slideIds ?? [], `groups[${index}].slideIds`)
+    return { id: group.id, slideIds }
+  })
+  return { ungrouped, groups }
+}
 
-  if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'number' || !Number.isInteger(id) || id <= 0)) {
-    throw new AppError(400, 'ids must be an array of positive integers')
+export function parseGroupCreate(input: unknown) {
+  const body = asRecord(input)
+  return { title: parseOptionalTrimmedString(body.title, 'title') ?? 'Group' }
+}
+
+export function parseGroupPatch(input: unknown) {
+  const body = asRecord(input)
+  const title = parseOptionalTrimmedString(body.title, 'title')
+  let collapsed: boolean | undefined
+  if (body.collapsed !== undefined) {
+    if (typeof body.collapsed !== 'boolean') throw new AppError(400, 'collapsed must be a boolean')
+    collapsed = body.collapsed
   }
-
-  const uniqueIds = new Set(ids)
-  if (uniqueIds.size !== ids.length) {
-    throw new AppError(400, 'ids must be unique')
+  if (title === undefined && collapsed === undefined) {
+    throw new AppError(400, 'at least one field is required')
   }
-
-  return { ids }
+  return { title, collapsed }
 }

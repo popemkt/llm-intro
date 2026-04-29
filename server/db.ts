@@ -12,6 +12,7 @@ const SEED_PRESENTATION_NAME = 'LLM & Agent Basics'
 const BUILT_IN_SLIDES = [
   { code_id: '01-opener', title: 'What is an LLM?' },
   { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
+  { code_id: '10-word-dimensions', title: 'How Words Become Numbers' },
   { code_id: '03-context', title: 'Context Window' },
   { code_id: '04-tool-use', title: 'Tool Use / Agent Loop' },
   { code_id: '05-claude-desktop', title: 'Claude Desktop' },
@@ -20,6 +21,23 @@ const BUILT_IN_SLIDES = [
   { code_id: '08-workspace-concepts', title: 'Workspace Concepts' },
   { code_id: '09-appendix', title: 'Tech Landscape (Appendix)' },
 ] as const
+
+// One-time seed for the system presentation's group layout. Applied only
+// when the presentation has no groups yet, so user customisations on
+// existing databases are preserved.
+const SEED_LAYOUT = {
+  ungrouped: ['06-browser-control', '08-workspace-concepts'] as string[],
+  groups: [
+    {
+      title: 'How it works from a visible standpoint',
+      slides: ['01-opener', '02-linear-regression', '04-tool-use', '03-context'],
+    },
+    { title: 'Indepth theory', slides: ['10-word-dimensions'] },
+    { title: 'Claude code', slides: ['05-claude-desktop', '07-workspace-setup'] },
+    { title: 'Advanced tools and workflows', slides: ['09-appendix'] },
+    { title: 'Cowork', slides: [] as string[] },
+  ],
+} as const
 
 export function openDatabase(filePath = process.env.LLM_INTRO_DB_PATH ?? DB_PATH) {
   const db = new Database(filePath)
@@ -106,6 +124,30 @@ function migrate(db: Database.Database) {
     `)
     db.pragma('user_version = 5')
   }
+
+  if (version < 6) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS slide_groups (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        presentation_id INTEGER NOT NULL REFERENCES presentations(id) ON DELETE CASCADE,
+        title           TEXT NOT NULL DEFAULT 'Group',
+        position        INTEGER NOT NULL DEFAULT 0,
+        collapsed       INTEGER NOT NULL DEFAULT 0,
+        created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS slide_groups_presentation_idx ON slide_groups(presentation_id, position);
+    `)
+    try {
+      db.exec(`ALTER TABLE slides ADD COLUMN group_id INTEGER REFERENCES slide_groups(id) ON DELETE SET NULL`)
+    } catch {
+      // Column already exists.
+    }
+    // Positions now scoped per-bucket (null group = ungrouped); old global
+    // uniqueness no longer applies.
+    db.exec(`DROP INDEX IF EXISTS slides_presentation_position_unique`)
+    db.pragma('user_version = 6')
+  }
 }
 
 function normalizeSlidePositions(db: Database.Database) {
@@ -173,5 +215,34 @@ function seedSystemPresentation(db: Database.Database) {
       }
     })
     deleteMissing.run(presentationId, ...BUILT_IN_SLIDES.map((slide) => slide.code_id))
+  })()
+
+  seedSystemLayout(db, presentationId)
+}
+
+function seedSystemLayout(db: Database.Database, presentationId: number) {
+  const existingGroupCount = db
+    .prepare('SELECT COUNT(*) as n FROM slide_groups WHERE presentation_id=?')
+    .get(presentationId) as { n: number }
+  if (existingGroupCount.n > 0) return
+
+  const insertGroup = db.prepare(
+    'INSERT INTO slide_groups (presentation_id, title, position, collapsed) VALUES (?, ?, ?, 0)',
+  )
+  const setSlide = db.prepare(
+    'UPDATE slides SET position=?, group_id=? WHERE presentation_id=? AND code_id=?',
+  )
+
+  db.transaction(() => {
+    SEED_LAYOUT.ungrouped.forEach((codeId, index) => {
+      setSlide.run(index, null, presentationId, codeId)
+    })
+    SEED_LAYOUT.groups.forEach((group, groupIndex) => {
+      const { lastInsertRowid } = insertGroup.run(presentationId, group.title, groupIndex)
+      const groupId = Number(lastInsertRowid)
+      group.slides.forEach((codeId, index) => {
+        setSlide.run(index, groupId, presentationId, codeId)
+      })
+    })
   })()
 }

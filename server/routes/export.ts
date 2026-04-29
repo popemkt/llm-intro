@@ -5,9 +5,11 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { createPresentationsService } from '../services/presentations.js'
 import type { createSlidesService } from '../services/slides.js'
+import type { createGroupsService } from '../services/groups.js'
 
 type PresentationsService = ReturnType<typeof createPresentationsService>
 type SlidesService = ReturnType<typeof createSlidesService>
+type GroupsService = ReturnType<typeof createGroupsService>
 type ExportMode = 'player' | 'deck'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -48,14 +50,14 @@ function generateEntryFile(codeIds: string[], exportDataJson: string, exportMeta
 import '@/index.css'
 import { createRoot } from 'react-dom/client'
 import type { ComponentType } from 'react'
-import type { SlideProps, ApiPresentation, ApiSlide } from '@/types'
+import type { SlideProps, ApiPresentation, ApiSlide, ApiSlideGroup } from '@/types'
 import ExportViewer from '@/export-viewer'
 ${imports}
 
 const __EXPORT_REGISTRY__: Record<string, ComponentType<SlideProps>> = {
 ${entries}
 }
-const __EXPORT_DATA__: { version: number; presentation: ApiPresentation; slides: ApiSlide[] } = ${exportDataJson}
+const __EXPORT_DATA__: { version: number; presentation: ApiPresentation; slides: ApiSlide[]; groups: ApiSlideGroup[] } = ${exportDataJson}
 const __EXPORT_META__ = ${exportMetaJson}
 
 Object.assign(window, { __EXPORT_REGISTRY__, __EXPORT_DATA__, __EXPORT_META__ })
@@ -82,12 +84,19 @@ export default defineConfig({
 `
 }
 
-const HTML_TEMPLATE = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Presentation</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}</style></head>
-<body><div id="root"></div><script type="module" src="./entry.tsx"></script></body>
-</html>`
+// Read the project's index.html at export time and rewrite it so the export
+// build uses the same head (fonts, meta, favicon) as the dev/main build.
+// This keeps dev and export visually identical — any change to index.html
+// automatically propagates to exports.
+function buildHtmlFromIndex(): string {
+  const indexPath = path.join(ROOT, 'index.html')
+  let html = fs.readFileSync(indexPath, 'utf-8')
+  // Point the bundle entry at the export entry file in the temp workspace.
+  html = html.replace(/<script[^>]*src=["'][^"']*main\.tsx["'][^>]*><\/script>/, '<script type="module" src="./entry.tsx"></script>')
+  // Exports are one-off presentations — no scroll chrome.
+  html = html.replace(/<\/head>/, '<style>html,body,#root{height:100%;overflow:hidden;margin:0}*{box-sizing:border-box}</style></head>')
+  return html
+}
 
 function createExportWorkspace() {
   const tempDir = fs.mkdtempSync(path.join(ROOT, '.export-tmp-'))
@@ -111,6 +120,7 @@ function cleanup(tempDir: string) {
 export function createExportHandler(
   presentationsService: PresentationsService,
   slidesService: SlidesService,
+  groupsService: GroupsService,
 ): express.RequestHandler {
   return async (req, res, next) => {
     const pid = Number(req.params.pid)
@@ -119,17 +129,21 @@ export function createExportHandler(
     try {
       const presentation = presentationsService.get(pid)
       let slides = slidesService.list(pid)
+      let groups = groupsService.list(pid)
       const slideIds: number[] | undefined = req.body?.slideIds
       const exportMode = parseExportMode(req.body?.mode)
       if (Array.isArray(slideIds) && slideIds.length > 0) {
         const idSet = new Set(slideIds)
         slides = slides.filter(s => idSet.has(s.id))
+        const retainedGroupIds = new Set(slides.map(s => s.group_id).filter((id): id is number => id != null))
+        groups = groups.filter(g => retainedGroupIds.has(g.id))
       }
       const codeIds = slides.filter(s => s.kind === 'code' && s.code_id).map(s => s.code_id as string)
       const exportData = {
         version: EXPORT_DATA_VERSION,
         presentation,
         slides,
+        groups,
       }
       const exportMeta = {
         artifactVersion: EXPORT_ARTIFACT_VERSION,
@@ -147,7 +161,7 @@ export function createExportHandler(
         workspace.entryPath,
         generateEntryFile(codeIds, JSON.stringify(exportData), JSON.stringify(exportMeta)),
       )
-      fs.writeFileSync(workspace.indexPath, HTML_TEMPLATE)
+      fs.writeFileSync(workspace.indexPath, buildHtmlFromIndex())
       fs.writeFileSync(workspace.configPath, generateViteConfig(workspace.tempDir))
 
       try {

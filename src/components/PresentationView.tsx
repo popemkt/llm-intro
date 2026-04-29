@@ -121,12 +121,12 @@ export function PresentationView({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="h-screen w-screen flex flex-col"
+      className="h-screen w-screen relative"
       style={{ background: 'var(--color-bg)', cursor: controlsVisible ? 'default' : 'none' }}
       onMouseMove={resetHideTimer}
     >
-      {/* Progress bar */}
-      <div style={{ position: 'relative', height: 2, background: 'var(--color-muted)', flexShrink: 0 }}>
+      {/* Progress bar — floats over top edge so controls show/hide never reflows the slide */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'var(--color-muted)', zIndex: 10 }}>
         <motion.div
           style={{ position: 'absolute', top: 0, left: 0, height: '100%', background: 'var(--color-accent)', transformOrigin: 'left' }}
           animate={{ width: `${progress}%` }}
@@ -134,9 +134,9 @@ export function PresentationView({
         />
       </div>
 
-      {/* Slide area — 16:9 centered */}
-      <div className="flex-1 overflow-hidden flex items-center justify-center" style={{ padding: '16px 24px' }}>
-        <div style={{ width: '100%', maxWidth: 'calc((100vh - 90px) * 16/9)' }}>
+      {/* Slide area — fills the viewport, 16:9 centered */}
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center" style={{ padding: '16px 24px' }}>
+        <div style={{ width: '100%', maxWidth: 'calc(100vh * 16/9)' }}>
           <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', overflow: 'hidden', borderRadius: 8 }}>
             <AnimatePresence mode="wait" custom={directionRef.current}>
               <motion.div
@@ -171,8 +171,8 @@ export function PresentationView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
-            className="flex-shrink-0 flex items-center gap-4 px-6 py-3 border-t border-(--color-border)"
-            style={{ background: 'var(--color-surface)', height: 56, cursor: 'default' }}
+            className="flex items-center gap-4 px-6 py-3 border-t border-(--color-border)"
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--color-surface)', height: 56, cursor: 'default', zIndex: 20 }}
           >
             {/* Home */}
             {onGoHome && (

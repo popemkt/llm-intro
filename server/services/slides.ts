@@ -1,4 +1,4 @@
-import type { Block } from '../../shared/api.js'
+import type { Block, LayoutInput } from '../../shared/api.js'
 import { AppError } from '../errors.js'
 import type { createPresentationsRepository } from '../repositories/presentations.js'
 import type { createSlidesRepository } from '../repositories/slides.js'
@@ -48,15 +48,13 @@ export function createSlidesService(
       slidesRepo.delete(presentationId, slideId)
     },
 
-    reorder(presentationId: number, ids: number[]) {
+    applyLayout(presentationId: number, layout: LayoutInput) {
       getPresentation(presentationId)
-      const slides = slidesRepo.listByPresentationId(presentationId)
-      const slideIds = slides.map((slide) => slide.id)
-
-      if (slideIds.length !== ids.length) throw new AppError(400, 'ids must include every slide exactly once')
-      if (!ids.every((id) => slideIds.includes(id))) throw new AppError(400, 'ids must belong to this presentation')
-
-      return slidesRepo.replaceOrder(presentationId, ids)
+      try {
+        return slidesRepo.applyLayout(presentationId, layout)
+      } catch (err) {
+        throw new AppError(400, err instanceof Error ? err.message : 'invalid layout')
+      }
     },
   }
 }

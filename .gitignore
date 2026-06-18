@@ -38,6 +38,7 @@ pnpm-debug.log*
 # Test screenshots (Playwright verification only)
 *.png
 .playwright-mcp/
+.portless/
 playwright-report/
 test-results/
 

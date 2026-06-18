@@ -2,7 +2,6 @@ import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AppProviders, createAgentNativeQueryClient } from '@agent-native/core/client'
-import '@agent-native/core/styles/agent-native.css'
 import './index.css'
 import { applyAppTheme, getStoredAppTheme } from './lib/appTheme'
 

@@ -150,6 +150,24 @@ function migrate(db: Database.Database) {
     db.exec(`DROP INDEX IF EXISTS slides_presentation_position_unique`);
     db.pragma("user_version = 6");
   }
+
+  if (version < 7) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS deck_snapshots (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        presentation_id INTEGER NOT NULL REFERENCES presentations(id) ON DELETE CASCADE,
+        label           TEXT NOT NULL,
+        deck_name       TEXT NOT NULL,
+        slide_count     INTEGER NOT NULL DEFAULT 0,
+        group_count     INTEGER NOT NULL DEFAULT 0,
+        payload         TEXT NOT NULL,
+        created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS deck_snapshots_presentation_created_idx
+      ON deck_snapshots(presentation_id, created_at DESC, id DESC);
+    `);
+    db.pragma("user_version = 7");
+  }
 }
 
 function normalizeSlidePositions(db: Database.Database) {

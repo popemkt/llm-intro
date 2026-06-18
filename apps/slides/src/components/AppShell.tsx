@@ -19,6 +19,16 @@ const navItems = [
   { label: "Theme", to: "/settings", icon: Settings },
 ];
 
+const agentSuggestions = [
+  "Summarize this deck",
+  "List available themes",
+  "Save a snapshot of this deck",
+  "Create a title slide for this deck",
+  "Add a bullets slide after the current topic",
+  "Turn this outline into normal slides",
+  "Export this deck as HTML",
+];
+
 type AgentTerminalInfo =
   | {
       available: true;
@@ -383,17 +393,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useSlidesRouteStateBridge(location);
   useAppThemeCommandBridge();
   useSelectionContextBridge(location);
-  const agentSuggestions = useMemo(
-    () => [
-      "Summarize this deck",
-      "List available themes",
-      "Create a title slide for this deck",
-      "Add a bullets slide after the current topic",
-      "Turn this outline into normal slides",
-      "Export this deck as HTML",
-    ],
-    [],
-  );
 
   const setShellCollapsed = (next: boolean) => {
     setCollapsed(next);

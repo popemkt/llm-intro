@@ -70,6 +70,14 @@ editing, themed presentation playback, and HTML export.
 - Agents can prepare an HTML export for the active deck through a product-safe
   action that returns the existing download URL.
 
+## Snapshots
+
+- Agents can save a deck snapshot that captures deck metadata, slide list, slide
+  blocks, and slide groups.
+- Agents can list and inspect saved deck snapshots.
+- Restoring a snapshot is not yet exposed; it must be added as a separate
+  consequential action with clear user intent.
+
 ## Agent-Native Adoption
 
 - The app adopts Agent-Native framework primitives without replacing the product
@@ -93,7 +101,7 @@ editing, themed presentation playback, and HTML export.
   standard normal slides, multi-slide outlines, slide groups, and deck theme
   changes, HTML export links, and active deck summaries in the active deck from
   simple prompts. It can also list available themes and change the app shell
-  theme.
+  theme, and it can create/list deck snapshots.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.
@@ -116,7 +124,7 @@ editing, themed presentation playback, and HTML export.
   model.
 - Richer visual slide editing controls, such as inline text editing, block
   menus, and slash-style block insertion.
-- Deck snapshots or version history.
+- Snapshot restore/version-history UI.
 - Speaker notes and improved presenter controls.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and

@@ -59,6 +59,26 @@ describe("Agent Native app context actions", () => {
         a2a: true,
       },
     });
+    expect(res.body.actions["create-deck-snapshot"]).toMatchObject({
+      name: "create-deck-snapshot",
+      readOnly: false,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
+    expect(res.body.actions["list-deck-snapshots"]).toMatchObject({
+      name: "list-deck-snapshots",
+      readOnly: true,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -167,6 +187,58 @@ describe("Agent Native active deck context", () => {
       expect.arrayContaining([expect.objectContaining({ title: "Context Group" })]),
     );
     expect(res.body.navigation).toMatchObject({ view: "deck", deckId: pid });
+  });
+});
+
+describe("Agent Native deck snapshots", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec(
+      "DELETE FROM deck_snapshots; DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;",
+    );
+    pid = (await request(app).post("/api/presentations").send({ name: "Snapshot Deck" })).body.id;
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Snapshot Slide" });
+    await request(app)
+      .post(`/_agent-native/actions/create-group`)
+      .send({ pid, title: "Snapshot Group" });
+  });
+
+  it("POST /_agent-native/actions/create-deck-snapshot captures deck state", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/create-deck-snapshot")
+      .send({ pid, label: "Before edits" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      presentation_id: pid,
+      label: "Before edits",
+      deck_name: "Snapshot Deck",
+      slide_count: 1,
+      group_count: 1,
+      payload: {
+        deck: expect.objectContaining({ id: pid, name: "Snapshot Deck" }),
+        slides: [expect.objectContaining({ title: "Snapshot Slide" })],
+        groups: [expect.objectContaining({ title: "Snapshot Group" })],
+      },
+    });
+
+    const listRes = await request(app).get(`/_agent-native/actions/list-deck-snapshots?pid=${pid}`);
+    expect(listRes.body).toEqual([
+      expect.objectContaining({
+        id: res.body.id,
+        label: "Before edits",
+        slide_count: 1,
+      }),
+    ]);
+
+    const getRes = await request(app).get(
+      `/_agent-native/actions/get-deck-snapshot?pid=${pid}&snapshotId=${res.body.id}`,
+    );
+    expect(getRes.body.payload.slides).toEqual([
+      expect.objectContaining({ title: "Snapshot Slide" }),
+    ]);
   });
 });
 
@@ -334,6 +406,39 @@ describe("App agent export runtime", () => {
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("HTML export");
     expect(res.body.text).toContain(`/api/presentations/${pid}/export`);
+  });
+});
+
+describe("App agent snapshot runtime", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec(
+      "DELETE FROM deck_snapshots; DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;",
+    );
+    pid = (await request(app).post("/api/presentations").send({ name: "Snapshot Runtime" })).body
+      .id;
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Runtime Slide" });
+  });
+
+  it("POST /_agent-native/app-agent creates and lists deck snapshots", async () => {
+    const createRes = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: 'save snapshot called "Checkpoint"',
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(createRes.status).toBe(200);
+    expect(createRes.body.text).toContain("Checkpoint");
+
+    const listRes = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "list snapshots", scope: { type: "deck", id: String(pid) } });
+
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.text).toContain("Checkpoint");
   });
 });
 

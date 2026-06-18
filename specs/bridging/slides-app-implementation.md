@@ -71,6 +71,14 @@ framework boundary.
 | Rename/collapse group | `update-group` action | Browser flow when UI changes |
 | Delete group | `delete-group` action, slide regroup reconciliation | Vitest/API plus browser flow |
 
+## Snapshots
+
+| Functional behavior | Code implementation | Validation |
+|---|---|---|
+| Persist deck snapshots | `deck_snapshots` migration, snapshot repository/service | Vitest/API |
+| Create snapshot | `create-deck-snapshot` action captures deck, slides, and groups | Vitest/API plus App Mode smoke |
+| List/read snapshots | `list-deck-snapshots`, `get-deck-snapshot` actions | Vitest/API plus App Mode smoke |
+
 ## Presentation And Editor UI
 
 | Functional behavior | Code implementation | Validation |
@@ -199,10 +207,11 @@ include listing slides, listing groups, creating one normal slide, creating a
 multi-slide normal outline, creating a group, changing the deck theme, and
 preparing an HTML export link. It can also summarize the active deck through
 `get-active-deck-context`, list theme metadata through `get-theme-catalog`, and
-queue app-shell theme changes through `set-app-theme`. This gives the embedded
-panel a real product-safe tool path without requiring a Builder.io login.
-Repository self-modification is still Code Mode and should go through the local
-authenticated CLI bridge or a trusted hosted frame.
+queue app-shell theme changes through `set-app-theme`. It can capture and list
+deck snapshots through `create-deck-snapshot` and `list-deck-snapshots`. This
+gives the embedded panel a real product-safe tool path without requiring a
+Builder.io login. Repository self-modification is still Code Mode and should go
+through the local authenticated CLI bridge or a trusted hosted frame.
 
 ### Adoption Notes
 

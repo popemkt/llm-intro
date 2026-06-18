@@ -8,15 +8,19 @@ import { createAppContextActions } from "./app-context.js";
 import { createDeckOutlineAction } from "./deck-outline.js";
 import { createActiveDeckContextAction } from "./active-deck-context.js";
 import { createThemeDesignActions } from "./theme-design.js";
+import { createSnapshotActions } from "./snapshots.js";
+import type { createSnapshotsService } from "../server/services/snapshots.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
 type GroupsService = ReturnType<typeof createGroupsService>;
+type SnapshotsService = ReturnType<typeof createSnapshotsService>;
 
 export function createSlideDeckActions(services: {
   presentationsService: PresentationsService;
   slidesService: SlidesService;
   groupsService: GroupsService;
+  snapshotsService: SnapshotsService;
 }) {
   return {
     ...createAppContextActions(),
@@ -29,6 +33,7 @@ export function createSlideDeckActions(services: {
       services.slidesService,
     ),
     ...createGroupActions(services.groupsService),
+    ...createSnapshotActions(services.snapshotsService),
   };
 }
 

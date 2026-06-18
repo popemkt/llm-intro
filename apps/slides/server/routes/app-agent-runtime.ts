@@ -247,6 +247,36 @@ function responseTextForExport(result: unknown) {
   return `HTML export${name ? ` for "${name}"` : ""}: ${url}`;
 }
 
+function formatSnapshotList(result: unknown) {
+  if (!Array.isArray(result)) return "I could not read the snapshot list.";
+  if (result.length === 0) return "This deck has no snapshots yet.";
+
+  return result
+    .map((snapshot, index) => {
+      const label =
+        snapshot && typeof snapshot === "object" && "label" in snapshot
+          ? getText(snapshot.label)
+          : "";
+      const slideCount =
+        snapshot && typeof snapshot === "object" && "slide_count" in snapshot
+          ? Number(snapshot.slide_count)
+          : 0;
+      return `${index + 1}. ${label || "Untitled snapshot"} (${slideCount} slide${
+        slideCount === 1 ? "" : "s"
+      })`;
+    })
+    .join("\n");
+}
+
+function responseTextForCreatedSnapshot(result: unknown) {
+  if (!result || typeof result !== "object") return "Saved a deck snapshot.";
+  const label = "label" in result ? getText(result.label) : "";
+  const slideCount = "slide_count" in result ? Number(result.slide_count) : 0;
+  return `Saved snapshot ${label ? `"${label}"` : ""} with ${slideCount} slide${
+    slideCount === 1 ? "" : "s"
+  }.`;
+}
+
 async function handleNavigationPrompt(
   actions: SlideDeckActions,
   prompt: string,
@@ -327,6 +357,11 @@ async function handleDeckReadPrompt(
     return responseTextForExport(result);
   }
 
+  if (/\b(list|show|summarize)\b.*\bsnapshots?\b/.test(normalized)) {
+    const snapshots = await runAction(actions["list-deck-snapshots"], { pid: deckId });
+    return `Snapshots in this deck:\n${formatSnapshotList(snapshots)}`;
+  }
+
   return null;
 }
 
@@ -381,6 +416,12 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     return `Changed this deck's theme to ${theme}.`;
   }
 
+  if (/\b(create|save|capture|make)\b.*\bsnapshots?\b/.test(normalized)) {
+    const label = inferTitle(prompt, "Snapshot");
+    const snapshot = await runAction(actions["create-deck-snapshot"], { pid: deckId, label });
+    return responseTextForCreatedSnapshot(snapshot);
+  }
+
   if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
     const title = inferTitle(prompt, "Group");
     const group = await runAction(actions["create-group"], { pid: deckId, title });
@@ -414,6 +455,7 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     "Try:",
     "- summarize this deck",
     "- list available themes",
+    "- save a snapshot of this deck",
     "- list slides",
     '- create a title slide called "Roadmap"',
     "- create a bullets slide with a short outline",

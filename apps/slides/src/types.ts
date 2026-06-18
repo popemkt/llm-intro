@@ -3,6 +3,8 @@ import type { Block, ThemeName } from "@llm-intro/api-contract";
 
 export type {
   ApiPresentation,
+  ApiDeckSnapshot,
+  ApiDeckSnapshotDetail,
   ApiSlide,
   ApiSlideGroup,
   Block,

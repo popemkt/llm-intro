@@ -71,6 +71,24 @@ export interface ApiSlideGroup {
   updated_at: string;
 }
 
+export interface ApiDeckSnapshot {
+  id: number;
+  presentation_id: number;
+  label: string;
+  deck_name: string;
+  slide_count: number;
+  group_count: number;
+  created_at: string;
+}
+
+export interface ApiDeckSnapshotDetail extends ApiDeckSnapshot {
+  payload: {
+    deck: ApiPresentation;
+    slides: ApiSlide[];
+    groups: ApiSlideGroup[];
+  };
+}
+
 export interface LayoutInput {
   ungrouped: number[];
   groups: Array<{ id: number; slideIds: number[] }>;

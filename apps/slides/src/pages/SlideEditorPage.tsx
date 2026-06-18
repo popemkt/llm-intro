@@ -1,15 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Type,
-  Image as ImageIcon,
-  Globe,
-  Square,
-  Trash2,
-  Settings,
-  Circle,
-  Pill,
-} from "lucide-react";
+import { Image as ImageIcon, Globe, Square, Trash2, Settings, Circle, Pill } from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
@@ -18,6 +9,7 @@ import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
 import { getReadableTextColor } from "@/lib/color";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 
 type DragMode = "move" | "resize-tl" | "resize-tr" | "resize-bl" | "resize-br";
 
@@ -343,6 +335,11 @@ export function SlideEditorPage() {
     setSelectedId(b.id);
   }, []);
 
+  const addBlocks = useCallback((nextBlocks: Block[]) => {
+    setBlocks((prev) => [...prev, ...nextBlocks]);
+    setSelectedId(nextBlocks[0]?.id ?? null);
+  }, []);
+
   const deleteBlock = useCallback((id: string) => {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedId((s) => (s === id ? null : s));
@@ -654,54 +651,7 @@ export function SlideEditorPage() {
             flexShrink: 0,
           }}
         >
-          {/* Add block */}
-          <div
-            style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}
-          >
-            <div
-              style={{
-                fontSize: 9,
-                fontFamily: "JetBrains Mono, monospace",
-                color: C.muted,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                marginBottom: 8,
-              }}
-            >
-              Add Block
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {(
-                [
-                  { type: "text" as const, icon: <Type size={12} />, label: "Text" },
-                  { type: "image" as const, icon: <ImageIcon size={12} />, label: "Image" },
-                  { type: "iframe" as const, icon: <Globe size={12} />, label: "Embed" },
-                  { type: "shape" as const, icon: <Square size={12} />, label: "Shape" },
-                ] as const
-              ).map(({ type, icon, label }) => (
-                <button
-                  key={type}
-                  onClick={() => addBlock(type)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "5px 10px",
-                    borderRadius: 7,
-                    cursor: "pointer",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: C.accentSubtle,
-                    border: `1px solid ${C.border}`,
-                    color: C.accent,
-                    fontFamily: "Inter, sans-serif",
-                  }}
-                >
-                  {icon} {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SlideBlockInsertPanel onAddBlock={addBlock} onAddBlocks={addBlocks} />
 
           {/* Selected block properties */}
           <div

@@ -136,6 +136,8 @@ Taken now:
   snapshot id.
 - Deck settings version-history UI that creates, lists, and restores snapshots
   through the same Agent-Native action surface.
+- Visual editor insertion presets for title, bullets, quote, and metric content
+  that compile back to typed blocks instead of raw reference-app HTML.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

@@ -81,6 +81,13 @@ framework boundary.
 | Restore snapshot | `restore-deck-snapshot` action replaces the live deck from a snapshot id | Vitest/API |
 | Version-history UI | `SnapshotHistory` in deck settings calls snapshot actions | Browser smoke |
 
+## Visual Editor
+
+| Functional behavior | Code implementation | Validation |
+|---|---|---|
+| Insert primitive blocks | `SlideBlockInsertPanel` adds text, image, embed, and shape blocks | Browser smoke |
+| Insert content presets | `SlideBlockInsertPanel` adds title, bullets, quote, and metric typed block sets | Browser smoke |
+
 ## Presentation And Editor UI
 
 | Functional behavior | Code implementation | Validation |

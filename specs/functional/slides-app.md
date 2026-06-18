@@ -113,6 +113,9 @@ editing, themed presentation playback, and HTML export.
   layouts and uses `create-deck-from-outline`.
 - Users can create common normal slide layouts from the overview add tile
   without opening the manual editor first.
+- Users can insert primitive blocks and common content presets in the visual
+  slide editor. Presets still write ordinary typed blocks so themes, export, and
+  agent actions keep using the same slide model.
 - In local development, trusted maintainers can use local authenticated coding
   CLIs such as Codex or Claude Code through the Agent-Native terminal bridge.
   This is a Code Mode capability and must not imply production shell access.
@@ -123,8 +126,7 @@ editing, themed presentation playback, and HTML export.
 
 - Prompt-to-deck generation that streams usable slides into the current deck
   model.
-- Richer visual slide editing controls, such as inline text editing, block
-  menus, and slash-style block insertion.
+- Inline text editing, block bubble menus, and slash-style keyboard insertion.
 - Speaker notes and improved presenter controls.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and

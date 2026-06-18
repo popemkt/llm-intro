@@ -305,6 +305,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useSlidesRouteStateBridge(location);
   const agentSuggestions = useMemo(
     () => [
+      "Summarize this deck",
       "Create a title slide for this deck",
       "Add a bullets slide after the current topic",
       "Turn this outline into normal slides",

@@ -41,7 +41,7 @@ Reference documentation:
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
   listing, normal slide creation, multi-slide outline creation, group creation,
-  deck theme changes, and HTML export links.
+  deck theme changes, HTML export links, and active deck summaries.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -74,6 +74,7 @@ for now. The migration should replace one workflow at a time:
 | create/update/delete groups | `create-group`, `update-group`, `delete-group`, mounted and used by client |
 | reorder slides/groups | `update-deck-layout` mutating action, mounted and used by client |
 | read current app context | `get-current-app-context` read action over Agent-Native app state |
+| read active deck context | `get-active-deck-context` read action over route state plus deck, slide, and group services |
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
 | export HTML | `get-deck-export` read action returns the existing `/api` download URL |
 
@@ -113,6 +114,9 @@ Taken now:
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Semantic route-state bridge for current app context and product-safe
   navigation commands.
+- Active deck context exposure through `get-active-deck-context`, which lets
+  agents inspect the current deck, slides, groups, and navigation state without
+  code-mode access.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

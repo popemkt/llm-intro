@@ -105,6 +105,28 @@ function formatCurrentContext(result: unknown) {
   return "I cannot read the current app context yet.";
 }
 
+function formatActiveDeckContext(result: unknown) {
+  if (!result || typeof result !== "object" || !("deck" in result)) {
+    return "I cannot read the active deck context yet.";
+  }
+  const context = result as {
+    deck?: { id?: number; name?: string; theme?: string } | null;
+    slides?: unknown[];
+    groups?: unknown[];
+  };
+  if (!context.deck) return "No active deck is open.";
+
+  const slideCount = Array.isArray(context.slides) ? context.slides.length : 0;
+  const groupCount = Array.isArray(context.groups) ? context.groups.length : 0;
+  return [
+    `Current deck: ${context.deck.name || `Deck ${context.deck.id}`}.`,
+    `Theme: ${context.deck.theme || "unknown"}.`,
+    `${slideCount} slide${slideCount === 1 ? "" : "s"}, ${groupCount} group${
+      groupCount === 1 ? "" : "s"
+    }.`,
+  ].join("\n");
+}
+
 function formatGroupList(result: unknown) {
   if (!Array.isArray(result)) return "I could not read the group list.";
   if (result.length === 0) return "This deck has no groups yet.";
@@ -253,12 +275,48 @@ async function handleNavigationPrompt(
   return null;
 }
 
+async function handleDeckReadPrompt(
+  actions: SlideDeckActions,
+  normalized: string,
+  deckId: number | null,
+) {
+  if (
+    /\b(current|active)\b.*\bdeck\b/.test(normalized) ||
+    /\bsummarize\b.*\bdeck\b/.test(normalized)
+  ) {
+    const context = await runAction(actions["get-active-deck-context"], deckId ? { deckId } : {});
+    return formatActiveDeckContext(context);
+  }
+
+  if (!deckId) return null;
+
+  if (/\b(list|show|summarize)\b.*\bslides?\b/.test(normalized)) {
+    const slides = await runAction(actions["list-slides"], { pid: deckId });
+    return `Slides in this deck:\n${formatSlideList(slides)}`;
+  }
+
+  if (/\b(list|show|summarize)\b.*\bgroups?\b/.test(normalized)) {
+    const groups = await runAction(actions["list-groups"], { pid: deckId });
+    return `Groups in this deck:\n${formatGroupList(groups)}`;
+  }
+
+  if (/\b(export|download)\b/.test(normalized)) {
+    const result = await runAction(actions["get-deck-export"], { id: deckId });
+    return responseTextForExport(result);
+  }
+
+  return null;
+}
+
 async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
   const normalized = prompt.toLowerCase();
   const navigationResponse = await handleNavigationPrompt(actions, prompt, normalized, deckId);
   if (navigationResponse) return navigationResponse;
+
+  const readResponse = await handleDeckReadPrompt(actions, normalized, deckId);
+  if (readResponse) return readResponse;
 
   if (/\b(create|make|generate)\b.*\bdeck\b/.test(normalized)) {
     const slides = outlineSlides(prompt);
@@ -275,26 +333,11 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     return "Open a deck first, then I can list slides or create normal slides in that deck.";
   }
 
-  if (/\b(list|show|summarize)\b.*\bslides?\b/.test(normalized)) {
-    const slides = await runAction(actions["list-slides"], { pid: deckId });
-    return `Slides in this deck:\n${formatSlideList(slides)}`;
-  }
-
-  if (/\b(list|show|summarize)\b.*\bgroups?\b/.test(normalized)) {
-    const groups = await runAction(actions["list-groups"], { pid: deckId });
-    return `Groups in this deck:\n${formatGroupList(groups)}`;
-  }
-
   if (/\b(change|set|update)\b.*\btheme\b/.test(normalized)) {
     const theme = inferTheme(prompt);
     if (!theme) return `Pick one of these themes: ${THEME_NAMES.join(", ")}.`;
     await runAction(actions["update-deck"], { id: deckId, theme });
     return `Changed this deck's theme to ${theme}.`;
-  }
-
-  if (/\b(export|download)\b/.test(normalized)) {
-    const result = await runAction(actions["get-deck-export"], { id: deckId });
-    return responseTextForExport(result);
   }
 
   if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
@@ -328,6 +371,7 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     "I can work with this deck through app actions.",
     "",
     "Try:",
+    "- summarize this deck",
     "- list slides",
     '- create a title slide called "Roadmap"',
     "- create a bullets slide with a short outline",

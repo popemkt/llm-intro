@@ -75,6 +75,8 @@ editing, themed presentation playback, and HTML export.
 - Existing functionality remains intact during adoption.
 - Framework actions become the shared surface for UI, future agent tools, and
   future CLI/MCP access.
+- Agents can read the active deck context, including deck metadata, slide list,
+  group list, and current navigation state, without shell or filesystem access.
 - Borrowed reference-app features are limited to capabilities that improve this
   product, especially advanced slide creation and stronger shell/agent UX.
 - The app shell includes an Agent-Native-style product rail and a real
@@ -83,7 +85,8 @@ editing, themed presentation playback, and HTML export.
 - In App Mode, agents can use product-safe deck actions without shell or
   filesystem access. The current local runtime can list slides and create
   standard normal slides, multi-slide outlines, slide groups, and deck theme
-  changes, and HTML export links in the active deck from simple prompts.
+  changes, HTML export links, and active deck summaries in the active deck from
+  simple prompts.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

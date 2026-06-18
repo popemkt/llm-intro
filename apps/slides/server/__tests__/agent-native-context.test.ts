@@ -29,6 +29,16 @@ describe("Agent Native app context actions", () => {
         a2a: true,
       },
     });
+    expect(res.body.actions["get-active-deck-context"]).toMatchObject({
+      name: "get-active-deck-context",
+      readOnly: true,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -67,6 +77,37 @@ describe("Agent Native app context actions", () => {
       slideId: 9,
     });
     expect(commandRes.body._writeId).toEqual(expect.any(String));
+  });
+});
+
+describe("Agent Native active deck context", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+    pid = (await request(app).post("/api/presentations").send({ name: "Context Deck" })).body.id;
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Context Slide" });
+    await request(app)
+      .post(`/_agent-native/actions/create-group`)
+      .send({ pid, title: "Context Group" });
+    await request(app)
+      .put("/_agent-native/application-state/navigation")
+      .send({ view: "deck", label: "Context Deck", pathname: `/p/${pid}`, deckId: pid });
+  });
+
+  it("GET /_agent-native/actions/get-active-deck-context reads the route-scoped deck", async () => {
+    const res = await request(app).get("/_agent-native/actions/get-active-deck-context");
+
+    expect(res.status).toBe(200);
+    expect(res.body.deck).toMatchObject({ id: pid, name: "Context Deck" });
+    expect(res.body.slides).toEqual(
+      expect.arrayContaining([expect.objectContaining({ title: "Context Slide" })]),
+    );
+    expect(res.body.groups).toEqual(
+      expect.arrayContaining([expect.objectContaining({ title: "Context Group" })]),
+    );
+    expect(res.body.navigation).toMatchObject({ view: "deck", deckId: pid });
   });
 });
 
@@ -167,6 +208,27 @@ describe("App agent route context runtime", () => {
 
     const commandRes = await request(app).get("/_agent-native/application-state/navigate");
     expect(commandRes.body).toMatchObject({ view: "app-settings" });
+  });
+});
+
+describe("App agent active deck context runtime", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+    pid = (await request(app).post("/api/presentations").send({ name: "Runtime Context" })).body.id;
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Visible Slide" });
+  });
+
+  it("POST /_agent-native/app-agent summarizes the active deck context", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "summarize this deck", scope: { type: "deck", id: String(pid) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Runtime Context");
+    expect(res.body.text).toContain("1 slide");
   });
 });
 

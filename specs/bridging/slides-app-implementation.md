@@ -94,14 +94,16 @@ framework boundary.
 | Functional behavior | Code implementation |
 |---|---|
 | Export deck as HTML | `apps/slides/server/routes/export.ts` |
-| Agent export action | `get-deck-export` action returns `/api/presentations/:id/export` |
+| Agent export action | `get-deck-export` action returns the POST `/api/presentations/:id/export` file route |
 | Export viewer bootstrap | `apps/slides/src/export-viewer.tsx` |
 | Static data provider | `apps/slides/src/data/static-provider.ts` |
 
 The export route remains on `/api` because it returns a downloadable HTML file.
 `get-deck-export` exposes that capability to agents by returning the existing
-download URL. Move the file response only when the Agent-Native action layer has
-an intentional file response pattern in this repo.
+download URL and method. The action itself is read-only; the returned file route
+still uses POST because export mode and selected slide ids travel in the request
+body. Move the file response only when the Agent-Native action layer has an
+intentional file response pattern in this repo.
 
 ## Agent Shell Bridge
 

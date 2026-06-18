@@ -170,7 +170,7 @@ describe("Agent Native deck export action", () => {
       id: deck.id,
       name: "Exportable",
       format: "html",
-      method: "GET",
+      method: "POST",
       url: `/api/presentations/${deck.id}/export`,
     });
   });

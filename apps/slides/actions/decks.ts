@@ -36,7 +36,7 @@ function createDeckExportAction(presentationsService: PresentationsService) {
         id: deck.id,
         name: deck.name,
         format: "html",
-        method: "GET",
+        method: "POST",
         url: `/api/presentations/${deck.id}/export`,
       };
     },

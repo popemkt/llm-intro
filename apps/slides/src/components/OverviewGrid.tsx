@@ -34,6 +34,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { callAction } from "@agent-native/core/client";
 import type { UnifiedSlide, ApiSlideGroup, LayoutInput, ThemeName } from "@/types";
 import { DbSlideRenderer } from "./DbSlideRenderer";
 import { Breadcrumb, type BreadcrumbSegment } from "./Breadcrumb";
@@ -798,6 +799,12 @@ type ExportState =
       mode: ExportMode;
     };
 
+type DeckExportResult = {
+  url: string;
+  method: "POST";
+  format: "html";
+};
+
 function ExportProgressDialog({
   state,
   onRetry,
@@ -925,14 +932,19 @@ async function exportPresentation(
   slideIds?: number[],
   mode: ExportMode = "player",
 ) {
+  const exportInfo = await callAction<DeckExportResult>(
+    "get-deck-export",
+    { id: presentationId },
+    { method: "GET" },
+  );
   const payload: { slideIds?: number[]; mode?: ExportMode } = {};
   if (slideIds && slideIds.length > 0) payload.slideIds = slideIds;
   if (mode !== "player") payload.mode = mode;
   const body = Object.keys(payload).length > 0 ? JSON.stringify(payload) : undefined;
   const headers: Record<string, string> = {};
   if (body) headers["Content-Type"] = "application/json";
-  const res = await fetch(`/api/presentations/${presentationId}/export`, {
-    method: "POST",
+  const res = await fetch(exportInfo.url, {
+    method: exportInfo.method,
     body,
     headers,
   });

@@ -129,6 +129,16 @@ describe("Agent Native action exposure", () => {
         a2a: true,
       },
     });
+    expect(res.body.actions["create-normal-slides"]).toMatchObject({
+      name: "create-normal-slides",
+      readOnly: false,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
   });
 
   it("POST /_agent-native/actions/invoke/:name runs an action as a tool caller", async () => {
@@ -178,6 +188,10 @@ describe("Agent Native action exposure", () => {
       expect.objectContaining({ name: "MCP Deck" }),
     ]);
   });
+});
+
+describe("Agent Native A2A exposure", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
 
   it("GET /_agent-native/a2a/agent-card advertises slide skills", async () => {
     const res = await request(app).get("/_agent-native/a2a/agent-card");
@@ -196,6 +210,93 @@ describe("Agent Native action exposure", () => {
         expect.objectContaining({
           id: "create-normal-slide",
           name: "Create normal slide",
+        }),
+        expect.objectContaining({
+          id: "create-normal-slides",
+          name: "Create normal slides",
+        }),
+      ]),
+    );
+  });
+});
+
+describe("Normal slide actions", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+    pid = (await request(app).post("/api/presentations").send({ name: "Pres" })).body.id;
+  });
+
+  it("POST /_agent-native/actions/create-normal-slide creates a standard layout slide", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/create-normal-slide")
+      .send({
+        pid,
+        layout: "bullets",
+        title: "Agent Native Adoption",
+        label: "Migration",
+        bullets: ["Keep themeability", "Expose actions", "Use the shell"],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe("Agent Native Adoption");
+    expect(res.body.kind).toBe("db");
+    expect(res.body.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "title",
+          type: "text",
+          markdown: "## Agent Native Adoption",
+        }),
+        expect.objectContaining({
+          id: "bullets",
+          type: "text",
+          markdown: expect.stringContaining("Keep themeability"),
+        }),
+      ]),
+    );
+    expect(res.body.blocks.every((block: { x?: number }) => typeof block.x === "number")).toBe(
+      true,
+    );
+  });
+
+  it("POST /_agent-native/actions/create-normal-slides creates outline slides", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/create-normal-slides")
+      .send({
+        pid,
+        slides: [
+          {
+            layout: "title",
+            title: "Adopting Agent Native",
+            subtitle: "Keep our product, improve the shell",
+          },
+          {
+            layout: "two-column",
+            title: "What moves",
+            leftBullets: ["Action registry", "Agent panel"],
+            rightBullets: ["Theme bridge", "Local CLI mode"],
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0]).toMatchObject({
+      title: "Adopting Agent Native",
+      kind: "db",
+    });
+    expect(res.body[1].blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "left",
+          markdown: expect.stringContaining("Action registry"),
+        }),
+        expect.objectContaining({
+          id: "right",
+          markdown: expect.stringContaining("Local CLI mode"),
         }),
       ]),
     );
@@ -333,39 +434,6 @@ describe("Slides API", () => {
     expect(res.body.title).toBe("S1");
     expect(res.body.kind).toBe("db");
     expect(Array.isArray(res.body.blocks)).toBe(true);
-  });
-
-  it("POST /_agent-native/actions/create-normal-slide creates a standard layout slide", async () => {
-    const res = await request(app)
-      .post("/_agent-native/actions/create-normal-slide")
-      .send({
-        pid,
-        layout: "bullets",
-        title: "Agent Native Adoption",
-        label: "Migration",
-        bullets: ["Keep themeability", "Expose actions", "Use the shell"],
-      });
-
-    expect(res.status).toBe(200);
-    expect(res.body.title).toBe("Agent Native Adoption");
-    expect(res.body.kind).toBe("db");
-    expect(res.body.blocks).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "title",
-          type: "text",
-          markdown: "## Agent Native Adoption",
-        }),
-        expect.objectContaining({
-          id: "bullets",
-          type: "text",
-          markdown: expect.stringContaining("Keep themeability"),
-        }),
-      ]),
-    );
-    expect(res.body.blocks.every((block: { x?: number }) => typeof block.x === "number")).toBe(
-      true,
-    );
   });
 
   it("PATCH /:sid updates a slide", async () => {

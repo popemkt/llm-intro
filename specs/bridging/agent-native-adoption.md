@@ -56,6 +56,7 @@ for now. The migration should replace one workflow at a time:
 | list slides/groups | `list-slides` and `list-groups` read actions, mounted and used by client |
 | create slide | `create-slide` mutating action, mounted and used by client |
 | create normal slide | `create-normal-slide` mutating action translating reference layouts to typed blocks |
+| create normal slide sequence | `create-normal-slides` mutating action translating a structured outline into multiple typed DB slides |
 | patch slide | `update-slide` mutating action, mounted and used by client |
 | delete slide | `delete-slide` mutating action, mounted and used by client |
 | create/update/delete groups | `create-group`, `update-group`, `delete-group`, mounted and used by client |
@@ -81,8 +82,8 @@ Taken now:
 
 - Product shell pattern: left navigation rail plus right `AgentPanel`.
 - Agent sidebar prompt suggestions scoped to deck creation/editing.
-- Normal slide layout vocabulary: title, section, bullets, two-column, quote,
-  metrics, and closing.
+- Normal slide layout vocabulary and outline creation: title, section, bullets,
+  two-column, quote, metrics, closing, and multi-slide sequence creation.
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.

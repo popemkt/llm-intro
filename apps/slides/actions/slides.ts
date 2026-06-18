@@ -1,7 +1,7 @@
 import { defineAction } from "@agent-native/core";
 import type { createSlidesService } from "../server/services/slides.js";
 import { parseLayout, parseSlideCreate, parseSlidePatch } from "../server/validation.js";
-import { createNormalSlideAction } from "./normal-slide-action.js";
+import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
 type SlidesService = ReturnType<typeof createSlidesService>;
@@ -57,6 +57,7 @@ export function createSlideActions(slidesService: SlidesService) {
     }),
 
     "create-normal-slide": createNormalSlideAction(slidesService),
+    "create-normal-slides": createNormalSlidesAction(slidesService),
 
     "update-slide": defineAction({
       description: "Update slide title or blocks.",

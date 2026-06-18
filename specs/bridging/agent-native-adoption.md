@@ -34,6 +34,9 @@ Reference documentation:
   action bridge, backed by the existing presentation service.
 - Deck, slide, group, and layout JSON operations are available through
   `/_agent-native/actions/*` and the browser API client calls those actions.
+- The shell publishes the current URL and semantic route state into
+  Agent-Native application state (`__url__`, `navigation`) and consumes
+  product-safe `navigate` commands queued by the `navigate-app` action.
 - The embedded `AgentPanel` has a local App Mode runtime at
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
@@ -69,6 +72,8 @@ for now. The migration should replace one workflow at a time:
 | delete slide | `delete-slide` mutating action, mounted and used by client |
 | create/update/delete groups | `create-group`, `update-group`, `delete-group`, mounted and used by client |
 | reorder slides/groups | `update-deck-layout` mutating action, mounted and used by client |
+| read current app context | `get-current-app-context` read action over Agent-Native app state |
+| navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
 | export HTML | keep `/api` route until file/download handling moves to an action-safe endpoint |
 
 ## Features To Borrow From The Reference Slides App
@@ -96,6 +101,8 @@ Taken now:
 - Normal slide layout vocabulary and outline creation: title, section, bullets,
   two-column, quote, metrics, closing, and multi-slide sequence creation.
 - Application-state endpoint shape needed by the sidebar's URL sync.
+- Semantic route-state bridge for current app context and product-safe
+  navigation commands.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

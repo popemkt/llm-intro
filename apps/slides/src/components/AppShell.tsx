@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AgentTerminal, AssistantChat, agentNativePath } from "@agent-native/core/client";
 import type { AgentChatRuntime } from "@agent-native/core/client/chat";
@@ -29,10 +29,158 @@ type AgentTerminalInfo =
       error?: string;
     };
 
+type SlidesNavigationState =
+  | { view: "decks"; label: "Decks"; pathname: string }
+  | { view: "app-settings"; label: "App settings"; pathname: string }
+  | { view: "deck"; label: string; pathname: string; deckId: number }
+  | { view: "deck-settings"; label: string; pathname: string; deckId: number }
+  | { view: "slide-editor"; label: string; pathname: string; deckId: number; slideId: number };
+
+type SlidesNavigationCommand = {
+  view: "decks" | "deck" | "slide-editor" | "deck-settings" | "app-settings";
+  deckId?: number;
+  slideId?: number;
+};
+
 function deckScopeFromPath(pathname: string) {
   const match = pathname.match(/^\/(?:p|presentations)\/(\d+)/);
   if (!match) return null;
   return { type: "deck" as const, id: match[1], label: `Deck ${match[1]}` };
+}
+
+function navigationStateFromPath(pathname: string): SlidesNavigationState {
+  const editMatch = pathname.match(/^\/p\/(\d+)\/edit\/(\d+)$/);
+  if (editMatch) {
+    const deckId = Number(editMatch[1]);
+    const slideId = Number(editMatch[2]);
+    return {
+      view: "slide-editor",
+      label: `Deck ${deckId}, slide ${slideId} editor`,
+      pathname,
+      deckId,
+      slideId,
+    };
+  }
+
+  const settingsMatch = pathname.match(/^\/p\/(\d+)\/settings$/);
+  if (settingsMatch) {
+    const deckId = Number(settingsMatch[1]);
+    return { view: "deck-settings", label: `Deck ${deckId} settings`, pathname, deckId };
+  }
+
+  const deckMatch = pathname.match(/^\/p\/(\d+)$/);
+  if (deckMatch) {
+    const deckId = Number(deckMatch[1]);
+    return { view: "deck", label: `Deck ${deckId}`, pathname, deckId };
+  }
+
+  if (pathname === "/settings") {
+    return { view: "app-settings", label: "App settings", pathname };
+  }
+
+  return { view: "decks", label: "Decks", pathname };
+}
+
+function pathFromNavigationCommand(command: SlidesNavigationCommand) {
+  switch (command.view) {
+    case "decks":
+      return "/";
+    case "app-settings":
+      return "/settings";
+    case "deck":
+      return command.deckId ? `/p/${command.deckId}` : null;
+    case "deck-settings":
+      return command.deckId ? `/p/${command.deckId}/settings` : null;
+    case "slide-editor":
+      return command.deckId && command.slideId
+        ? `/p/${command.deckId}/edit/${command.slideId}`
+        : null;
+  }
+}
+
+function urlStateFromLocation(location: ReturnType<typeof useLocation>) {
+  return {
+    pathname: location.pathname,
+    search: location.search,
+    hash: location.hash,
+    searchParams: Object.fromEntries(new URLSearchParams(location.search).entries()),
+  };
+}
+
+async function writeAppState(key: string, value: unknown) {
+  await fetch(agentNativePath(`/_agent-native/application-state/${key}`), {
+    method: "PUT",
+    keepalive: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(value),
+  });
+}
+
+async function deleteAppState(key: string) {
+  await fetch(agentNativePath(`/_agent-native/application-state/${key}`), {
+    method: "DELETE",
+    headers: { "X-Agent-Native-CSRF": "1" },
+  });
+}
+
+async function readNavigateCommand() {
+  const response = await fetch(agentNativePath("/_agent-native/application-state/navigate"));
+  if (!response.ok || response.status === 204) return null;
+  return (await response.json()) as SlidesNavigationCommand & { _writeId?: string };
+}
+
+function useSlidesRouteStateBridge(location: ReturnType<typeof useLocation>) {
+  const lastNavigationCommandRef = useRef<string | null>(null);
+  const navigationState = useMemo(
+    () => navigationStateFromPath(location.pathname),
+    [location.pathname],
+  );
+
+  useEffect(() => {
+    void writeAppState("__url__", urlStateFromLocation(location));
+    void writeAppState("navigation", navigationState);
+  }, [location, navigationState]);
+
+  useEffect(() => {
+    let active = true;
+
+    const poll = async () => {
+      try {
+        if (document.visibilityState !== "visible") return;
+        const command = await readNavigateCommand();
+        if (!active || !command) return;
+
+        const dedupKey =
+          command._writeId ??
+          JSON.stringify({
+            view: command.view,
+            deckId: command.deckId,
+            slideId: command.slideId,
+          });
+        if (lastNavigationCommandRef.current === dedupKey) {
+          await deleteAppState("navigate");
+          return;
+        }
+        lastNavigationCommandRef.current = dedupKey;
+        await deleteAppState("navigate");
+
+        const path = pathFromNavigationCommand(command);
+        if (path && path !== `${location.pathname}${location.search}${location.hash}`) {
+          window.history.pushState({}, "", path);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      } catch {
+        // Best-effort agent command bridge.
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => void poll(), 1000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [location.hash, location.pathname, location.search]);
 }
 
 function SlidesAgentSurface({
@@ -154,6 +302,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const deckScope = useMemo(() => deckScopeFromPath(location.pathname), [location.pathname]);
   const appAgentRuntime = useMemo(() => createSlidesAppAgentRuntime(deckScope), [deckScope]);
+  useSlidesRouteStateBridge(location);
   const agentSuggestions = useMemo(
     () => [
       "Create a title slide for this deck",

@@ -190,6 +190,74 @@ describe("Agent Native action exposure", () => {
   });
 });
 
+describe("Agent Native app context actions", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
+
+  it("GET /_agent-native/actions exposes context and navigation actions", async () => {
+    const res = await request(app).get("/_agent-native/actions");
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions["get-current-app-context"]).toMatchObject({
+      name: "get-current-app-context",
+      readOnly: true,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
+    expect(res.body.actions["navigate-app"]).toMatchObject({
+      name: "navigate-app",
+      readOnly: false,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
+  });
+
+  it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
+    await request(app)
+      .put("/_agent-native/application-state/__url__")
+      .send({ pathname: "/p/12", search: "", hash: "", searchParams: {} });
+    await request(app)
+      .put("/_agent-native/application-state/navigation")
+      .send({ view: "deck", label: "Deck 12", pathname: "/p/12", deckId: 12 });
+
+    const res = await request(app).get("/_agent-native/actions/get-current-app-context");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      url: { pathname: "/p/12" },
+      navigation: { view: "deck", deckId: 12 },
+    });
+  });
+
+  it("POST /_agent-native/actions/navigate-app queues a semantic navigation command", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/navigate-app")
+      .send({ view: "slide-editor", deckId: 7, slideId: 9 });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      queued: true,
+      command: { view: "slide-editor", deckId: 7, slideId: 9 },
+    });
+
+    const commandRes = await request(app).get("/_agent-native/application-state/navigate");
+    expect(commandRes.status).toBe(200);
+    expect(commandRes.body).toMatchObject({
+      view: "slide-editor",
+      deckId: 7,
+      slideId: 9,
+    });
+    expect(commandRes.body._writeId).toEqual(expect.any(String));
+  });
+});
+
 describe("Agent Native A2A exposure", () => {
   const { app } = createTestContext({ seedSystemPresentation: false });
 
@@ -399,6 +467,41 @@ describe("App agent runtime", () => {
 
     expect(listRes.status).toBe(200);
     expect(listRes.body.text).toContain("Decision Points");
+  });
+});
+
+describe("App agent route context runtime", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+    pid = (await request(app).post("/api/presentations").send({ name: "Pres" })).body.id;
+  });
+
+  it("POST /_agent-native/app-agent reads current app context", async () => {
+    await request(app)
+      .put("/_agent-native/application-state/navigation")
+      .send({ view: "deck", label: `Deck ${pid}`, pathname: `/p/${pid}`, deckId: pid });
+
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "where am I?", scope: { type: "deck", id: String(pid) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain(`Deck ${pid}`);
+  });
+
+  it("POST /_agent-native/app-agent queues app navigation commands", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "open app settings", scope: { type: "deck", id: String(pid) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Opening app settings");
+
+    const commandRes = await request(app).get("/_agent-native/application-state/navigate");
+    expect(commandRes.body).toMatchObject({ view: "app-settings" });
   });
 });
 

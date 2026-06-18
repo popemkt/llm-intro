@@ -80,6 +80,26 @@ function inferTheme(prompt: string) {
   return THEME_NAMES.find((theme) => normalized.includes(theme)) ?? themeAliases[normalized];
 }
 
+function inferPositiveIntegerAfter(prompt: string, terms: string[]) {
+  const termPattern = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const match = prompt.match(new RegExp(`\\b(?:${termPattern})\\s+(\\d+)\\b`, "i"));
+  const value = Number(match?.[1]);
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function formatCurrentContext(result: unknown) {
+  if (!result || typeof result !== "object") return "I cannot read the current app context yet.";
+  const context = result as {
+    url?: { pathname?: string } | null;
+    navigation?: { label?: string; view?: string; deckId?: number; slideId?: number } | null;
+  };
+  const navigation = context.navigation;
+  if (navigation?.label) return `Current screen: ${navigation.label}.`;
+  if (navigation?.view) return `Current screen: ${navigation.view}.`;
+  if (context.url?.pathname) return `Current path: ${context.url.pathname}.`;
+  return "I cannot read the current app context yet.";
+}
+
 function formatGroupList(result: unknown) {
   if (!Array.isArray(result)) return "I could not read the group list.";
   if (result.length === 0) return "This deck has no groups yet.";
@@ -157,10 +177,62 @@ function responseTextForCreatedGroup(result: unknown) {
   return `Created group ${title ? `"${title}"` : "in this deck"}.`;
 }
 
+async function handleNavigationPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number | null,
+) {
+  if (/\b(where am i|current (screen|page|context)|what (screen|page))\b/.test(normalized)) {
+    const context = await runAction(actions["get-current-app-context"], {});
+    return formatCurrentContext(context);
+  }
+
+  if (/\b(open|go to|navigate)\b.*\b(app )?settings\b/.test(normalized)) {
+    await runAction(actions["navigate-app"], { view: "app-settings" });
+    return "Opening app settings.";
+  }
+
+  if (/\b(open|go to|navigate)\b.*\bdecks?\b/.test(normalized)) {
+    await runAction(actions["navigate-app"], { view: "decks" });
+    return "Opening decks.";
+  }
+
+  if (/\b(open|go to|navigate)\b.*\bdeck settings\b/.test(normalized)) {
+    const targetDeckId = inferPositiveIntegerAfter(prompt, ["deck"]) ?? deckId;
+    if (!targetDeckId) return "Tell me which deck id to open settings for.";
+    await runAction(actions["navigate-app"], { view: "deck-settings", deckId: targetDeckId });
+    return `Opening deck ${targetDeckId} settings.`;
+  }
+
+  if (/\b(open|go to|navigate)\b.*\bslide\b/.test(normalized)) {
+    const targetDeckId = inferPositiveIntegerAfter(prompt, ["deck"]) ?? deckId;
+    const slideId = inferPositiveIntegerAfter(prompt, ["slide"]);
+    if (!targetDeckId || !slideId) return "Tell me which deck id and slide id to open.";
+    await runAction(actions["navigate-app"], {
+      view: "slide-editor",
+      deckId: targetDeckId,
+      slideId,
+    });
+    return `Opening slide ${slideId} in deck ${targetDeckId}.`;
+  }
+
+  if (/\b(open|go to|navigate)\b.*\bdeck\b/.test(normalized)) {
+    const targetDeckId = inferPositiveIntegerAfter(prompt, ["deck"]) ?? deckId;
+    if (!targetDeckId) return "Tell me which deck id to open.";
+    await runAction(actions["navigate-app"], { view: "deck", deckId: targetDeckId });
+    return `Opening deck ${targetDeckId}.`;
+  }
+
+  return null;
+}
+
 async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
   const normalized = prompt.toLowerCase();
+  const navigationResponse = await handleNavigationPrompt(actions, prompt, normalized, deckId);
+  if (navigationResponse) return navigationResponse;
 
   if (!deckId) {
     return "Open a deck first, then I can list slides or create normal slides in that deck.";

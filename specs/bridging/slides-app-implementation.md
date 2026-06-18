@@ -22,6 +22,7 @@ framework boundary.
 | App providers and query cache | `AppProviders`, `createAgentNativeQueryClient()` | `apps/slides/src/main.tsx` |
 | App shell | Local shell with `AgentPanel`, local toggle, and product rail | `apps/slides/src/components/AppShell.tsx` |
 | Application state | Minimal route for sidebar URL/app-state sync | `apps/slides/server/routes/application-state.ts` |
+| Route state and navigation | Local React Router bridge writes `__url__`/`navigation` and consumes `navigate` commands | `apps/slides/src/components/AppShell.tsx`, `apps/slides/actions/app-context.ts` |
 | Framework core probes | No-op or local defaults for Agent-Native panel/status/resource probes | `apps/slides/server/routes/framework-core.ts` |
 | Local Code Mode terminal | Local PTY WebSocket bridge for known authenticated CLIs | `apps/slides/server/agent-terminal.ts`, `apps/slides/server/index.ts` |
 | Local App Mode runtime | Deck-scoped HTTP chat runtime backed by the action registry | `apps/slides/server/routes/app-agent-runtime.ts`, `apps/slides/src/agent/appAgentRuntime.ts` |
@@ -119,8 +120,11 @@ framework `AgentSidebar` wrapper because this React Router app and
 Agent-Native's bundled router do not share the same router context. App Mode
 renders Agent-Native `AssistantChat` with a custom `AgentChatRuntime` wired to
 `POST /_agent-native/app-agent` for local, deck-scoped product prompts. Code
-Mode renders the stock `AgentPanel` with `agentChatSurface="dev-frame"` so the
-local terminal bridge remains available for trusted local coding CLIs.
+Mode renders Agent-Native `AgentTerminal` against the local terminal bridge so
+trusted local coding CLIs are available without Builder.io auth. For the same
+router-context reason, route-state sync is implemented locally while preserving
+the framework application-state keys: the shell writes `__url__` and
+`navigation`, and consumes one-shot `navigate` commands.
 Production `/_agent-native/agent-chat` streaming is not mounted yet, so hosted
 chat persistence, approvals, memory, and streaming remain separate adoption
 slices. Production shell access remains gated by the server-side terminal
@@ -167,11 +171,14 @@ For this repo, the ideal target is:
 
 The current bridge exposes every slide/deck/group action through the shared
 action registry for HTTP, generic invoke, MCP-shaped tools, OpenAPI discovery,
-and A2A discovery. These endpoints intentionally call the same `run()`
-functions used by the UI action hooks, so reads and writes stay on one
-validated service path. The MCP and A2A surfaces are protocol-compatible
-discovery/invocation adapters; they are not yet a full authenticated hosted
-agent runtime with chat state, approvals, memory, or streaming.
+and A2A discovery. It also exposes product-safe app context and navigation
+actions: `get-current-app-context` reads the current route state, while
+`navigate-app` queues semantic route commands for the open UI. These endpoints
+intentionally call the same `run()` functions used by the UI action hooks, so
+reads and writes stay on one validated service path. The MCP and A2A surfaces
+are protocol-compatible discovery/invocation adapters; they are not yet a full
+authenticated hosted agent runtime with chat state, approvals, memory, or
+streaming.
 
 The local App Mode runtime is intentionally narrower than the full hosted
 runtime. It accepts a deck scope from the shell, maps simple prompts to existing

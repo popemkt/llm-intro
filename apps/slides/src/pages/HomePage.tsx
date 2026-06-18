@@ -1,74 +1,139 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'motion/react'
-import { Plus, Trash2, Presentation, Settings } from 'lucide-react'
-import { useActionMutation, useActionQuery } from '@agent-native/core/client'
-import { getErrorMessage } from '@/api/client'
-import { THEME_NAMES, type ApiPresentation, type ThemeName } from '@/types'
-import { C } from '@/design/tokens'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
+import { Plus, Trash2, Presentation, Settings } from "lucide-react";
+import { useActionMutation, useActionQuery } from "@agent-native/core/client";
+import { getErrorMessage } from "@/api/client";
+import { THEME_NAMES, type ApiPresentation, type ThemeName } from "@/types";
+import { C } from "@/design/tokens";
 
 export function HomePage() {
-  const navigate = useNavigate()
-  const [showForm, setShowForm] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newTheme, setNewTheme] = useState<ThemeName>('dark-green')
-  const [error, setError] = useState<string | null>(null)
-  const decksQuery = useActionQuery<ApiPresentation[]>('list-decks', {})
-  const presentations: ApiPresentation[] = decksQuery.data ?? []
-  const visibleError = error ?? (decksQuery.error ? getErrorMessage(decksQuery.error) : null)
-  const createDeck = useActionMutation<ApiPresentation, { name: string; theme: ThemeName }>('create-deck')
-  const deleteDeck = useActionMutation<null, { id: number }>('delete-deck', { method: 'DELETE' })
+  const navigate = useNavigate();
+  const [showForm, setShowForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newTheme, setNewTheme] = useState<ThemeName>("dark-green");
+  const [error, setError] = useState<string | null>(null);
+  const decksQuery = useActionQuery<ApiPresentation[]>("list-decks", {});
+  const presentations: ApiPresentation[] = decksQuery.data ?? [];
+  const visibleError = error ?? (decksQuery.error ? getErrorMessage(decksQuery.error) : null);
+  const createDeck = useActionMutation<ApiPresentation, { name: string; theme: ThemeName }>(
+    "create-deck",
+  );
+  const deleteDeck = useActionMutation<null, { id: number }>("delete-deck", { method: "DELETE" });
 
   const create = async () => {
-    if (!newName.trim()) return
-    setError(null)
+    if (!newName.trim()) return;
+    setError(null);
     try {
-      const pres = await createDeck.mutateAsync({ name: newName.trim(), theme: newTheme })
-      navigate(`/p/${pres.id}`)
+      const pres = await createDeck.mutateAsync({ name: newName.trim(), theme: newTheme });
+      navigate(`/p/${pres.id}`);
     } catch (err) {
-      setError(getErrorMessage(err))
+      setError(getErrorMessage(err));
     }
-  }
+  };
 
   const remove = async (id: number) => {
-    if (!confirm('Delete this presentation and all its slides?')) return
-    setError(null)
+    if (!confirm("Delete this presentation and all its slides?")) return;
+    setError(null);
     try {
-      await deleteDeck.mutateAsync({ id })
+      await deleteDeck.mutateAsync({ id });
     } catch (err) {
-      setError(getErrorMessage(err))
+      setError(getErrorMessage(err));
     }
-  }
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: 'Inter, sans-serif' }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: C.bg,
+        color: C.text,
+        fontFamily: "Inter, sans-serif",
+      }}
+    >
       {/* Header */}
-      <div style={{ borderBottom: `1px solid ${C.border}`, padding: '18px 40px', display: 'flex', alignItems: 'center', gap: 12, background: C.surface }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.accent }} />
-        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em', color: C.text }}>Decks</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div
+        style={{
+          borderBottom: `1px solid ${C.border}`,
+          padding: "18px 40px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          background: C.surface,
+        }}
+      >
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.accent }} />
+        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em", color: C.text }}>
+          Decks
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <button
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate("/settings")}
             aria-label="App settings"
             title="App settings"
-            style={{ display: 'flex', alignItems: 'center', padding: 7, background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', color: C.textDim }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: 7,
+              background: "none",
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              cursor: "pointer",
+              color: C.textDim,
+            }}
           >
             <Settings size={14} />
           </button>
           <button
-            onClick={() => setShowForm(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: C.accent, color: C.bg, border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+            onClick={() => setShowForm((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: C.accent,
+              color: C.bg,
+              border: "none",
+              borderRadius: 8,
+              padding: "8px 14px",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
           >
             <Plus size={13} /> New
           </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 40px' }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 40px" }}>
         {visibleError && (
-          <div style={{ marginBottom: 20, padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: '#ff8a8a', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div
+            style={{
+              marginBottom: 20,
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.surface,
+              color: "#ff8a8a",
+              fontSize: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
             <span>{visibleError}</span>
-            <button onClick={() => void decksQuery.refetch()} style={{ background: 'none', border: 'none', color: C.textDim, cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>
+            <button
+              onClick={() => void decksQuery.refetch()}
+              style={{
+                background: "none",
+                border: "none",
+                color: C.textDim,
+                cursor: "pointer",
+                fontSize: 12,
+                textDecoration: "underline",
+              }}
+            >
               Retry
             </button>
           </div>
@@ -79,39 +144,111 @@ export function HomePage() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 32, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 32,
+              display: "flex",
+              gap: 12,
+              alignItems: "flex-end",
+              flexWrap: "wrap",
+            }}
           >
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ display: 'block', fontSize: 11, color: C.textDim, marginBottom: 6, fontFamily: 'JetBrains Mono, monospace' }}>Name</label>
+            <div style={{ flex: "1 1 200px" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  color: C.textDim,
+                  marginBottom: 6,
+                  fontFamily: "JetBrains Mono, monospace",
+                }}
+              >
+                Name
+              </label>
               <input
                 autoFocus
                 value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && create()}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && create()}
                 placeholder="My deck"
-                style={{ width: '100%', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, color: C.text, outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box' }}
+                style={{
+                  width: "100%",
+                  background: C.bg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  color: C.text,
+                  outline: "none",
+                  fontFamily: "Inter, sans-serif",
+                  boxSizing: "border-box",
+                }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: C.textDim, marginBottom: 6, fontFamily: 'JetBrains Mono, monospace' }}>Slide theme</label>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  color: C.textDim,
+                  marginBottom: 6,
+                  fontFamily: "JetBrains Mono, monospace",
+                }}
+              >
+                Slide theme
+              </label>
               <select
                 value={newTheme}
-                onChange={e => setNewTheme(e.target.value as ThemeName)}
-                style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, color: C.text, outline: 'none', cursor: 'pointer' }}
+                onChange={(e) => setNewTheme(e.target.value as ThemeName)}
+                style={{
+                  background: C.bg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  color: C.text,
+                  outline: "none",
+                  cursor: "pointer",
+                }}
               >
-                {THEME_NAMES.map(t => <option key={t} value={t}>{t}</option>)}
+                {THEME_NAMES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
             <button
               onClick={create}
               disabled={createDeck.isPending || !newName.trim()}
-              style={{ background: C.accent, color: C.bg, border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: createDeck.isPending || !newName.trim() ? 0.5 : 1 }}
+              style={{
+                background: C.accent,
+                color: C.bg,
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 18px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                opacity: createDeck.isPending || !newName.trim() ? 0.5 : 1,
+              }}
             >
-              {createDeck.isPending ? 'Creating…' : 'Create'}
+              {createDeck.isPending ? "Creating…" : "Create"}
             </button>
             <button
               onClick={() => setShowForm(false)}
-              style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, color: C.textDim, cursor: 'pointer' }}
+              style={{
+                background: "none",
+                border: `1px solid ${C.border}`,
+                borderRadius: 8,
+                padding: "8px 14px",
+                fontSize: 12,
+                color: C.textDim,
+                cursor: "pointer",
+              }}
             >
               Cancel
             </button>
@@ -121,28 +258,68 @@ export function HomePage() {
         {decksQuery.isLoading ? (
           <div style={{ fontSize: 12, color: C.textDim }}>Loading…</div>
         ) : presentations.length === 0 ? (
-          <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>No decks yet.</div>
+          <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>No decks yet.</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-            {presentations.map(pres => (
-              <motion.div key={pres.id} whileHover={{ scale: 1.02 }} style={{ position: 'relative' }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {presentations.map((pres) => (
+              <motion.div
+                key={pres.id}
+                whileHover={{ scale: 1.02 }}
+                style={{ position: "relative" }}
+              >
                 <button
                   onClick={() => navigate(`/p/${pres.id}`)}
                   aria-label={`Open ${pres.name}`}
-                  style={{ width: '100%', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', textAlign: 'left', cursor: 'pointer', display: 'block' }}
+                  style={{
+                    width: "100%",
+                    background: C.surface,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 12,
+                    padding: "18px 20px",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    display: "block",
+                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <Presentation size={14} style={{ color: C.accent }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{pres.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+                      {pres.name}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 10, color: C.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: C.muted,
+                      fontFamily: "JetBrains Mono, monospace",
+                    }}
+                  >
                     slides theme: {pres.theme}
                   </div>
                 </button>
                 <button
-                  onClick={e => { e.stopPropagation(); void remove(pres.id) }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void remove(pres.id);
+                  }}
                   aria-label={`Delete ${pres.name}`}
-                  style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4, borderRadius: 6 }}
+                  style={{
+                    position: "absolute",
+                    top: 10,
+                    right: 10,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: C.muted,
+                    padding: 4,
+                    borderRadius: 6,
+                  }}
                   title="Delete"
                 >
                   <Trash2 size={13} />
@@ -153,5 +330,5 @@ export function HomePage() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,168 +1,327 @@
-import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Check } from 'lucide-react'
-import { useActionMutation, useActionQuery } from '@agent-native/core/client'
-import type { ApiPresentation, ThemeName } from '@/types'
-import { THEME_NAMES } from '@/types'
-import { getErrorMessage } from '@/api/client'
-import { C } from '@/design/tokens'
-import { THEME_META } from '@/lib/themeMeta'
-import { Breadcrumb } from '@/components/Breadcrumb'
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { Check } from "lucide-react";
+import { useActionMutation, useActionQuery } from "@agent-native/core/client";
+import type { ApiPresentation, ThemeName } from "@/types";
+import { THEME_NAMES } from "@/types";
+import { getErrorMessage } from "@/api/client";
+import { C } from "@/design/tokens";
+import { THEME_META } from "@/lib/themeMeta";
+import { Breadcrumb } from "@/components/Breadcrumb";
 
 const inp: React.CSSProperties = {
-  width: '100%', background: C.bg, border: `1px solid ${C.border}`,
-  borderRadius: 8, padding: '9px 13px', fontSize: 13, color: C.text,
-  fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box',
-}
+  width: "100%",
+  background: C.bg,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  padding: "9px 13px",
+  fontSize: 13,
+  color: C.text,
+  fontFamily: "Inter, sans-serif",
+  outline: "none",
+  boxSizing: "border-box",
+};
 
 export function SettingsPage() {
-  const { id } = useParams<{ id: string }>()
-  const pid = Number(id)
-  const validPid = Boolean(id && !isNaN(pid))
+  const { id } = useParams<{ id: string }>();
+  const pid = Number(id);
+  const validPid = Boolean(id && !isNaN(pid));
 
-  const [name,       setName]  = useState('')
-  const [slideTheme, setSlideTheme] = useState<ThemeName>('dark-green')
-  const [saving, setSaving] = useState(false)
-  const [saved,  setSaved]  = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [name, setName] = useState("");
+  const [slideTheme, setSlideTheme] = useState<ThemeName>("dark-green");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const presentationQuery = useActionQuery<ApiPresentation>('get-deck', { id: pid }, { enabled: validPid })
-  const updatePresentation = useActionMutation<ApiPresentation, { id: number; name?: string; theme?: ThemeName }>('update-deck', { method: 'PUT' })
+  const presentationQuery = useActionQuery<ApiPresentation>(
+    "get-deck",
+    { id: pid },
+    { enabled: validPid },
+  );
+  const updatePresentation = useActionMutation<
+    ApiPresentation,
+    { id: number; name?: string; theme?: ThemeName }
+  >("update-deck", { method: "PUT" });
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
-  }, [pid])
+    setLoading(true);
+    setError(null);
+  }, [pid]);
 
   useEffect(() => {
     if (!validPid) {
-      setError('Invalid deck route')
-      setLoading(false)
-      return
+      setError("Invalid deck route");
+      setLoading(false);
+      return;
     }
     if (presentationQuery.error) {
-      setError(getErrorMessage(presentationQuery.error))
-      setLoading(false)
-      return
+      setError(getErrorMessage(presentationQuery.error));
+      setLoading(false);
+      return;
     }
-    if (presentationQuery.isLoading) return
-    const presentation = presentationQuery.data
-    if (!presentation) return
-    setName(presentation.name)
-    setSlideTheme(presentation.theme)
-    setLoading(false)
-  }, [presentationQuery.data, presentationQuery.error, presentationQuery.isLoading, validPid])
+    if (presentationQuery.isLoading) return;
+    const presentation = presentationQuery.data;
+    if (!presentation) return;
+    setName(presentation.name);
+    setSlideTheme(presentation.theme);
+    setLoading(false);
+  }, [presentationQuery.data, presentationQuery.error, presentationQuery.isLoading, validPid]);
 
   const save = async () => {
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
     try {
-      await updatePresentation.mutateAsync({ id: pid, name, theme: slideTheme })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      await updatePresentation.mutateAsync({ id: pid, name, theme: slideTheme });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      setError(getErrorMessage(err))
+      setError(getErrorMessage(err));
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text }}>
       {/* Header */}
-      <div style={{ height: 56, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, padding: '0 24px', background: C.surface }}>
-        <Breadcrumb segments={[
-          { label: 'Home', to: '/' },
-          { label: name || 'Deck', to: `/p/${pid}` },
-          { label: 'Settings' },
-        ]} />
-        <div style={{ marginLeft: 'auto' }}>
+      <div
+        style={{
+          height: 56,
+          borderBottom: `1px solid ${C.border}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "0 24px",
+          background: C.surface,
+        }}
+      >
+        <Breadcrumb
+          segments={[
+            { label: "Home", to: "/" },
+            { label: name || "Deck", to: `/p/${pid}` },
+            { label: "Settings" },
+          ]}
+        />
+        <div style={{ marginLeft: "auto" }}>
           <button
             onClick={save}
             disabled={saving}
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '7px 18px', borderRadius: 8,
-              cursor: saving ? 'not-allowed' : 'pointer',
-              fontSize: 13, fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "7px 18px",
+              borderRadius: 8,
+              cursor: saving ? "not-allowed" : "pointer",
+              fontSize: 13,
+              fontWeight: 700,
               background: saved ? C.accentDim : C.accent,
-              border: 'none', color: C.bg, opacity: saving ? 0.7 : 1,
-              transition: 'background 0.2s',
+              border: "none",
+              color: C.bg,
+              opacity: saving ? 0.7 : 1,
+              transition: "background 0.2s",
             }}
           >
-            {saved ? <><Check size={13} /> Saved</> : saving ? 'Saving…' : 'Save'}
+            {saved ? (
+              <>
+                <Check size={13} /> Saved
+              </>
+            ) : saving ? (
+              "Saving…"
+            ) : (
+              "Save"
+            )}
           </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 660, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 36 }}>
+      <div
+        style={{
+          maxWidth: 660,
+          margin: "0 auto",
+          padding: "40px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 36,
+        }}
+      >
         {error && (
-          <div style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: '#ff8a8a', fontSize: 12 }}>
+          <div
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.surface,
+              color: "#ff8a8a",
+              fontSize: 12,
+            }}
+          >
             {error}
           </div>
         )}
 
         {/* Presentation Name */}
         <section>
-          <h2 style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
+          <h2
+            style={{
+              fontSize: 11,
+              fontFamily: "JetBrains Mono, monospace",
+              color: C.muted,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              margin: "0 0 12px 0",
+            }}
+          >
             Presentation Name
           </h2>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Name…" style={inp} disabled={loading} />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name…"
+            style={inp}
+            disabled={loading}
+          />
         </section>
 
         {/* Slide Theme */}
         <section>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px 0' }}>
+            <h2
+              style={{
+                fontSize: 11,
+                fontFamily: "JetBrains Mono, monospace",
+                color: C.muted,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                margin: "0 0 4px 0",
+              }}
+            >
               Slide Theme
             </h2>
             <p style={{ fontSize: 12, color: C.textDim, margin: 0 }}>
               Styles DB-backed slides. Code slides have their own styling.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            {THEME_NAMES.map(t => {
-              const { label, desc } = THEME_META[t]
-              const isActive = slideTheme === t
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            {THEME_NAMES.map((t) => {
+              const { label, desc } = THEME_META[t];
+              const isActive = slideTheme === t;
               return (
                 <button
                   key={t}
                   data-theme={t}
                   onClick={() => setSlideTheme(t)}
                   style={{
-                    background: 'var(--theme-bg)',
-                    border: `2px solid ${isActive ? 'var(--theme-accent)' : 'var(--theme-border)'}`,
-                    borderRadius: 12, padding: '14px', cursor: 'pointer',
-                    textAlign: 'left', display: 'flex', flexDirection: 'column',
-                    gap: 10, transition: 'border-color 0.15s', position: 'relative',
+                    background: "var(--theme-bg)",
+                    border: `2px solid ${isActive ? "var(--theme-accent)" : "var(--theme-border)"}`,
+                    borderRadius: 12,
+                    padding: "14px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    transition: "border-color 0.15s",
+                    position: "relative",
                   }}
                 >
                   {isActive && (
-                    <div style={{ position: 'absolute', top: 8, right: 8, width: 18, height: 18, borderRadius: '50%', background: 'var(--theme-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Check size={10} style={{ color: 'var(--theme-bg)' }} />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "var(--theme-accent)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Check size={10} style={{ color: "var(--theme-bg)" }} />
                     </div>
                   )}
-                  <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--theme-surface)', borderRadius: 6, border: '1px solid var(--theme-border)', display: 'flex', flexDirection: 'column', padding: '6px 8px', gap: 4, boxSizing: 'border-box' }}>
-                    <div style={{ height: 4, width: '60%', background: 'var(--theme-accent)', borderRadius: 2 }} />
-                    <div style={{ height: 3, width: '85%', background: 'var(--theme-text-dim)', borderRadius: 2, opacity: 0.5 }} />
-                    <div style={{ height: 3, width: '70%', background: 'var(--theme-text-dim)', borderRadius: 2, opacity: 0.3 }} />
-                    <div style={{ marginTop: 'auto', display: 'flex', gap: 4 }}>
-                      <div style={{ height: 8, width: 8, borderRadius: '50%', background: 'var(--theme-accent)' }} />
-                      <div style={{ height: 8, width: 8, borderRadius: '50%', background: 'var(--theme-muted)' }} />
+                  <div
+                    style={{
+                      width: "100%",
+                      aspectRatio: "16/9",
+                      background: "var(--theme-surface)",
+                      borderRadius: 6,
+                      border: "1px solid var(--theme-border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      padding: "6px 8px",
+                      gap: 4,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: 4,
+                        width: "60%",
+                        background: "var(--theme-accent)",
+                        borderRadius: 2,
+                      }}
+                    />
+                    <div
+                      style={{
+                        height: 3,
+                        width: "85%",
+                        background: "var(--theme-text-dim)",
+                        borderRadius: 2,
+                        opacity: 0.5,
+                      }}
+                    />
+                    <div
+                      style={{
+                        height: 3,
+                        width: "70%",
+                        background: "var(--theme-text-dim)",
+                        borderRadius: 2,
+                        opacity: 0.3,
+                      }}
+                    />
+                    <div style={{ marginTop: "auto", display: "flex", gap: 4 }}>
+                      <div
+                        style={{
+                          height: 8,
+                          width: 8,
+                          borderRadius: "50%",
+                          background: "var(--theme-accent)",
+                        }}
+                      />
+                      <div
+                        style={{
+                          height: 8,
+                          width: 8,
+                          borderRadius: "50%",
+                          background: "var(--theme-muted)",
+                        }}
+                      />
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--theme-text)', marginBottom: 2 }}>{label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--theme-text-dim)' }}>{desc}</div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "var(--theme-text)",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--theme-text-dim)" }}>{desc}</div>
                   </div>
                 </button>
-              )
+              );
             })}
           </div>
         </section>
-
       </div>
     </div>
-  )
+  );
 }

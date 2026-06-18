@@ -1,53 +1,65 @@
-import express from 'express'
-import cors from 'cors'
-import { AppError } from './errors.js'
-import { createPresentationsRouter } from './routes/presentations.js'
-import { createSlidesRouter } from './routes/slides.js'
-import { createGroupsRouter } from './routes/groups.js'
-import { createExportHandler } from './routes/export.js'
-import { createApplicationStateRouter } from './routes/application-state.js'
-import { createFrameworkCoreRouter } from './routes/framework-core.js'
-import { createAgentNativeActionsRouter, createAgentNativeDiscoveryRouter } from './routes/agent-native-actions.js'
-import type { SlideDeckActions } from '../actions/index.js'
-import type { createPresentationsService } from './services/presentations.js'
-import type { createSlidesService } from './services/slides.js'
-import type { createGroupsService } from './services/groups.js'
+import express from "express";
+import cors from "cors";
+import { AppError } from "./errors.js";
+import { createPresentationsRouter } from "./routes/presentations.js";
+import { createSlidesRouter } from "./routes/slides.js";
+import { createGroupsRouter } from "./routes/groups.js";
+import { createExportHandler } from "./routes/export.js";
+import { createApplicationStateRouter } from "./routes/application-state.js";
+import { createFrameworkCoreRouter } from "./routes/framework-core.js";
+import {
+  createAgentNativeActionsRouter,
+  createAgentNativeDiscoveryRouter,
+} from "./routes/agent-native-actions.js";
+import type { SlideDeckActions } from "../actions/index.js";
+import type { createPresentationsService } from "./services/presentations.js";
+import type { createSlidesService } from "./services/slides.js";
+import type { createGroupsService } from "./services/groups.js";
 
-type PresentationsService = ReturnType<typeof createPresentationsService>
-type SlidesService = ReturnType<typeof createSlidesService>
-type GroupsService = ReturnType<typeof createGroupsService>
+type PresentationsService = ReturnType<typeof createPresentationsService>;
+type SlidesService = ReturnType<typeof createSlidesService>;
+type GroupsService = ReturnType<typeof createGroupsService>;
 
 export function createApp(services: {
-  presentationsService: PresentationsService
-  slidesService: SlidesService
-  groupsService: GroupsService
-  actions: SlideDeckActions
+  presentationsService: PresentationsService;
+  slidesService: SlidesService;
+  groupsService: GroupsService;
+  actions: SlideDeckActions;
 }) {
-  const app = express()
+  const app = express();
 
-  app.use(cors())
-  app.use(express.json())
+  app.use(cors());
+  app.use(express.json());
 
-  app.use('/_agent-native', createAgentNativeDiscoveryRouter(services.actions))
-  app.use('/_agent-native', createFrameworkCoreRouter())
-  app.use('/_agent-native/application-state', createApplicationStateRouter())
-  app.use('/_agent-native/actions', createAgentNativeActionsRouter(services.actions))
-  app.post('/api/presentations/:pid/export', createExportHandler(services.presentationsService, services.slidesService, services.groupsService))
-  app.use('/api/presentations', createPresentationsRouter(services.presentationsService))
-  app.use('/api/presentations/:pid/slides', createSlidesRouter(services.slidesService))
-  app.use('/api/presentations/:pid/groups', createGroupsRouter(services.groupsService))
+  app.use("/_agent-native", createAgentNativeDiscoveryRouter(services.actions));
+  app.use("/_agent-native", createFrameworkCoreRouter());
+  app.use("/_agent-native/application-state", createApplicationStateRouter());
+  app.use("/_agent-native/actions", createAgentNativeActionsRouter(services.actions));
+  app.post(
+    "/api/presentations/:pid/export",
+    createExportHandler(
+      services.presentationsService,
+      services.slidesService,
+      services.groupsService,
+    ),
+  );
+  app.use("/api/presentations", createPresentationsRouter(services.presentationsService));
+  app.use("/api/presentations/:pid/slides", createSlidesRouter(services.slidesService));
+  app.use("/api/presentations/:pid/groups", createGroupsRouter(services.groupsService));
 
-  app.get('/api/health', (_req, res) => res.json({ ok: true }))
+  app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    if (err instanceof AppError) {
-      res.status(err.status).json({ error: err.message })
-      return
-    }
+  app.use(
+    (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      if (err instanceof AppError) {
+        res.status(err.status).json({ error: err.message });
+        return;
+      }
 
-    console.error(err)
-    res.status(500).json({ error: 'internal server error' })
-  })
+      console.error(err);
+      res.status(500).json({ error: "internal server error" });
+    },
+  );
 
-  return app
+  return app;
 }

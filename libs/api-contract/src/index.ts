@@ -1,61 +1,68 @@
-export type ThemeName = 'dark-green' | 'dark-blue' | 'light' | 'neon' | 'warm' | 'ocean'
+export type ThemeName = "dark-green" | "dark-blue" | "light" | "neon" | "warm" | "ocean";
 
-export const THEME_NAMES: ThemeName[] = ['dark-green', 'dark-blue', 'light', 'neon', 'warm', 'ocean']
+export const THEME_NAMES: ThemeName[] = [
+  "dark-green",
+  "dark-blue",
+  "light",
+  "neon",
+  "warm",
+  "ocean",
+];
 
 type BlockPos = {
-  x?: number
-  y?: number
-  w?: number
-  h?: number
-}
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+};
 
-export type TextBlock = { id: string; type: 'text'; markdown: string } & BlockPos
-export type ImageBlock = { id: string; type: 'image'; url: string; alt?: string } & BlockPos
-export type IframeBlock = { id: string; type: 'iframe'; url: string; height?: number } & BlockPos
+export type TextBlock = { id: string; type: "text"; markdown: string } & BlockPos;
+export type ImageBlock = { id: string; type: "image"; url: string; alt?: string } & BlockPos;
+export type IframeBlock = { id: string; type: "iframe"; url: string; height?: number } & BlockPos;
 export type ShapeBlock = {
-  id: string
-  type: 'shape'
-  shape: 'rect' | 'pill' | 'circle'
-  color: string
-  label?: string
-  width?: string
-  height?: string
-} & BlockPos
+  id: string;
+  type: "shape";
+  shape: "rect" | "pill" | "circle";
+  color: string;
+  label?: string;
+  width?: string;
+  height?: string;
+} & BlockPos;
 
-export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock
+export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock;
 
 export interface ApiPresentation {
-  id: number
-  name: string
-  theme: ThemeName
-  created_at: string
-  updated_at: string
+  id: number;
+  name: string;
+  theme: ThemeName;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ApiSlide {
-  id: number
-  presentation_id: number
-  position: number
-  group_id: number | null
-  kind: 'code' | 'db'
-  code_id: string | null
-  title: string
-  blocks: Block[]
-  created_at: string
-  updated_at: string
+  id: number;
+  presentation_id: number;
+  position: number;
+  group_id: number | null;
+  kind: "code" | "db";
+  code_id: string | null;
+  title: string;
+  blocks: Block[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ApiSlideGroup {
-  id: number
-  presentation_id: number
-  title: string
-  position: number
-  collapsed: boolean
-  created_at: string
-  updated_at: string
+  id: number;
+  presentation_id: number;
+  title: string;
+  position: number;
+  collapsed: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LayoutInput {
-  ungrouped: number[]
-  groups: Array<{ id: number; slideIds: number[] }>
+  ungrouped: number[];
+  groups: Array<{ id: number; slideIds: number[] }>;
 }

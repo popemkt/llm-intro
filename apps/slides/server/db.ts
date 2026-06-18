@@ -1,63 +1,63 @@
-import Database from 'better-sqlite3'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import Database from "better-sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const DB_PATH = path.join(__dirname, 'data', 'app.db')
+export const DB_PATH = path.join(__dirname, "data", "app.db");
 
-const SEED_PRESENTATION_KEY = 'llm-intro'
-const SEED_PRESENTATION_NAME = 'LLM & Agent Basics'
+const SEED_PRESENTATION_KEY = "llm-intro";
+const SEED_PRESENTATION_NAME = "LLM & Agent Basics";
 
 const BUILT_IN_SLIDES = [
-  { code_id: '01-opener', title: 'What is an LLM?' },
-  { code_id: '02-linear-regression', title: 'Linear Regression → LLM' },
-  { code_id: '10-word-dimensions', title: 'How Words Become Numbers' },
-  { code_id: '03-context', title: 'Context Window' },
-  { code_id: '04-tool-use', title: 'Tool Use / Agent Loop' },
-  { code_id: '05-claude-desktop', title: 'Claude Desktop' },
-  { code_id: '06-browser-control', title: 'Browser Control (Playwright)' },
-  { code_id: '07-workspace-setup', title: 'Workspace Setup' },
-  { code_id: '08-workspace-concepts', title: 'Workspace Concepts' },
-  { code_id: '09-appendix', title: 'Tech Landscape (Appendix)' },
-] as const
+  { code_id: "01-opener", title: "What is an LLM?" },
+  { code_id: "02-linear-regression", title: "Linear Regression → LLM" },
+  { code_id: "10-word-dimensions", title: "How Words Become Numbers" },
+  { code_id: "03-context", title: "Context Window" },
+  { code_id: "04-tool-use", title: "Tool Use / Agent Loop" },
+  { code_id: "05-claude-desktop", title: "Claude Desktop" },
+  { code_id: "06-browser-control", title: "Browser Control (Playwright)" },
+  { code_id: "07-workspace-setup", title: "Workspace Setup" },
+  { code_id: "08-workspace-concepts", title: "Workspace Concepts" },
+  { code_id: "09-appendix", title: "Tech Landscape (Appendix)" },
+] as const;
 
 // One-time seed for the system presentation's group layout. Applied only
 // when the presentation has no groups yet, so user customisations on
 // existing databases are preserved.
 const SEED_LAYOUT = {
-  ungrouped: ['06-browser-control', '08-workspace-concepts'] as string[],
+  ungrouped: ["06-browser-control", "08-workspace-concepts"] as string[],
   groups: [
     {
-      title: 'How it works from a visible standpoint',
-      slides: ['01-opener', '02-linear-regression', '04-tool-use', '03-context'],
+      title: "How it works from a visible standpoint",
+      slides: ["01-opener", "02-linear-regression", "04-tool-use", "03-context"],
     },
-    { title: 'Indepth theory', slides: ['10-word-dimensions'] },
-    { title: 'Claude code', slides: ['05-claude-desktop', '07-workspace-setup'] },
-    { title: 'Advanced tools and workflows', slides: ['09-appendix'] },
-    { title: 'Cowork', slides: [] as string[] },
+    { title: "Indepth theory", slides: ["10-word-dimensions"] },
+    { title: "Claude code", slides: ["05-claude-desktop", "07-workspace-setup"] },
+    { title: "Advanced tools and workflows", slides: ["09-appendix"] },
+    { title: "Cowork", slides: [] as string[] },
   ],
-} as const
+} as const;
 
 export function openDatabase(filePath = process.env.LLM_INTRO_DB_PATH ?? DB_PATH) {
-  const db = new Database(filePath)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
-  return db
+  const db = new Database(filePath);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+  return db;
 }
 
 export function bootstrapDatabase(
   db: Database.Database,
   options: { seedSystemPresentation?: boolean } = {},
 ) {
-  migrate(db)
+  migrate(db);
   if (options.seedSystemPresentation ?? true) {
-    seedSystemPresentation(db)
+    seedSystemPresentation(db);
   }
 }
 
 function migrate(db: Database.Database) {
-  const version = db.pragma('user_version', { simple: true }) as number
+  const version = db.pragma("user_version", { simple: true }) as number;
 
   if (version < 1) {
     db.exec(`
@@ -77,8 +77,8 @@ function migrate(db: Database.Database) {
         created_at      TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
       );
-    `)
-    db.pragma('user_version = 1')
+    `);
+    db.pragma("user_version = 1");
   }
 
   if (version < 2) {
@@ -87,33 +87,33 @@ function migrate(db: Database.Database) {
       `ALTER TABLE slides ADD COLUMN code_id TEXT`,
     ]) {
       try {
-        db.exec(sql)
+        db.exec(sql);
       } catch {
         // Column already exists.
       }
     }
-    db.pragma('user_version = 2')
+    db.pragma("user_version = 2");
   }
 
   if (version < 3) {
     try {
-      db.exec(`ALTER TABLE presentations ADD COLUMN system_key TEXT`)
+      db.exec(`ALTER TABLE presentations ADD COLUMN system_key TEXT`);
     } catch {
       // Column already exists.
     }
-    db.pragma('user_version = 3')
+    db.pragma("user_version = 3");
   }
 
   if (version < 4) {
-    normalizeSlidePositions(db)
+    normalizeSlidePositions(db);
     db.exec(`
       CREATE UNIQUE INDEX IF NOT EXISTS slides_presentation_position_unique
       ON slides(presentation_id, position);
       CREATE UNIQUE INDEX IF NOT EXISTS slides_presentation_code_id_unique
       ON slides(presentation_id, code_id)
       WHERE code_id IS NOT NULL
-    `)
-    db.pragma('user_version = 4')
+    `);
+    db.pragma("user_version = 4");
   }
 
   if (version < 5) {
@@ -121,8 +121,8 @@ function migrate(db: Database.Database) {
       CREATE UNIQUE INDEX IF NOT EXISTS presentations_system_key_unique
       ON presentations(system_key)
       WHERE system_key IS NOT NULL
-    `)
-    db.pragma('user_version = 5')
+    `);
+    db.pragma("user_version = 5");
   }
 
   if (version < 6) {
@@ -137,112 +137,112 @@ function migrate(db: Database.Database) {
         updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
       );
       CREATE INDEX IF NOT EXISTS slide_groups_presentation_idx ON slide_groups(presentation_id, position);
-    `)
+    `);
     try {
-      db.exec(`ALTER TABLE slides ADD COLUMN group_id INTEGER REFERENCES slide_groups(id) ON DELETE SET NULL`)
+      db.exec(
+        `ALTER TABLE slides ADD COLUMN group_id INTEGER REFERENCES slide_groups(id) ON DELETE SET NULL`,
+      );
     } catch {
       // Column already exists.
     }
     // Positions now scoped per-bucket (null group = ungrouped); old global
     // uniqueness no longer applies.
-    db.exec(`DROP INDEX IF EXISTS slides_presentation_position_unique`)
-    db.pragma('user_version = 6')
+    db.exec(`DROP INDEX IF EXISTS slides_presentation_position_unique`);
+    db.pragma("user_version = 6");
   }
 }
 
 function normalizeSlidePositions(db: Database.Database) {
-  const presentationIds = db.prepare('SELECT id FROM presentations ORDER BY id').all() as Array<{ id: number }>
-  const update = db.prepare('UPDATE slides SET position=? WHERE id=?')
+  const presentationIds = db.prepare("SELECT id FROM presentations ORDER BY id").all() as Array<{
+    id: number;
+  }>;
+  const update = db.prepare("UPDATE slides SET position=? WHERE id=?");
 
   db.transaction(() => {
     for (const { id } of presentationIds) {
       const slides = db
-        .prepare('SELECT id FROM slides WHERE presentation_id=? ORDER BY position, id')
-        .all(id) as Array<{ id: number }>
+        .prepare("SELECT id FROM slides WHERE presentation_id=? ORDER BY position, id")
+        .all(id) as Array<{ id: number }>;
 
       slides.forEach((slide, index) => {
-        update.run(index, slide.id)
-      })
+        update.run(index, slide.id);
+      });
     }
-  })()
+  })();
 }
 
 function seedSystemPresentation(db: Database.Database) {
-  const selectBySystemKey = db.prepare('SELECT id FROM presentations WHERE system_key=?')
-  const selectByName = db.prepare('SELECT id FROM presentations WHERE name=?')
-  const attachSystemKey = db.prepare('UPDATE presentations SET system_key=? WHERE id=?')
+  const selectBySystemKey = db.prepare("SELECT id FROM presentations WHERE system_key=?");
+  const selectByName = db.prepare("SELECT id FROM presentations WHERE name=?");
+  const attachSystemKey = db.prepare("UPDATE presentations SET system_key=? WHERE id=?");
 
-  const existing = (
-    selectBySystemKey.get(SEED_PRESENTATION_KEY) ??
-    selectByName.get(SEED_PRESENTATION_NAME)
-  ) as { id: number } | undefined
+  const existing = (selectBySystemKey.get(SEED_PRESENTATION_KEY) ??
+    selectByName.get(SEED_PRESENTATION_NAME)) as { id: number } | undefined;
 
-  let presentationId: number
+  let presentationId: number;
 
   if (existing) {
-    presentationId = existing.id
-    attachSystemKey.run(SEED_PRESENTATION_KEY, presentationId)
+    presentationId = existing.id;
+    attachSystemKey.run(SEED_PRESENTATION_KEY, presentationId);
   } else {
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)')
-      .run(SEED_PRESENTATION_NAME, 'dark-green', SEED_PRESENTATION_KEY)
-    presentationId = Number(lastInsertRowid)
+      .prepare("INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)")
+      .run(SEED_PRESENTATION_NAME, "dark-green", SEED_PRESENTATION_KEY);
+    presentationId = Number(lastInsertRowid);
   }
 
-  const selectSlide = db.prepare(
-    'SELECT id FROM slides WHERE presentation_id=? AND code_id=?',
-  )
+  const selectSlide = db.prepare("SELECT id FROM slides WHERE presentation_id=? AND code_id=?");
   const insertSlide = db.prepare(
     "INSERT INTO slides (presentation_id, position, kind, code_id, title, blocks) VALUES (?, ?, 'code', ?, ?, '[]')",
-  )
+  );
   const updateSlide = db.prepare(
     "UPDATE slides SET position=?, title=?, kind='code', updated_at=datetime('now') WHERE id=?",
-  )
+  );
   const deleteMissing = db.prepare(
     `DELETE FROM slides
      WHERE presentation_id=?
        AND kind='code'
-       AND code_id NOT IN (${BUILT_IN_SLIDES.map(() => '?').join(', ')})`,
-  )
+       AND code_id NOT IN (${BUILT_IN_SLIDES.map(() => "?").join(", ")})`,
+  );
 
   db.transaction(() => {
     BUILT_IN_SLIDES.forEach(({ code_id, title }, position) => {
-      const row = selectSlide.get(presentationId, code_id) as { id: number } | undefined
+      const row = selectSlide.get(presentationId, code_id) as { id: number } | undefined;
       if (row) {
-        updateSlide.run(position, title, row.id)
+        updateSlide.run(position, title, row.id);
       } else {
-        insertSlide.run(presentationId, position, code_id, title)
+        insertSlide.run(presentationId, position, code_id, title);
       }
-    })
-    deleteMissing.run(presentationId, ...BUILT_IN_SLIDES.map((slide) => slide.code_id))
-  })()
+    });
+    deleteMissing.run(presentationId, ...BUILT_IN_SLIDES.map((slide) => slide.code_id));
+  })();
 
-  seedSystemLayout(db, presentationId)
+  seedSystemLayout(db, presentationId);
 }
 
 function seedSystemLayout(db: Database.Database, presentationId: number) {
   const existingGroupCount = db
-    .prepare('SELECT COUNT(*) as n FROM slide_groups WHERE presentation_id=?')
-    .get(presentationId) as { n: number }
-  if (existingGroupCount.n > 0) return
+    .prepare("SELECT COUNT(*) as n FROM slide_groups WHERE presentation_id=?")
+    .get(presentationId) as { n: number };
+  if (existingGroupCount.n > 0) return;
 
   const insertGroup = db.prepare(
-    'INSERT INTO slide_groups (presentation_id, title, position, collapsed) VALUES (?, ?, ?, 0)',
-  )
+    "INSERT INTO slide_groups (presentation_id, title, position, collapsed) VALUES (?, ?, ?, 0)",
+  );
   const setSlide = db.prepare(
-    'UPDATE slides SET position=?, group_id=? WHERE presentation_id=? AND code_id=?',
-  )
+    "UPDATE slides SET position=?, group_id=? WHERE presentation_id=? AND code_id=?",
+  );
 
   db.transaction(() => {
     SEED_LAYOUT.ungrouped.forEach((codeId, index) => {
-      setSlide.run(index, null, presentationId, codeId)
-    })
+      setSlide.run(index, null, presentationId, codeId);
+    });
     SEED_LAYOUT.groups.forEach((group, groupIndex) => {
-      const { lastInsertRowid } = insertGroup.run(presentationId, group.title, groupIndex)
-      const groupId = Number(lastInsertRowid)
+      const { lastInsertRowid } = insertGroup.run(presentationId, group.title, groupIndex);
+      const groupId = Number(lastInsertRowid);
       group.slides.forEach((codeId, index) => {
-        setSlide.run(index, groupId, presentationId, codeId)
-      })
-    })
-  })()
+        setSlide.run(index, groupId, presentationId, codeId);
+      });
+    });
+  })();
 }

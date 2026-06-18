@@ -1,1 +1,1 @@
-export * from '@llm-intro/api-contract'
+export * from "@llm-intro/api-contract";

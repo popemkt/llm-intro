@@ -42,6 +42,7 @@ export function createSlideActions(slidesService: SlidesService) {
         pid: z.coerce.number().int().positive(),
         title: z.string().optional(),
         blocks: z.array(blockInput).optional(),
+        notes: z.string().optional(),
       }),
       http: {
         method: "POST",
@@ -60,12 +61,13 @@ export function createSlideActions(slidesService: SlidesService) {
     "create-normal-slides": createNormalSlidesAction(slidesService),
 
     "update-slide": defineAction({
-      description: "Update slide title or blocks.",
+      description: "Update slide title, speaker notes, or blocks.",
       schema: z.object({
         pid: z.coerce.number().int().positive(),
         sid: z.coerce.number().int().positive(),
         title: z.string().optional(),
         blocks: z.array(blockInput).optional(),
+        notes: z.string().optional(),
       }),
       http: {
         method: "PUT",
@@ -75,7 +77,7 @@ export function createSlideActions(slidesService: SlidesService) {
       publicAgent: {
         ...publicWriteAction,
         title: "Update slide",
-        description: "Update slide title or blocks.",
+        description: "Update slide title, speaker notes, or blocks.",
       },
       run: ({ pid, sid, ...patch }) => slidesService.update(pid, sid, parseSlidePatch(patch)),
     }),

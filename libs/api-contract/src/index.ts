@@ -57,6 +57,7 @@ export interface ApiSlide {
   code_id: string | null;
   title: string;
   blocks: Block[];
+  notes: string;
   created_at: string;
   updated_at: string;
 }

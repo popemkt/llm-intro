@@ -31,8 +31,11 @@ export const api = {
     list: (pid: number) => callAction<ApiSlide[]>("list-slides", { pid }, { method: "GET" }),
     create: (pid: number, title?: string) =>
       callAction<ApiSlide>("create-slide", { pid, title }, { method: "POST" }),
-    update: (pid: number, sid: number, patch: { title?: string; blocks?: unknown[] }) =>
-      callAction<ApiSlide>("update-slide", { pid, sid, ...patch }, { method: "PUT" }),
+    update: (
+      pid: number,
+      sid: number,
+      patch: { title?: string; blocks?: unknown[]; notes?: string },
+    ) => callAction<ApiSlide>("update-slide", { pid, sid, ...patch }, { method: "PUT" }),
     delete: async (pid: number, sid: number) => {
       await callAction<null>("delete-slide", { pid, sid }, { method: "DELETE" });
     },

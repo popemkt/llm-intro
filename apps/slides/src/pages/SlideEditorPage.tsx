@@ -88,6 +88,7 @@ export function SlideEditorPage() {
   const [title, setTitle] = useState("Untitled");
   const [presName, setPresName] = useState("");
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [notes, setNotes] = useState("");
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -109,18 +110,22 @@ export function SlideEditorPage() {
   const slidesQuery = useActionQuery<ApiSlide[]>("list-slides", { pid }, { enabled: validRoute });
   const updateSlide = useActionMutation<
     ApiSlide,
-    { pid: number; sid: number; title?: string; blocks?: unknown[] }
+    { pid: number; sid: number; title?: string; blocks?: unknown[]; notes?: string }
   >("update-slide", { method: "PUT" });
 
   // Current values ref (for keyboard handler)
   const blocksRef = useRef(blocks);
   const titleRef = useRef(title);
+  const notesRef = useRef(notes);
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
   useEffect(() => {
     titleRef.current = title;
   }, [title]);
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
 
   useEffect(() => {
     setLoading(true);
@@ -168,6 +173,7 @@ export function SlideEditorPage() {
     setPresName(pres.name);
     setTitle(slide.title);
     setBlocks(slide.blocks);
+    setNotes(slide.notes ?? "");
     setTheme(pres.theme);
     hasLoadedRef.current = true;
     setLoading(false);
@@ -243,7 +249,7 @@ export function SlideEditorPage() {
     };
   }, []);
 
-  // Auto-save: trigger on blocks/title changes after initial load
+  // Auto-save: trigger on blocks/title/notes changes after initial load
   useEffect(() => {
     if (!hasLoadedRef.current || loading) return;
     setSaveStatus("idle");
@@ -257,6 +263,7 @@ export function SlideEditorPage() {
           sid,
           title: titleRef.current,
           blocks: blocksRef.current,
+          notes: notesRef.current,
         });
         setSaveStatus("saved");
         if (savedStatusTimerRef.current) clearTimeout(savedStatusTimerRef.current);
@@ -270,7 +277,7 @@ export function SlideEditorPage() {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, title, pid, sid, loading]);
+  }, [blocks, title, notes, pid, sid, loading]);
 
   const saveAndExit = useCallback(async () => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -282,6 +289,7 @@ export function SlideEditorPage() {
         sid,
         title: titleRef.current,
         blocks: blocksRef.current,
+        notes: notesRef.current,
       });
       navigate(`/p/${pid}`);
     } catch (err) {
@@ -872,6 +880,33 @@ export function SlideEditorPage() {
                 </span>
               </div>
             )}
+
+            <div>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: C.textDim,
+                  marginBottom: 4,
+                  fontFamily: "JetBrains Mono, monospace",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Speaker Notes
+              </div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Private presenter notes for this slide..."
+                rows={5}
+                style={{
+                  ...inp,
+                  resize: "vertical",
+                  fontFamily: "Inter, sans-serif",
+                  lineHeight: 1.5,
+                }}
+              />
+            </div>
           </div>
 
           {/* Layers list */}

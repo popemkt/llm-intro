@@ -519,9 +519,12 @@ describe("Slides API", () => {
   });
 
   it("POST / creates a db slide", async () => {
-    const res = await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "S1" });
+    const res = await request(app)
+      .post(`/api/presentations/${pid}/slides`)
+      .send({ title: "S1", notes: "Opening note" });
     expect(res.status).toBe(201);
     expect(res.body.title).toBe("S1");
+    expect(res.body.notes).toBe("Opening note");
     expect(res.body.kind).toBe("db");
     expect(Array.isArray(res.body.blocks)).toBe(true);
   });
@@ -532,8 +535,13 @@ describe("Slides API", () => {
     } = await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Old" });
     const res = await request(app)
       .patch(`/api/presentations/${pid}/slides/${sid}`)
-      .send({ title: "New", blocks: [{ id: "x", type: "text", markdown: "hi" }] });
+      .send({
+        title: "New",
+        notes: "Speaker cue",
+        blocks: [{ id: "x", type: "text", markdown: "hi" }],
+      });
     expect(res.body.title).toBe("New");
+    expect(res.body.notes).toBe("Speaker cue");
     expect(res.body.blocks[0].markdown).toBe("hi");
   });
 

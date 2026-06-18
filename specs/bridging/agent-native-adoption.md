@@ -96,7 +96,7 @@ for now. The migration should replace one workflow at a time:
 - an Agent-Native frame/panel experience that supports App mode for product
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
-- speaker notes/fullscreen presentation refinements;
+- fullscreen presenter refinements, including live speaker-note display;
 - import/export expansion after the core action surface is stable.
 
 ## Ported From Agent-Native Slides
@@ -138,6 +138,8 @@ Taken now:
   through the same Agent-Native action surface.
 - Visual editor insertion presets for title, bullets, quote, and metric content
   that compile back to typed blocks instead of raw reference-app HTML.
+- Speaker-note persistence on slides through the existing slide model, update
+  action, snapshots, and export payloads.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

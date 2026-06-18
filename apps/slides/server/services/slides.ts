@@ -22,12 +22,16 @@ export function createSlidesService(
       return slidesRepo.listByPresentationId(presentationId);
     },
 
-    create(presentationId: number, input: { title: string; blocks: Block[] }) {
+    create(presentationId: number, input: { title: string; blocks: Block[]; notes?: string }) {
       getPresentation(presentationId);
       return slidesRepo.create(presentationId, input);
     },
 
-    update(presentationId: number, slideId: number, patch: { title?: string; blocks?: Block[] }) {
+    update(
+      presentationId: number,
+      slideId: number,
+      patch: { title?: string; blocks?: Block[]; notes?: string },
+    ) {
       getPresentation(presentationId);
       const slide = slidesRepo.getById(presentationId, slideId);
       if (!slide) throw new AppError(404, "slide not found");
@@ -37,6 +41,7 @@ export function createSlidesService(
       return slidesRepo.update(presentationId, slideId, {
         title: patch.title ?? slide.title,
         blocks: patch.blocks ?? slide.blocks,
+        notes: patch.notes ?? slide.notes,
       });
     },
 

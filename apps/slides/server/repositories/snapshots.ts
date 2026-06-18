@@ -55,8 +55,8 @@ export function createSnapshotsRepository(db: Database.Database) {
   `);
   const insertSlideStmt = db.prepare(`
     INSERT INTO slides
-      (id, presentation_id, position, group_id, kind, code_id, title, blocks, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, presentation_id, position, group_id, kind, code_id, title, blocks, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   return {
@@ -120,6 +120,7 @@ export function createSnapshotsRepository(db: Database.Database) {
             slide.code_id,
             slide.title,
             JSON.stringify(slide.blocks),
+            slide.notes ?? "",
             slide.created_at,
             slide.updated_at,
           );

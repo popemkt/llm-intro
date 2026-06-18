@@ -10,6 +10,7 @@ type SlideRow = {
   code_id: string | null;
   title: string;
   blocks: string;
+  notes: string;
   created_at: string;
   updated_at: string;
 };
@@ -20,6 +21,41 @@ function mapSlide(row: SlideRow): ApiSlide {
     ...rest,
     blocks: JSON.parse(blocks) as Block[],
   };
+}
+
+function validateLayout(
+  layout: LayoutInput,
+  existingSlideIds: Set<number>,
+  existingGroupIds: Set<number>,
+) {
+  const seenSlides = new Set<number>();
+  const seenGroups = new Set<number>();
+
+  for (const id of layout.ungrouped) {
+    if (!existingSlideIds.has(id)) throw new Error(`slide ${id} does not belong to presentation`);
+    if (seenSlides.has(id)) throw new Error(`slide ${id} appears twice in layout`);
+    seenSlides.add(id);
+  }
+
+  for (const group of layout.groups) {
+    if (!existingGroupIds.has(group.id))
+      throw new Error(`group ${group.id} does not belong to presentation`);
+    if (seenGroups.has(group.id)) throw new Error(`group ${group.id} appears twice in layout`);
+    seenGroups.add(group.id);
+
+    for (const id of group.slideIds) {
+      if (!existingSlideIds.has(id)) throw new Error(`slide ${id} does not belong to presentation`);
+      if (seenSlides.has(id)) throw new Error(`slide ${id} appears twice in layout`);
+      seenSlides.add(id);
+    }
+  }
+
+  if (seenSlides.size !== existingSlideIds.size) {
+    throw new Error("layout must include every slide exactly once");
+  }
+  if (seenGroups.size !== existingGroupIds.size) {
+    throw new Error("layout must include every group exactly once");
+  }
 }
 
 export function createSlidesRepository(db: Database.Database) {
@@ -40,10 +76,10 @@ export function createSlidesRepository(db: Database.Database) {
     "SELECT MAX(position) as max_position FROM slides WHERE presentation_id=? AND group_id IS NULL",
   );
   const insertStmt = db.prepare(
-    "INSERT INTO slides (presentation_id, position, kind, title, blocks) VALUES (?, ?, 'db', ?, ?)",
+    "INSERT INTO slides (presentation_id, position, kind, title, blocks, notes) VALUES (?, ?, 'db', ?, ?, ?)",
   );
   const updateStmt = db.prepare(
-    "UPDATE slides SET title=?, blocks=?, updated_at=datetime('now') WHERE id=?",
+    "UPDATE slides SET title=?, blocks=?, notes=?, updated_at=datetime('now') WHERE id=?",
   );
   const deleteStmt = db.prepare("DELETE FROM slides WHERE id=? AND presentation_id=?");
   const setPositionAndGroupStmt = db.prepare(
@@ -65,7 +101,10 @@ export function createSlidesRepository(db: Database.Database) {
       return row ? mapSlide(row) : null;
     },
 
-    create(presentationId: number, input: { title: string; blocks: Block[] }): ApiSlide {
+    create(
+      presentationId: number,
+      input: { title: string; blocks: Block[]; notes?: string },
+    ): ApiSlide {
       const row = maxUngroupedPositionStmt.get(presentationId) as { max_position: number | null };
       const position = (row.max_position ?? -1) + 1;
       const { lastInsertRowid } = insertStmt.run(
@@ -73,6 +112,7 @@ export function createSlidesRepository(db: Database.Database) {
         position,
         input.title,
         JSON.stringify(input.blocks),
+        input.notes ?? "",
       );
       return this.getById(presentationId, Number(lastInsertRowid))!;
     },
@@ -80,9 +120,9 @@ export function createSlidesRepository(db: Database.Database) {
     update(
       presentationId: number,
       slideId: number,
-      input: { title: string; blocks: Block[] },
+      input: { title: string; blocks: Block[]; notes: string },
     ): ApiSlide {
-      updateStmt.run(input.title, JSON.stringify(input.blocks), slideId);
+      updateStmt.run(input.title, JSON.stringify(input.blocks), input.notes, slideId);
       return this.getById(presentationId, slideId)!;
     },
 
@@ -98,38 +138,7 @@ export function createSlidesRepository(db: Database.Database) {
         (listGroupIdsStmt.all(presentationId) as Array<{ id: number }>).map((r) => r.id),
       );
 
-      const seenSlides = new Set<number>();
-      const seenGroups = new Set<number>();
-
-      const validate = () => {
-        for (const id of layout.ungrouped) {
-          if (!existingSlideIds.has(id))
-            throw new Error(`slide ${id} does not belong to presentation`);
-          if (seenSlides.has(id)) throw new Error(`slide ${id} appears twice in layout`);
-          seenSlides.add(id);
-        }
-        for (const group of layout.groups) {
-          if (!existingGroupIds.has(group.id))
-            throw new Error(`group ${group.id} does not belong to presentation`);
-          if (seenGroups.has(group.id))
-            throw new Error(`group ${group.id} appears twice in layout`);
-          seenGroups.add(group.id);
-          for (const id of group.slideIds) {
-            if (!existingSlideIds.has(id))
-              throw new Error(`slide ${id} does not belong to presentation`);
-            if (seenSlides.has(id)) throw new Error(`slide ${id} appears twice in layout`);
-            seenSlides.add(id);
-          }
-        }
-        if (seenSlides.size !== existingSlideIds.size) {
-          throw new Error("layout must include every slide exactly once");
-        }
-        if (seenGroups.size !== existingGroupIds.size) {
-          throw new Error("layout must include every group exactly once");
-        }
-      };
-
-      validate();
+      validateLayout(layout, existingSlideIds, existingGroupIds);
 
       db.transaction(() => {
         layout.ungrouped.forEach((slideId, index) => {

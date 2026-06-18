@@ -27,6 +27,12 @@ function parseOptionalTrimmedString(value: unknown, field: string) {
   return trimmed;
 }
 
+function parseOptionalString(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
+  return value;
+}
+
 function parseTheme(value: unknown): ThemeName | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "string" || !THEME_NAMES.includes(value as (typeof THEME_NAMES)[number])) {
@@ -142,6 +148,7 @@ export function parseSlideCreate(input: unknown) {
   return {
     title: parseOptionalTrimmedString(body.title, "title") ?? "New slide",
     blocks: parseBlocks(body.blocks) ?? [],
+    notes: parseOptionalString(body.notes, "notes") ?? "",
   };
 }
 
@@ -150,9 +157,10 @@ export function parseSlidePatch(input: unknown) {
   const patch = {
     title: parseOptionalTrimmedString(body.title, "title"),
     blocks: parseBlocks(body.blocks),
+    notes: parseOptionalString(body.notes, "notes"),
   };
 
-  if (patch.title === undefined && patch.blocks === undefined) {
+  if (patch.title === undefined && patch.blocks === undefined && patch.notes === undefined) {
     throw new AppError(400, "at least one field is required");
   }
 

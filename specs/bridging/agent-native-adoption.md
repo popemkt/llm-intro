@@ -19,12 +19,13 @@ Reference documentation:
 - The React root uses Agent-Native's shared `AppProviders`.
 - The app uses `createAgentNativeQueryClient()` so future action hooks share the
   framework's cache defaults.
-- Agent-Native global styles remain behind a TODO because the reset/token layer
-  collides with the existing deck CSS. Local theme variables and slide
-  themeability remain authoritative during the shell migration.
+- Agent-Native global styles are loaded with an explicit token bridge in
+  `themes.css`. Existing app and slide theme variables remain authoritative;
+  Agent-Native HSL tokens are derived from them so framework components do not
+  fight the deck CSS.
 - The root is wrapped in a local `AppShell` that ports the useful shell shape
   from the Agent-Native Slides app: left product rail, deck-scoped
-  `AgentSidebar`, and an agent toggle. The sidebar starts closed while the full
+  `AgentPanel`, and an agent toggle. The panel starts closed while the full
   production chat handler is still pending.
 - A minimal `/_agent-native/application-state/:key` route supports the
   framework sidebar's URL/application-state polling. It is intentionally narrow
@@ -33,6 +34,11 @@ Reference documentation:
   action bridge, backed by the existing presentation service.
 - Deck, slide, group, and layout JSON operations are available through
   `/_agent-native/actions/*` and the browser API client calls those actions.
+- Local Code Mode can use Agent-Native's terminal protocol with local,
+  authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
+  and `/_agent-native/agent-terminal-info`; in development it starts a PTY
+  WebSocket bridge that prefers `codex`, then `claude`, then other known local
+  CLIs.
 
 ## Migration Direction
 
@@ -63,8 +69,8 @@ for now. The migration should replace one workflow at a time:
 - design-system storage and apply action, while preserving this app's existing
   `ThemeName` and slide theme model;
 - an Agent-Native frame/panel experience that supports App mode for product
-  actions and Code mode for trusted repo self-modification through Desktop or a
-  Builder-hosted frame;
+  actions and Code mode for trusted repo self-modification through local CLIs,
+  Desktop, or a Builder-hosted frame;
 - deck version snapshots;
 - speaker notes/fullscreen presentation refinements;
 - import/export expansion after the core action surface is stable.
@@ -73,11 +79,13 @@ for now. The migration should replace one workflow at a time:
 
 Taken now:
 
-- Product shell pattern: left navigation rail plus right `AgentSidebar`.
+- Product shell pattern: left navigation rail plus right `AgentPanel`.
 - Agent sidebar prompt suggestions scoped to deck creation/editing.
 - Normal slide layout vocabulary: title, section, bullets, two-column, quote,
   metrics, and closing.
 - Application-state endpoint shape needed by the sidebar's URL sync.
+- Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
+  terminal surface.
 
 Translated rather than copied:
 

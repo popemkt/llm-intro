@@ -20,8 +20,10 @@ framework boundary.
 | Functional behavior | Agent-Native/action bridge | Current code |
 |---|---|---|
 | App providers and query cache | `AppProviders`, `createAgentNativeQueryClient()` | `apps/slides/src/main.tsx` |
-| App shell | Local shell with `AgentSidebar`, `AgentToggleButton`, and product rail | `apps/slides/src/components/AppShell.tsx` |
+| App shell | Local shell with `AgentPanel`, local toggle, and product rail | `apps/slides/src/components/AppShell.tsx` |
 | Application state | Minimal route for sidebar URL/app-state sync | `apps/slides/server/routes/application-state.ts` |
+| Framework core probes | No-op or local defaults for Agent-Native panel/status/resource probes | `apps/slides/server/routes/framework-core.ts` |
+| Local Code Mode terminal | Local PTY WebSocket bridge for known authenticated CLIs | `apps/slides/server/agent-terminal.ts`, `apps/slides/server/index.ts` |
 | Action HTTP mount | `/_agent-native/actions/:name` | `apps/slides/server/routes/agent-native-actions.ts`, `apps/slides/server/app.ts` |
 | Action definitions | `defineAction` wrappers over existing services | `apps/slides/actions/*.ts` |
 | Action discovery | `GET /_agent-native/actions`, `GET /_agent-native/openapi.json` | `apps/slides/server/routes/agent-native-actions.ts` |
@@ -109,10 +111,13 @@ through the same action registry and application state regardless of which
 frame hosts it.
 
 Current implementation note: the app mounts `AgentSidebar` and the
-application-state route it polls, but the production `/_agent-native/agent-chat`
-stream is not mounted yet. Until that runtime is adopted, action/MCP/A2A
-invocation is the functional agent path and the sidebar remains closed by
-default.
+Current implementation note: the app mounts `AgentPanel` directly instead of the
+framework `AgentSidebar` wrapper because this React Router app and
+Agent-Native's bundled router do not share the same router context. The local
+wrapper keeps the panel, suggestions, scope, and persistence behavior while
+avoiding the incompatible URL sync layer. Production `/_agent-native/agent-chat`
+streaming is not mounted yet, so action/MCP/A2A invocation remains the
+functional App Mode path and the panel remains closed by default.
 
 ### App Mode And Code Mode
 
@@ -121,22 +126,24 @@ The agent panel should support two tool modes:
 | Mode | Capabilities | Intended audience |
 |---|---|---|
 | App mode | Uses only app tools: deck/slide/group actions, navigation, selection/context, and other product-safe actions. No filesystem or shell access. | End users and production product workflows. |
-| Code mode | Adds coding tools on top of app tools: shell, file read/edit/write, database/workspace access, and coding CLI handoff. | Developers, trusted maintainers, local Desktop, or Builder-hosted code frames. |
+| Code mode | Adds coding tools on top of app tools: shell, file read/edit/write, database/workspace access, and coding CLI handoff. | Developers, trusted maintainers, local dev server, local Desktop, or Builder-hosted code frames. |
 
 Code mode is not the same as Vite dev mode or `NODE_ENV=development`. It is an
-agent capability toggle. If a user asks for a code change from the in-app panel
-and no code-capable frame is connected, the UI should explain that code changes
-need Agent Native Desktop or a Builder cloud frame. If a code-capable frame is
-connected, the request can be routed there while the app keeps showing the
-normal agent/sidebar state.
+agent capability toggle. In this repo's local development server, Code Mode can
+be backed by the Agent-Native terminal protocol and a local authenticated CLI.
+That path does not require a Builder.io login because `codex`, `claude`, or
+another allowed CLI runs as the local user and reads its own local auth state. In
+production, Code Mode must remain disabled unless a trusted authenticated frame
+or server-side auth gate is added.
 
 For this repo, the ideal target is:
 
 1. App mode inside the slides UI for normal product work: create/edit slides,
    change theme, reorganize deck structure, export, and later prompt-to-deck.
 2. Code mode from the same UI when a maintainer asks to improve the app itself:
-   inspect the current screen/state, edit repo files, run `pnpm typecheck`,
-   `pnpm test`, and `pnpm lint`, then surface a diff/commit/PR.
+   inspect the current screen/state, hand off to a local CLI terminal or trusted
+   frame, edit repo files, run `pnpm typecheck`, `pnpm test`, and `pnpm lint`,
+   then surface a diff/commit/PR.
 3. A clear permission boundary so production users cannot accidentally gain
    shell or filesystem access.
 
@@ -154,7 +161,11 @@ agent runtime with chat state, approvals, memory, or streaming.
   become the primary agent surface only when connected to real App mode
   chat/tool transport.
 - Do not expose Code mode as plain app actions. Code mode needs a trusted
-  frame/desktop/cloud runner because it can read and modify the repository.
+  local terminal, frame, desktop, or cloud runner because it can read and modify
+  the repository.
+- Do not require Builder.io auth for local Code Mode. Builder-hosted frames are
+  an optional team/cloud path; local development should prefer already-authenticated
+  local CLIs.
 - Product actions should stay deployable without a writable code workspace.
   Code modification is optional frame capability, not a dependency of the
   deployed slides app.

@@ -37,6 +37,8 @@ describe("Agent Native app context actions", () => {
       readOnly: false,
       isConsequential: true,
     });
+    expectPublicAction(res.body.actions, "draft-deck-from-prompt", { readOnly: true });
+    expectPublicAction(res.body.actions, "create-deck-from-prompt", { readOnly: false });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -268,6 +270,30 @@ describe("Agent Native deck outline creation", () => {
   });
 });
 
+describe("Agent Native prompt deck creation", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+
+  beforeEach(() => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+  });
+
+  it("POST /_agent-native/actions/create-deck-from-prompt creates typed normal slides", async () => {
+    const res = await request(app).post("/_agent-native/actions/create-deck-from-prompt").send({
+      name: "Prompt Deck",
+      theme: "ocean",
+      prompt: "Create a deck about agent native adoption with shell, actions, and local code mode",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.deck).toMatchObject({ name: "Prompt Deck", theme: "ocean" });
+    expect(res.body.slides).toHaveLength(6);
+    expect(res.body.slides[0]).toMatchObject({ kind: "db" });
+    expect(res.body.slides[0].blocks).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: "text" })]),
+    );
+  });
+});
+
 describe("Agent Native deck export action", () => {
   const { db, app } = createTestContext({ seedSystemPresentation: false });
 
@@ -477,5 +503,20 @@ describe("App agent deck outline runtime", () => {
         expect.objectContaining({ title: "Adoption Steps", kind: "db" }),
       ]),
     });
+  });
+
+  it("POST /_agent-native/app-agent creates a deck from a freeform prompt", async () => {
+    const res = await request(app).post("/_agent-native/app-agent").send({
+      prompt: "create deck about local agent native adoption with actions and code mode",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Created deck");
+
+    const decks = await request(app).get("/_agent-native/actions/list-decks");
+    const created = decks.body.find((deck: { name?: string }) =>
+      deck.name?.includes("Local Agent Native Adoption"),
+    );
+    expect(created).toBeTruthy();
   });
 });

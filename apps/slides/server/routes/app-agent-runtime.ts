@@ -65,6 +65,12 @@ function inferDeckName(prompt: string) {
   return inferTitle(firstLine, "Generated deck");
 }
 
+function inferExplicitDeckName(prompt: string) {
+  const firstLine = prompt.split(/\r?\n/)[0] ?? "";
+  const explicit = firstLine.match(/\b(?:called|titled|named)\s+(.+)$/i)?.[1]?.trim();
+  return explicit ? explicit.replace(/[.!?]+$/, "") : undefined;
+}
+
 function inferBullets(prompt: string) {
   const lines = prompt
     .split(/\r?\n/)
@@ -230,6 +236,13 @@ function responseTextForCreatedDeck(result: unknown) {
   const id = deck && typeof deck === "object" && "id" in deck ? Number(deck.id) : null;
   const suffix = id ? ` Open deck ${id} to review it.` : "";
   return `Created deck ${name ? `"${name}"` : "from the outline"} with ${slides} slides.${suffix}`;
+}
+
+function responseTextForPromptDeck(result: unknown) {
+  if (!result || typeof result !== "object" || !("deck" in result)) {
+    return "Created the deck from the prompt.";
+  }
+  return responseTextForCreatedDeck(result);
 }
 
 function responseTextForCreatedGroup(result: unknown) {
@@ -435,11 +448,17 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
 
   if (/\b(create|make|generate)\b.*\bdeck\b/.test(normalized)) {
     const slides = outlineSlides(prompt);
-    if (slides.length === 0) {
-      return "Send a short outline with one slide per line, then I can create the deck.";
-    }
     const name = inferDeckName(prompt);
     const theme = inferTheme(prompt) ?? "dark-green";
+    if (slides.length === 0) {
+      const result = await runAction(actions["create-deck-from-prompt"], {
+        prompt,
+        name: inferExplicitDeckName(prompt),
+        theme,
+        slideCount: 6,
+      });
+      return responseTextForPromptDeck(result);
+    }
     const result = await runAction(actions["create-deck-from-outline"], { name, theme, slides });
     return responseTextForCreatedDeck(result);
   }

@@ -111,6 +111,8 @@ editing, themed presentation playback, and HTML export.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.
+- Users can create a new deck from Home with a freeform prompt. Prompt mode uses
+  `create-deck-from-prompt` to produce a typed, themeable normal-slide draft.
 - Users can create common normal slide layouts from the overview add tile
   without opening the manual editor first.
 - Users can insert primitive blocks and common content presets in the visual
@@ -129,8 +131,8 @@ editing, themed presentation playback, and HTML export.
 
 ## Candidate Reference Features
 
-- Prompt-to-deck generation that streams usable slides into the current deck
-  model.
+- Hosted LLM prompt-to-deck streaming that emits slides incrementally into the
+  current deck model.
 - Inline text editing, block bubble menus, and slash-style keyboard insertion.
 - Additional presenter refinements such as timer, next-slide preview, and
   external presenter display.

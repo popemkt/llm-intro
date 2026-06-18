@@ -21,7 +21,7 @@ type OutlineSlideInput = {
   subtitle?: string;
 };
 
-type DeckOutlineResult = {
+type DeckGenerationResult = {
   deck: ApiPresentation;
   slides: unknown[];
 };
@@ -31,7 +31,7 @@ type DeckCreatePanelProps = {
   onCreated: (deck: ApiPresentation) => void;
 };
 
-type CreateMode = "blank" | "outline";
+type CreateMode = "blank" | "outline" | "prompt";
 
 const sampleOutline = [
   "Title slide called Agent Native Adoption",
@@ -133,6 +133,13 @@ function ModeTabs({
         style={panelButtonStyle(mode === "outline")}
       >
         <FileText size={13} /> Outline
+      </button>
+      <button
+        type="button"
+        onClick={() => onModeChange("prompt")}
+        style={panelButtonStyle(mode === "prompt")}
+      >
+        <FileText size={13} /> Prompt
       </button>
       <button
         type="button"
@@ -252,6 +259,40 @@ function OutlineField({
   );
 }
 
+function PromptField({
+  prompt,
+  onPromptChange,
+}: {
+  prompt: string;
+  onPromptChange: (value: string) => void;
+}) {
+  return (
+    <label style={{ display: "grid", gap: 6, marginTop: 12, fontSize: 11, color: C.textDim }}>
+      Prompt
+      <textarea
+        value={prompt}
+        onChange={(e) => onPromptChange(e.target.value)}
+        rows={5}
+        placeholder="Create a deck about agent-native slide creation with app actions, local code mode, and themeable exports."
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          resize: "vertical",
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: 8,
+          padding: "10px 12px",
+          fontSize: 12,
+          lineHeight: 1.5,
+          color: C.text,
+          outline: "none",
+          fontFamily: "Inter, sans-serif",
+        }}
+      />
+    </label>
+  );
+}
+
 function CreateActions({
   mode,
   canCreate,
@@ -283,7 +324,13 @@ function CreateActions({
           opacity: canCreate ? 1 : 0.5,
         }}
       >
-        {isPending ? "Creating..." : mode === "outline" ? "Create deck and slides" : "Create deck"}
+        {isPending
+          ? "Creating..."
+          : mode === "outline"
+            ? "Create deck and slides"
+            : mode === "prompt"
+              ? "Generate deck"
+              : "Create deck"}
       </button>
       {mode === "outline" && (
         <span style={{ color: C.muted, fontSize: 11 }}>
@@ -299,18 +346,26 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
   const [name, setName] = useState("");
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [outline, setOutline] = useState(sampleOutline);
+  const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const outlineSlides = useMemo(() => parseOutline(outline), [outline]);
   const createDeck = useActionMutation<ApiPresentation, { name: string; theme: ThemeName }>(
     "create-deck",
   );
   const createDeckFromOutline = useActionMutation<
-    DeckOutlineResult,
+    DeckGenerationResult,
     { name: string; theme: ThemeName; slides: OutlineSlideInput[] }
   >("create-deck-from-outline");
-  const isPending = createDeck.isPending || createDeckFromOutline.isPending;
+  const createDeckFromPrompt = useActionMutation<
+    DeckGenerationResult,
+    { name?: string; theme: ThemeName; prompt: string; slideCount?: number }
+  >("create-deck-from-prompt");
+  const isPending =
+    createDeck.isPending || createDeckFromOutline.isPending || createDeckFromPrompt.isPending;
   const canCreate =
-    name.trim().length > 0 && (mode === "blank" || outlineSlides.length > 0) && !isPending;
+    (mode === "prompt" ? prompt.trim().length >= 8 : name.trim().length > 0) &&
+    (mode !== "outline" || outlineSlides.length > 0) &&
+    !isPending;
 
   const create = async () => {
     if (!canCreate) return;
@@ -321,6 +376,16 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
           name: name.trim(),
           theme,
           slides: outlineSlides,
+        });
+        onCreated(result.deck);
+        return;
+      }
+      if (mode === "prompt") {
+        const result = await createDeckFromPrompt.mutateAsync({
+          name: name.trim() || undefined,
+          theme,
+          prompt: prompt.trim(),
+          slideCount: 6,
         });
         onCreated(result.deck);
         return;
@@ -356,6 +421,7 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
       />
 
       {mode === "outline" && <OutlineField outline={outline} onOutlineChange={setOutline} />}
+      {mode === "prompt" && <PromptField prompt={prompt} onPromptChange={setPrompt} />}
 
       <CreateActions
         mode={mode}

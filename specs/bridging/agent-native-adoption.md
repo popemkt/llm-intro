@@ -75,6 +75,7 @@ for now. The migration should replace one workflow at a time:
 | create normal slide | `create-normal-slide` mutating action translating reference layouts to typed blocks |
 | create normal slide sequence | `create-normal-slides` mutating action translating a structured outline into multiple typed DB slides |
 | create deck from outline | `create-deck-from-outline` mutating action creating a deck plus typed normal slides |
+| create deck from prompt | `draft-deck-from-prompt` and `create-deck-from-prompt` actions generating typed normal-slide drafts from a freeform prompt |
 | patch slide | `update-slide` mutating action, mounted and used by client |
 | delete slide | `delete-slide` mutating action, mounted and used by client |
 | create/update/delete groups | `create-group`, `update-group`, `delete-group`, mounted and used by client |
@@ -89,7 +90,7 @@ for now. The migration should replace one workflow at a time:
 
 ## Features To Borrow From The Reference Slides App
 
-- prompt-to-deck generation that streams slides one by one;
+- hosted LLM prompt-to-deck generation that streams slides one by one;
 - richer visual slide editing: inline text edit, block bubble menu, slash menu;
 - design-system storage and apply action, while preserving this app's existing
   `ThemeName` and slide theme model;
@@ -114,9 +115,12 @@ Taken now:
 - Deck-level outline creation through `create-deck-from-outline`, which borrows
   the reference app's prompt-to-deck direction while preserving this app's typed
   DB slide blocks and theme model.
+- Deck-level prompt creation through `create-deck-from-prompt`, which creates a
+  typed local draft without hosted LLM credentials or raw HTML slide storage.
 - Home deck creation UI exposes the same action-backed deck creation modes:
-  blank deck creation through `create-deck` and outline deck creation through
-  `create-deck-from-outline`.
+  blank deck creation through `create-deck`, outline deck creation through
+  `create-deck-from-outline`, and prompt deck creation through
+  `create-deck-from-prompt`.
 - HTML export exposure through `get-deck-export`, keeping the existing file
   response route while making export discoverable to App Mode and external
   action clients.

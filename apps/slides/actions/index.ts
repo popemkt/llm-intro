@@ -6,6 +6,7 @@ import { createSlideActions } from "./slides.js";
 import { createGroupActions } from "./groups.js";
 import { createAppContextActions } from "./app-context.js";
 import { createDeckOutlineAction } from "./deck-outline.js";
+import { createDeckPromptActions } from "./deck-prompt.js";
 import { createActiveDeckContextAction } from "./active-deck-context.js";
 import { createThemeDesignActions } from "./theme-design.js";
 import { createSnapshotActions } from "./snapshots.js";
@@ -32,6 +33,7 @@ export function createSlideDeckActions(services: {
       services.presentationsService,
       services.slidesService,
     ),
+    ...createDeckPromptActions(services.presentationsService, services.slidesService),
     ...createGroupActions(services.groupsService),
     ...createSnapshotActions(services.snapshotsService),
   };

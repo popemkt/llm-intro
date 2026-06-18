@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { THEME_NAMES, type ThemeName } from "@llm-intro/api-contract";
 import { AppError } from "../errors.js";
 import type { SlideDeckActions } from "../../actions/index.js";
+import type { NormalSlideLayout } from "../../actions/normal-slide-layouts.js";
 
 type AppAgentRequest = {
   prompt?: string;
@@ -20,8 +22,23 @@ const normalLayoutKeywords = [
   { layout: "bullets", terms: ["bullet", "bullets", "list", "points"] },
   { layout: "metrics", terms: ["metric", "metrics", "stats", "numbers"] },
   { layout: "quote", terms: ["quote", "quotation"] },
+  { layout: "closing", terms: ["closing", "close", "next steps"] },
+  { layout: "section", terms: ["section", "chapter"] },
   { layout: "title", terms: ["title", "cover", "opening"] },
-] as const;
+] satisfies { layout: NormalSlideLayout; terms: string[] }[];
+
+const themeAliases: Record<string, ThemeName> = {
+  "dark green": "dark-green",
+  "dark-green": "dark-green",
+  green: "dark-green",
+  "dark blue": "dark-blue",
+  "dark-blue": "dark-blue",
+  blue: "dark-blue",
+  light: "light",
+  neon: "neon",
+  warm: "warm",
+  ocean: "ocean",
+};
 
 function getDeckId(scope: AppAgentRequest["scope"]) {
   if (scope?.type !== "deck") return null;
@@ -58,6 +75,50 @@ function inferLayout(prompt: string) {
     ?.layout;
 }
 
+function inferTheme(prompt: string) {
+  const normalized = prompt.toLowerCase();
+  return THEME_NAMES.find((theme) => normalized.includes(theme)) ?? themeAliases[normalized];
+}
+
+function formatGroupList(result: unknown) {
+  if (!Array.isArray(result)) return "I could not read the group list.";
+  if (result.length === 0) return "This deck has no groups yet.";
+
+  return result
+    .map((group, index) => {
+      const title =
+        group && typeof group === "object" && "title" in group ? getText(group.title) : "";
+      return `${index + 1}. ${title || "Untitled group"}`;
+    })
+    .join("\n");
+}
+
+function splitOutlineItems(prompt: string) {
+  const quoted = [...prompt.matchAll(/["“](.+?)["”]/g)].map((match) => match[1]?.trim() ?? "");
+  if (quoted.length > 1) return quoted.filter(Boolean).slice(0, 12);
+
+  const lines = prompt
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) return lines.slice(1, 13);
+
+  return prompt
+    .split(";")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(1, 13);
+}
+
+function outlineSlides(prompt: string) {
+  return splitOutlineItems(prompt).map((item) => ({
+    layout: inferLayout(item) ?? "bullets",
+    title: inferTitle(item, item),
+    bullets: inferBullets(item),
+  }));
+}
+
 async function runAction(action: unknown, args: unknown) {
   const callable = action as CallableAction | undefined;
   if (!callable || typeof callable.run !== "function") {
@@ -85,6 +146,17 @@ function responseTextForCreatedSlide(result: unknown) {
   return `Created ${title ? `"${title}"` : "a normal slide"}.`;
 }
 
+function responseTextForCreatedSlides(result: unknown) {
+  if (!Array.isArray(result)) return "Created the slide sequence.";
+  return `Created ${result.length} normal slides.`;
+}
+
+function responseTextForCreatedGroup(result: unknown) {
+  const title =
+    result && typeof result === "object" && "title" in result ? getText(result.title) : "";
+  return `Created group ${title ? `"${title}"` : "in this deck"}.`;
+}
+
 async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
@@ -97,6 +169,33 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   if (/\b(list|show|summarize)\b.*\bslides?\b/.test(normalized)) {
     const slides = await runAction(actions["list-slides"], { pid: deckId });
     return `Slides in this deck:\n${formatSlideList(slides)}`;
+  }
+
+  if (/\b(list|show|summarize)\b.*\bgroups?\b/.test(normalized)) {
+    const groups = await runAction(actions["list-groups"], { pid: deckId });
+    return `Groups in this deck:\n${formatGroupList(groups)}`;
+  }
+
+  if (/\b(change|set|update)\b.*\btheme\b/.test(normalized)) {
+    const theme = inferTheme(prompt);
+    if (!theme) return `Pick one of these themes: ${THEME_NAMES.join(", ")}.`;
+    await runAction(actions["update-deck"], { id: deckId, theme });
+    return `Changed this deck's theme to ${theme}.`;
+  }
+
+  if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
+    const title = inferTitle(prompt, "Group");
+    const group = await runAction(actions["create-group"], { pid: deckId, title });
+    return responseTextForCreatedGroup(group);
+  }
+
+  if (/\b(create|add|make)\b/.test(normalized) && /\bslides\b/.test(normalized)) {
+    const slides = outlineSlides(prompt);
+    if (slides.length === 0) {
+      return "Send a short outline with one slide per line, then I can create the slide sequence.";
+    }
+    const result = await runAction(actions["create-normal-slides"], { pid: deckId, slides });
+    return responseTextForCreatedSlides(result);
   }
 
   if (/\b(create|add|make)\b/.test(normalized) && /\bslide\b/.test(normalized)) {

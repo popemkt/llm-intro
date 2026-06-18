@@ -80,7 +80,8 @@ editing, themed presentation playback, and HTML export.
   Mode runtime for supported product prompts.
 - In App Mode, agents can use product-safe deck actions without shell or
   filesystem access. The current local runtime can list slides and create
-  standard normal slides in the active deck from simple prompts.
+  standard normal slides, multi-slide outlines, slide groups, and deck theme
+  changes in the active deck from simple prompts.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

@@ -164,12 +164,13 @@ discovery/invocation adapters; they are not yet a full authenticated hosted
 agent runtime with chat state, approvals, memory, or streaming.
 
 The local App Mode runtime is intentionally narrower than the full hosted
-runtime. It accepts a deck scope from the shell, maps simple prompts such as
-`list slides` and `create a title slide called "..."` to existing app actions,
-and returns plain chat text. This gives the embedded panel a real product-safe
-tool path without requiring a Builder.io login. Repository self-modification is
-still Code Mode and should go through the local authenticated CLI bridge or a
-trusted hosted frame.
+runtime. It accepts a deck scope from the shell, maps simple prompts to existing
+app actions, and returns plain chat text. Current supported prompt families
+include listing slides, listing groups, creating one normal slide, creating a
+multi-slide normal outline, creating a group, and changing the deck theme. This
+gives the embedded panel a real product-safe tool path without requiring a
+Builder.io login. Repository self-modification is still Code Mode and should go
+through the local authenticated CLI bridge or a trusted hosted frame.
 
 ### Adoption Notes
 

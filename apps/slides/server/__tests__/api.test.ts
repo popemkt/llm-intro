@@ -344,6 +344,62 @@ describe("App agent runtime", () => {
       ]),
     });
   });
+
+  it("POST /_agent-native/app-agent creates a normal slide sequence from an outline", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "create slides\n- Title slide called Kickoff\n- Bullets slide called Risks",
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Created 2 normal slides");
+    await expect(
+      request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`),
+    ).resolves.toMatchObject({
+      body: expect.arrayContaining([
+        expect.objectContaining({ title: "Kickoff", kind: "db" }),
+        expect.objectContaining({ title: "Risks", kind: "db" }),
+      ]),
+    });
+  });
+
+  it("POST /_agent-native/app-agent changes the deck theme through app actions", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "change theme to ocean",
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("ocean");
+    await expect(
+      request(app).get(`/_agent-native/actions/get-deck?id=${pid}`),
+    ).resolves.toMatchObject({
+      body: expect.objectContaining({ theme: "ocean" }),
+    });
+  });
+
+  it("POST /_agent-native/app-agent creates and lists groups through app actions", async () => {
+    const createRes = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: 'create group called "Decision Points"',
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(createRes.status).toBe(200);
+    expect(createRes.body.text).toContain("Decision Points");
+
+    const listRes = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "list groups", scope: { type: "deck", id: String(pid) } });
+
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.text).toContain("Decision Points");
+  });
 });
 
 describe("Agent Native framework core routes", () => {

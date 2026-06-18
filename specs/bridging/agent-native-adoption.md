@@ -36,7 +36,9 @@ Reference documentation:
   `/_agent-native/actions/*` and the browser API client calls those actions.
 - The embedded `AgentPanel` has a local App Mode runtime at
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
-  product prompts to the same action registry used by the UI.
+  product prompts to the same action registry used by the UI: slide/group
+  listing, normal slide creation, multi-slide outline creation, group creation,
+  and deck theme changes.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -87,7 +89,8 @@ Taken now:
 - Product shell pattern: left navigation rail plus right `AgentPanel`.
 - Agent sidebar prompt suggestions scoped to deck creation/editing.
 - Local App Mode chat runtime that can list deck slides and create normal
-  slides through product actions without hosted Builder.io auth.
+  slides, groups, multi-slide outlines, and theme changes through product
+  actions without hosted Builder.io auth.
 - Normal slide layout vocabulary and outline creation: title, section, bullets,
   two-column, quote, metrics, closing, and multi-slide sequence creation.
 - Application-state endpoint shape needed by the sidebar's URL sync.

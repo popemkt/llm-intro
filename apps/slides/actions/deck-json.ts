@@ -1,0 +1,175 @@
+import { defineAction } from "@agent-native/core";
+import { THEME_NAMES, type Block, type ThemeName } from "@llm-intro/api-contract";
+import { z } from "zod";
+import type { createPresentationsService } from "../server/services/presentations.js";
+import type { createSlidesService } from "../server/services/slides.js";
+import type { createGroupsService } from "../server/services/groups.js";
+
+type PresentationsService = ReturnType<typeof createPresentationsService>;
+type SlidesService = ReturnType<typeof createSlidesService>;
+type GroupsService = ReturnType<typeof createGroupsService>;
+
+const publicReadAction = { expose: true, readOnly: true, requiresAuth: false };
+const publicWriteAction = {
+  expose: true,
+  readOnly: false,
+  requiresAuth: false,
+  isConsequential: true,
+};
+
+const blockInput = z.record(z.string(), z.unknown());
+const portableThemeSchema = z.enum(THEME_NAMES as [ThemeName, ...ThemeName[]]);
+
+const importDeckSchema = z.object({
+  name: z.string().optional(),
+  deck: z.object({
+    name: z.string().optional(),
+    theme: portableThemeSchema.optional(),
+  }),
+  groups: z
+    .array(
+      z.object({
+        id: z.coerce.number().int().positive(),
+        title: z.string(),
+        position: z.coerce.number().int().nonnegative().optional(),
+        collapsed: z.boolean().optional(),
+      }),
+    )
+    .default([]),
+  slides: z.array(
+    z.object({
+      id: z.coerce.number().int().positive().optional(),
+      title: z.string(),
+      kind: z.enum(["db", "code"]).default("db"),
+      codeId: z.string().nullable().optional(),
+      groupId: z.coerce.number().int().positive().nullable().optional(),
+      position: z.coerce.number().int().nonnegative().optional(),
+      blocks: z.array(blockInput).default([]),
+      notes: z.string().optional(),
+    }),
+  ),
+});
+
+function sortedByPosition<T extends { position?: number; id?: number }>(items: T[]) {
+  return [...items].sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0) || (a.id ?? 0) - (b.id ?? 0),
+  );
+}
+
+export function createDeckJsonActions(services: {
+  presentationsService: PresentationsService;
+  slidesService: SlidesService;
+  groupsService: GroupsService;
+}) {
+  return {
+    "export-deck-json": defineAction({
+      description: "Export a deck as portable typed JSON for import into this app.",
+      schema: z.object({
+        id: z.coerce.number().int().positive(),
+      }),
+      http: { method: "GET", path: "export-deck-json" },
+      requiresAuth: false,
+      readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: "Export deck JSON",
+        description: "Export a deck as portable typed JSON for import into this app.",
+      },
+      run: ({ id }) => {
+        const deck = services.presentationsService.get(id);
+        const groups = services.groupsService.list(id);
+        const slides = services.slidesService.list(id);
+        return {
+          version: 1,
+          deck: {
+            name: deck.name,
+            theme: deck.theme,
+          },
+          groups: groups.map((group) => ({
+            id: group.id,
+            title: group.title,
+            position: group.position,
+            collapsed: group.collapsed,
+          })),
+          slides: slides.map((slide) => ({
+            id: slide.id,
+            title: slide.title,
+            kind: slide.kind,
+            codeId: slide.code_id,
+            groupId: slide.group_id,
+            position: slide.position,
+            blocks: slide.blocks,
+            notes: slide.notes,
+          })),
+        };
+      },
+    }),
+
+    "import-deck-json": defineAction({
+      description: "Import portable typed deck JSON as a new deck.",
+      schema: importDeckSchema,
+      http: { method: "POST", path: "import-deck-json" },
+      requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: "Import deck JSON",
+        description: "Import portable typed deck JSON as a new deck.",
+      },
+      run: (input) => {
+        const source = importDeckSchema.parse(input);
+        const deck = services.presentationsService.create({
+          name: source.name?.trim() || source.deck.name?.trim() || "Imported deck",
+          theme: source.deck.theme ?? "dark-green",
+        });
+
+        const groupIdMap = new Map<number, number>();
+        const groups = sortedByPosition(source.groups).map((group) => {
+          const created = services.groupsService.create(deck.id, group.title);
+          groupIdMap.set(group.id, created.id);
+          return group.collapsed === undefined
+            ? created
+            : services.groupsService.update(deck.id, created.id, { collapsed: group.collapsed });
+        });
+
+        const skippedCodeSlides: Array<{ title: string; codeId: string | null | undefined }> = [];
+        const importedSlides = sortedByPosition(source.slides)
+          .map((slide) => {
+            if (slide.kind === "code") {
+              skippedCodeSlides.push({ title: slide.title, codeId: slide.codeId });
+              return null;
+            }
+            return {
+              source: slide,
+              created: services.slidesService.create(deck.id, {
+                title: slide.title,
+                blocks: slide.blocks as Block[],
+                notes: slide.notes ?? "",
+              }),
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null);
+
+        const ungrouped = importedSlides
+          .filter(({ source }) => !source.groupId || !groupIdMap.has(source.groupId))
+          .map(({ created }) => created.id);
+        const layoutGroups = sortedByPosition(source.groups).map((group) => ({
+          id: groupIdMap.get(group.id)!,
+          slideIds: importedSlides
+            .filter(({ source }) => source.groupId === group.id)
+            .map(({ created }) => created.id),
+        }));
+
+        if (importedSlides.length > 0 || groups.length > 0) {
+          services.slidesService.applyLayout(deck.id, { ungrouped, groups: layoutGroups });
+        }
+
+        return {
+          deck,
+          groups: services.groupsService.list(deck.id),
+          slides: services.slidesService.list(deck.id),
+          skippedCodeSlides,
+        };
+      },
+    }),
+  };
+}

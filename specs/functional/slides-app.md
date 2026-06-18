@@ -71,6 +71,10 @@ editing, themed presentation playback, and HTML export.
   intentionally migrated.
 - Agents can prepare an HTML export for the active deck through a product-safe
   action that returns the existing download URL.
+- Agents can export a deck as portable typed JSON and import that JSON into a
+  new deck. Portable JSON preserves DB-backed slides, blocks, notes, groups,
+  layout, and theme; code-backed slides are exported as metadata and skipped on
+  import because their source modules are not portable user content.
 
 ## Snapshots
 

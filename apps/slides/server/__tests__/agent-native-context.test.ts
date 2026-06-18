@@ -41,6 +41,8 @@ describe("Agent Native app context actions", () => {
     });
     expectPublicAction(res.body.actions, "draft-deck-from-prompt", { readOnly: true });
     expectPublicAction(res.body.actions, "create-deck-from-prompt", { readOnly: false });
+    expectPublicAction(res.body.actions, "export-deck-json", { readOnly: true });
+    expectPublicAction(res.body.actions, "import-deck-json", { readOnly: false });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -355,6 +357,64 @@ describe("Agent Native deck export action", () => {
       method: "POST",
       url: `/api/presentations/${deck.id}/export`,
     });
+  });
+
+  it("exports and imports typed deck JSON", async () => {
+    const deck = (
+      await request(app).post("/api/presentations").send({ name: "Portable Deck", theme: "ocean" })
+    ).body;
+    const groupRes = await request(app)
+      .post("/_agent-native/actions/create-group")
+      .send({ pid: deck.id, title: "Portable Group" });
+    await request(app)
+      .put("/_agent-native/actions/update-group")
+      .send({ pid: deck.id, gid: groupRes.body.id, collapsed: true });
+    const slideRes = await request(app)
+      .post("/_agent-native/actions/create-slide")
+      .send({
+        pid: deck.id,
+        title: "Portable Slide",
+        notes: "Presenter note",
+        blocks: [{ id: "portable", type: "text", markdown: "# Portable" }],
+      });
+    await request(app)
+      .put("/_agent-native/actions/update-deck-layout")
+      .send({
+        pid: deck.id,
+        ungrouped: [],
+        groups: [{ id: groupRes.body.id, slideIds: [slideRes.body.id] }],
+      });
+
+    const exported = await request(app).get(
+      `/_agent-native/actions/export-deck-json?id=${deck.id}`,
+    );
+
+    expect(exported.status).toBe(200);
+    expect(exported.body).toMatchObject({
+      version: 1,
+      deck: { name: "Portable Deck", theme: "ocean" },
+      groups: [expect.objectContaining({ title: "Portable Group", collapsed: true })],
+      slides: [expect.objectContaining({ title: "Portable Slide", notes: "Presenter note" })],
+    });
+
+    const imported = await request(app)
+      .post("/_agent-native/actions/import-deck-json")
+      .send({ ...exported.body, name: "Imported Portable Deck" });
+
+    expect(imported.status).toBe(200);
+    expect(imported.body.deck).toMatchObject({ name: "Imported Portable Deck", theme: "ocean" });
+    expect(imported.body.groups).toEqual([
+      expect.objectContaining({ title: "Portable Group", collapsed: true }),
+    ]);
+    expect(imported.body.slides).toEqual([
+      expect.objectContaining({
+        title: "Portable Slide",
+        notes: "Presenter note",
+        group_id: imported.body.groups[0].id,
+        blocks: [expect.objectContaining({ markdown: "# Portable" })],
+      }),
+    ]);
+    expect(imported.body.skippedCodeSlides).toEqual([]);
   });
 });
 

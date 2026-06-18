@@ -125,6 +125,8 @@ framework boundary.
 |---|---|
 | Export deck as HTML | `apps/slides/server/routes/export.ts` |
 | Agent export action | `get-deck-export` action returns the POST `/api/presentations/:id/export` file route |
+| Export deck as typed JSON | `export-deck-json` action returns versioned deck, group, and slide data |
+| Import deck from typed JSON | `import-deck-json` action creates a new deck from portable DB-backed slide data and reapplies group layout |
 | Export viewer bootstrap | `apps/slides/src/export-viewer.tsx` |
 | Static data provider | `apps/slides/src/data/static-provider.ts` |
 

@@ -86,6 +86,7 @@ for now. The migration should replace one workflow at a time:
 | change app shell theme | `set-app-theme` mutating action that queues a browser-local app theme command |
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
 | export HTML | `get-deck-export` read action returns the existing `/api` download URL |
+| export/import typed JSON | `export-deck-json` and `import-deck-json` actions over typed deck, group, and DB slide data |
 | create/list/read/restore snapshots | `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, `restore-deck-snapshot` actions over captured typed deck state |
 
 ## Features To Borrow From The Reference Slides App
@@ -98,7 +99,8 @@ for now. The migration should replace one workflow at a time:
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
 - fullscreen/presenter refinements such as external presenter display;
-- import/export expansion after the core action surface is stable.
+- further import/export expansion for non-JSON formats after the core action
+  surface is stable.
 
 ## Ported From Agent-Native Slides
 
@@ -124,6 +126,9 @@ Taken now:
 - HTML export exposure through `get-deck-export`, keeping the existing file
   response route while making export discoverable to App Mode and external
   action clients.
+- Typed JSON export/import through `export-deck-json` and `import-deck-json`,
+  preserving DB-backed slide blocks, notes, groups, layout, and theme while
+  treating code-backed slides as non-portable source-module metadata.
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Semantic route-state bridge for current app context and product-safe
   navigation commands.

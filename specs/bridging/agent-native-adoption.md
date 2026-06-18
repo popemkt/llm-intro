@@ -68,6 +68,7 @@ for now. The migration should replace one workflow at a time:
 | create slide | `create-slide` mutating action, mounted and used by client |
 | create normal slide | `create-normal-slide` mutating action translating reference layouts to typed blocks |
 | create normal slide sequence | `create-normal-slides` mutating action translating a structured outline into multiple typed DB slides |
+| create deck from outline | `create-deck-from-outline` mutating action creating a deck plus typed normal slides |
 | patch slide | `update-slide` mutating action, mounted and used by client |
 | delete slide | `delete-slide` mutating action, mounted and used by client |
 | create/update/delete groups | `create-group`, `update-group`, `delete-group`, mounted and used by client |
@@ -100,6 +101,9 @@ Taken now:
   actions without hosted Builder.io auth.
 - Normal slide layout vocabulary and outline creation: title, section, bullets,
   two-column, quote, metrics, closing, and multi-slide sequence creation.
+- Deck-level outline creation through `create-deck-from-outline`, which borrows
+  the reference app's prompt-to-deck direction while preserving this app's typed
+  DB slide blocks and theme model.
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Semantic route-state bridge for current app context and product-safe
   navigation commands.

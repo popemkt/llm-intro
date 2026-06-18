@@ -12,12 +12,12 @@ const publicWriteAction = {
   isConsequential: true,
 };
 
-const metricSchema = z.object({
+export const metricSchema = z.object({
   value: z.string(),
   label: z.string(),
 });
 
-const normalSlideFieldsSchema = z.object({
+export const normalSlideFieldsSchema = z.object({
   layout: z.enum(NORMAL_SLIDE_LAYOUTS),
   title: z.string().optional(),
   label: z.string().optional(),
@@ -31,7 +31,7 @@ const normalSlideFieldsSchema = z.object({
   visualDescription: z.string().optional(),
 });
 
-function slideTitle(layout: string, title?: string) {
+export function slideTitle(layout: string, title?: string) {
   return title?.trim() || `${layout} slide`;
 }
 

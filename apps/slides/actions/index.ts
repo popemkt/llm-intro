@@ -5,6 +5,7 @@ import { createDeckActions } from "./decks.js";
 import { createSlideActions } from "./slides.js";
 import { createGroupActions } from "./groups.js";
 import { createAppContextActions } from "./app-context.js";
+import { createDeckOutlineAction } from "./deck-outline.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
@@ -19,6 +20,10 @@ export function createSlideDeckActions(services: {
     ...createAppContextActions(),
     ...createDeckActions(services.presentationsService),
     ...createSlideActions(services.slidesService),
+    "create-deck-from-outline": createDeckOutlineAction(
+      services.presentationsService,
+      services.slidesService,
+    ),
     ...createGroupActions(services.groupsService),
   };
 }

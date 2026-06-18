@@ -60,6 +60,11 @@ function inferTitle(prompt: string, fallback: string) {
   return fallback;
 }
 
+function inferDeckName(prompt: string) {
+  const firstLine = prompt.split(/\r?\n/)[0] ?? "";
+  return inferTitle(firstLine, "Generated deck");
+}
+
 function inferBullets(prompt: string) {
   const lines = prompt
     .split(/\r?\n/)
@@ -171,6 +176,18 @@ function responseTextForCreatedSlides(result: unknown) {
   return `Created ${result.length} normal slides.`;
 }
 
+function responseTextForCreatedDeck(result: unknown) {
+  if (!result || typeof result !== "object" || !("deck" in result)) {
+    return "Created the deck from the outline.";
+  }
+  const deck = result.deck;
+  const slides = "slides" in result && Array.isArray(result.slides) ? result.slides.length : 0;
+  const name = deck && typeof deck === "object" && "name" in deck ? getText(deck.name) : "";
+  const id = deck && typeof deck === "object" && "id" in deck ? Number(deck.id) : null;
+  const suffix = id ? ` Open deck ${id} to review it.` : "";
+  return `Created deck ${name ? `"${name}"` : "from the outline"} with ${slides} slides.${suffix}`;
+}
+
 function responseTextForCreatedGroup(result: unknown) {
   const title =
     result && typeof result === "object" && "title" in result ? getText(result.title) : "";
@@ -233,6 +250,17 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const normalized = prompt.toLowerCase();
   const navigationResponse = await handleNavigationPrompt(actions, prompt, normalized, deckId);
   if (navigationResponse) return navigationResponse;
+
+  if (/\b(create|make|generate)\b.*\bdeck\b/.test(normalized)) {
+    const slides = outlineSlides(prompt);
+    if (slides.length === 0) {
+      return "Send a short outline with one slide per line, then I can create the deck.";
+    }
+    const name = inferDeckName(prompt);
+    const theme = inferTheme(prompt) ?? "dark-green";
+    const result = await runAction(actions["create-deck-from-outline"], { name, theme, slides });
+    return responseTextForCreatedDeck(result);
+  }
 
   if (!deckId) {
     return "Open a deck first, then I can list slides or create normal slides in that deck.";

@@ -91,7 +91,8 @@ for now. The migration should replace one workflow at a time:
 
 ## Features To Borrow From The Reference Slides App
 
-- hosted LLM prompt-to-deck generation that streams slides one by one;
+- hosted LLM-backed prompt-to-deck generation; local deterministic streaming is
+  action-backed for now;
 - richer visual slide editing refinements after the core formatting controls;
 - further design-system management refinements, while preserving this app's
   existing `ThemeName` and slide theme model;
@@ -119,6 +120,9 @@ Taken now:
   DB slide blocks and theme model.
 - Deck-level prompt creation through `create-deck-from-prompt`, which creates a
   typed local draft without hosted LLM credentials or raw HTML slide storage.
+- Local prompt deck streaming through `/_agent-native/prompt-deck-stream`, which
+  drafts the deck, creates the deck, then emits each typed slide creation event
+  as NDJSON for the Home prompt UI.
 - Home deck creation UI exposes the same action-backed deck creation modes:
   blank deck creation through `create-deck`, outline deck creation through
   `create-deck-from-outline`, and prompt deck creation through

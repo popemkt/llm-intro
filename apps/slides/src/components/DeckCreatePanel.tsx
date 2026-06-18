@@ -26,6 +26,13 @@ type DeckGenerationResult = {
   slides: unknown[];
 };
 
+type PromptDeckStreamEvent =
+  | { type: "status"; message: string }
+  | { type: "draft"; name: string; slideCount: number }
+  | { type: "deck"; deck: ApiPresentation }
+  | { type: "slide"; index: number; total: number; title: string; slide: unknown }
+  | { type: "done"; deck: ApiPresentation };
+
 type DeckCreatePanelProps = {
   onCancel: () => void;
   onCreated: (deck: ApiPresentation) => void;
@@ -107,6 +114,49 @@ function panelButtonStyle(active = false) {
     fontWeight: 700,
     cursor: "pointer",
   };
+}
+
+async function createDeckFromPromptStream(input: {
+  name?: string;
+  prompt: string;
+  theme: ThemeName;
+  onEvent: (event: PromptDeckStreamEvent) => void;
+}) {
+  const response = await fetch("/_agent-native/prompt-deck-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: input.name,
+      prompt: input.prompt,
+      theme: input.theme,
+      slideCount: 6,
+    }),
+  });
+
+  if (!response.ok || !response.body) throw new Error("Prompt deck stream failed");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let deck: ApiPresentation | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as PromptDeckStreamEvent;
+      input.onEvent(event);
+      if (event.type === "done" || event.type === "deck") deck = event.deck;
+    }
+  }
+
+  if (!deck) throw new Error("Prompt deck stream did not return a deck");
+  return deck;
 }
 
 function ModeTabs({
@@ -261,35 +311,60 @@ function OutlineField({
 
 function PromptField({
   prompt,
+  streamMessages,
   onPromptChange,
 }: {
   prompt: string;
+  streamMessages: string[];
   onPromptChange: (value: string) => void;
 }) {
   return (
-    <label style={{ display: "grid", gap: 6, marginTop: 12, fontSize: 11, color: C.textDim }}>
-      Prompt
-      <textarea
-        value={prompt}
-        onChange={(e) => onPromptChange(e.target.value)}
-        rows={5}
-        placeholder="Create a deck about agent-native slide creation with app actions, local code mode, and themeable exports."
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          resize: "vertical",
-          background: C.bg,
-          border: `1px solid ${C.border}`,
-          borderRadius: 8,
-          padding: "10px 12px",
-          fontSize: 12,
-          lineHeight: 1.5,
-          color: C.text,
-          outline: "none",
-          fontFamily: "Inter, sans-serif",
-        }}
-      />
-    </label>
+    <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+      <label style={{ display: "grid", gap: 6, fontSize: 11, color: C.textDim }}>
+        Prompt
+        <textarea
+          value={prompt}
+          onChange={(e) => onPromptChange(e.target.value)}
+          rows={5}
+          placeholder="Create a deck about agent-native slide creation with app actions, local code mode, and themeable exports."
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            resize: "vertical",
+            background: C.bg,
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            padding: "10px 12px",
+            fontSize: 12,
+            lineHeight: 1.5,
+            color: C.text,
+            outline: "none",
+            fontFamily: "Inter, sans-serif",
+          }}
+        />
+      </label>
+      {streamMessages.length > 0 && (
+        <div
+          style={{
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            background: C.bg,
+            padding: "8px 10px",
+            display: "grid",
+            gap: 4,
+          }}
+        >
+          {streamMessages.map((message, index) => (
+            <div
+              key={`${message}-${index}`}
+              style={{ fontSize: 11, color: C.textDim, fontFamily: "JetBrains Mono, monospace" }}
+            >
+              {message}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -347,6 +422,8 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [outline, setOutline] = useState(sampleOutline);
   const [prompt, setPrompt] = useState("");
+  const [streamMessages, setStreamMessages] = useState<string[]>([]);
+  const [streamPending, setStreamPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const outlineSlides = useMemo(() => parseOutline(outline), [outline]);
   const createDeck = useActionMutation<ApiPresentation, { name: string; theme: ThemeName }>(
@@ -356,12 +433,7 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
     DeckGenerationResult,
     { name: string; theme: ThemeName; slides: OutlineSlideInput[] }
   >("create-deck-from-outline");
-  const createDeckFromPrompt = useActionMutation<
-    DeckGenerationResult,
-    { name?: string; theme: ThemeName; prompt: string; slideCount?: number }
-  >("create-deck-from-prompt");
-  const isPending =
-    createDeck.isPending || createDeckFromOutline.isPending || createDeckFromPrompt.isPending;
+  const isPending = createDeck.isPending || createDeckFromOutline.isPending || streamPending;
   const canCreate =
     (mode === "prompt" ? prompt.trim().length >= 8 : name.trim().length > 0) &&
     (mode !== "outline" || outlineSlides.length > 0) &&
@@ -370,6 +442,7 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
   const create = async () => {
     if (!canCreate) return;
     setError(null);
+    setStreamMessages([]);
     try {
       if (mode === "outline") {
         const result = await createDeckFromOutline.mutateAsync({
@@ -381,19 +454,41 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
         return;
       }
       if (mode === "prompt") {
-        const result = await createDeckFromPrompt.mutateAsync({
+        setStreamPending(true);
+        const deck = await createDeckFromPromptStream({
           name: name.trim() || undefined,
           theme,
           prompt: prompt.trim(),
-          slideCount: 6,
+          onEvent: (event) => {
+            if (event.type === "status") {
+              setStreamMessages((prev) => [...prev, event.message]);
+            }
+            if (event.type === "draft") {
+              setStreamMessages((prev) => [
+                ...prev,
+                `Drafted ${event.slideCount} slides for "${event.name}"`,
+              ]);
+            }
+            if (event.type === "deck") {
+              setStreamMessages((prev) => [...prev, `Created deck "${event.deck.name}"`]);
+            }
+            if (event.type === "slide") {
+              setStreamMessages((prev) => [
+                ...prev,
+                `Created slide ${event.index + 1}/${event.total}: ${event.title}`,
+              ]);
+            }
+          },
         });
-        onCreated(result.deck);
+        onCreated(deck);
         return;
       }
 
       onCreated(await createDeck.mutateAsync({ name: name.trim(), theme }));
     } catch (err) {
       setError(getErrorMessage(err));
+    } finally {
+      setStreamPending(false);
     }
   };
 
@@ -421,7 +516,9 @@ export function DeckCreatePanel({ onCancel, onCreated }: DeckCreatePanelProps) {
       />
 
       {mode === "outline" && <OutlineField outline={outline} onOutlineChange={setOutline} />}
-      {mode === "prompt" && <PromptField prompt={prompt} onPromptChange={setPrompt} />}
+      {mode === "prompt" && (
+        <PromptField prompt={prompt} streamMessages={streamMessages} onPromptChange={setPrompt} />
+      )}
 
       <CreateActions
         mode={mode}

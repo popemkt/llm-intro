@@ -120,7 +120,8 @@ editing, themed presentation playback, and HTML export.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.
 - Users can create a new deck from Home with a freeform prompt. Prompt mode uses
-  `create-deck-from-prompt` to produce a typed, themeable normal-slide draft.
+  a local streaming prompt deck route to draft the deck, create the deck, and
+  add typed, themeable normal slides incrementally.
 - Users can create common normal slide layouts from the overview add tile
   without opening the manual editor first.
 - Users can insert primitive blocks and common content presets in the visual
@@ -148,8 +149,8 @@ editing, themed presentation playback, and HTML export.
 
 ## Candidate Reference Features
 
-- Hosted LLM prompt-to-deck streaming that emits slides incrementally into the
-  current deck model.
+- Hosted LLM-backed prompt-to-deck streaming. The current local stream is
+  deterministic and action-backed until hosted model credentials are adopted.
 - Additional visual editor refinements after the core formatting controls.
 - Additional presenter refinements such as external presenter display.
 - Full production agent chat wiring. The current app has the shell surface,

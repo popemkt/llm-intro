@@ -8,6 +8,7 @@ import { createExportHandler } from "./routes/export.js";
 import { createApplicationStateRouter } from "./routes/application-state.js";
 import { createFrameworkCoreRouter } from "./routes/framework-core.js";
 import { createAppAgentRuntimeRouter } from "./routes/app-agent-runtime.js";
+import { createPromptDeckStreamRouter } from "./routes/prompt-deck-stream.js";
 import {
   createAgentNativeActionsRouter,
   createAgentNativeDiscoveryRouter,
@@ -36,6 +37,7 @@ export function createApp(services: {
 
   app.use("/_agent-native", createAgentNativeDiscoveryRouter(services.actions));
   app.use("/_agent-native/app-agent", createAppAgentRuntimeRouter(services.actions));
+  app.use("/_agent-native/prompt-deck-stream", createPromptDeckStreamRouter(services.actions));
   app.use(
     "/_agent-native",
     createFrameworkCoreRouter({ terminalBridge: services.agentTerminalBridge }),

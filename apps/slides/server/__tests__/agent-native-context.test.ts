@@ -335,6 +335,31 @@ describe("Agent Native prompt deck creation", () => {
       expect.arrayContaining([expect.objectContaining({ type: "text" })]),
     );
   });
+
+  it("POST /_agent-native/prompt-deck-stream streams deck and slide creation events", async () => {
+    const res = await request(app).post("/_agent-native/prompt-deck-stream").send({
+      name: "Stream Deck",
+      theme: "ocean",
+      prompt: "Create a deck about streaming prompt deck creation with actions",
+    });
+
+    expect(res.status).toBe(200);
+    const events = res.text
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { type: string; deck?: { id: number }; title?: string });
+    expect(events.map((event) => event.type)).toEqual(
+      expect.arrayContaining(["status", "draft", "deck", "slide", "done"]),
+    );
+    expect(events.filter((event) => event.type === "slide")).toHaveLength(6);
+    const deckEvent = events.find((event) => event.type === "deck");
+    expect(deckEvent?.deck?.id).toEqual(expect.any(Number));
+
+    const slidesRes = await request(app).get(
+      `/_agent-native/actions/list-slides?pid=${deckEvent?.deck?.id}`,
+    );
+    expect(slidesRes.body).toHaveLength(6);
+  });
 });
 
 describe("Agent Native deck export action", () => {

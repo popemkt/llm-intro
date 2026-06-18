@@ -58,6 +58,7 @@ framework boundary.
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
 | Create deck from outline | `create-deck-from-outline` action creates a deck and typed normal slides from an outline | Vitest/API plus App Mode and Home UI smoke |
 | Create deck from prompt | `draft-deck-from-prompt`, `create-deck-from-prompt`, Home prompt mode, and App Mode prompt routing | Vitest/API plus browser smoke |
+| Stream prompt deck creation | `/_agent-native/prompt-deck-stream` emits draft/deck/slide/done NDJSON events while creating typed normal slides | Vitest/API plus browser smoke |
 | Rename slide | `update-slide` action | Browser flow or focused smoke |
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |
 | Reorder slides/groups | `update-deck-layout` action, slide service validation | Vitest/API plus Playwright |

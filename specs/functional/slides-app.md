@@ -76,8 +76,11 @@ editing, themed presentation playback, and HTML export.
 - Borrowed reference-app features are limited to capabilities that improve this
   product, especially advanced slide creation and stronger shell/agent UX.
 - The app shell includes an Agent-Native-style product rail and a real
-  `AgentPanel` toggle. The panel starts closed until the full production chat
-  runtime is mounted.
+  `AgentPanel` toggle. The panel starts closed and uses a deck-scoped local App
+  Mode runtime for supported product prompts.
+- In App Mode, agents can use product-safe deck actions without shell or
+  filesystem access. The current local runtime can list slides and create
+  standard normal slides in the active deck from simple prompts.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.
@@ -88,6 +91,8 @@ editing, themed presentation playback, and HTML export.
 - In local development, trusted maintainers can use local authenticated coding
   CLIs such as Codex or Claude Code through the Agent-Native terminal bridge.
   This is a Code Mode capability and must not imply production shell access.
+  It also does not require Builder.io auth because the CLI uses the local
+  user's existing authentication.
 
 ## Candidate Reference Features
 
@@ -98,5 +103,6 @@ editing, themed presentation playback, and HTML export.
 - Deck snapshots or version history.
 - Speaker notes and improved presenter controls.
 - Full production agent chat wiring. The current app has the shell surface,
-  application-state route, action/MCP/A2A endpoints, and local-development
-  terminal bridge; hosted production chat remains a separate adoption slice.
+  application-state route, action/MCP/A2A endpoints, local App Mode runtime, and
+  local-development terminal bridge; hosted production chat remains a separate
+  adoption slice.

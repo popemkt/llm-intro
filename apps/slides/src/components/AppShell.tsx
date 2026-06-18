@@ -9,6 +9,7 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
+import { createSlidesAppAgentRuntime } from "@/agent/appAgentRuntime";
 
 const navItems = [
   { label: "Decks", to: "/", icon: LayoutDashboard },
@@ -37,6 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () => localStorage.getItem("agent-native-sidebar-open") === "true",
   );
   const deckScope = useMemo(() => deckScopeFromPath(location.pathname), [location.pathname]);
+  const appAgentRuntime = useMemo(() => createSlidesAppAgentRuntime(deckScope), [deckScope]);
   const agentSuggestions = useMemo(
     () => [
       "Create a title slide for this deck",
@@ -138,6 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onCollapse={() => setAgentOpenPersisted(false)}
             storageKey="llm-intro-slides-agent"
             scope={deckScope}
+            runtime={appAgentRuntime}
             agentChatSurface="dev-frame"
             codeAccess={localCodeAccess}
           />

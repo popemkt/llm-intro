@@ -34,6 +34,9 @@ Reference documentation:
   action bridge, backed by the existing presentation service.
 - Deck, slide, group, and layout JSON operations are available through
   `/_agent-native/actions/*` and the browser API client calls those actions.
+- The embedded `AgentPanel` has a local App Mode runtime at
+  `/_agent-native/app-agent`. It receives the current deck scope and maps simple
+  product prompts to the same action registry used by the UI.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -83,6 +86,8 @@ Taken now:
 
 - Product shell pattern: left navigation rail plus right `AgentPanel`.
 - Agent sidebar prompt suggestions scoped to deck creation/editing.
+- Local App Mode chat runtime that can list deck slides and create normal
+  slides through product actions without hosted Builder.io auth.
 - Normal slide layout vocabulary and outline creation: title, section, bullets,
   two-column, quote, metrics, closing, and multi-slide sequence creation.
 - Application-state endpoint shape needed by the sidebar's URL sync.
@@ -110,4 +115,7 @@ Translated rather than copied:
 Port the reference Slides shell and normal-slide creation shape without
 wholesale replacement: `AppShell`, minimal application-state routing, and
 `create-normal-slide` are adopted while raw-HTML slides, design systems,
-comments, collaboration, and production chat remain separate slices.
+comments, collaboration, and hosted production chat remain separate slices. The
+local App Mode runtime is now action-backed for basic deck prompts, but it is
+not yet the full hosted Agent-Native chat runtime with streaming, memory,
+approvals, or team collaboration.

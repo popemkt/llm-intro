@@ -303,6 +303,49 @@ describe("Normal slide actions", () => {
   });
 });
 
+describe("App agent runtime", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+    pid = (await request(app).post("/api/presentations").send({ name: "Pres" })).body.id;
+  });
+
+  it("POST /_agent-native/app-agent lists slides through app actions", async () => {
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Existing" });
+
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "list slides", scope: { type: "deck", id: String(pid) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Existing");
+  });
+
+  it("POST /_agent-native/app-agent creates a normal slide through app actions", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: 'create a title slide called "Local App Mode"',
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Local App Mode");
+    await expect(
+      request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`),
+    ).resolves.toMatchObject({
+      body: expect.arrayContaining([
+        expect.objectContaining({
+          title: "Local App Mode",
+          kind: "db",
+        }),
+      ]),
+    });
+  });
+});
+
 describe("Agent Native framework core routes", () => {
   const { app } = createTestContext({ seedSystemPresentation: false });
 

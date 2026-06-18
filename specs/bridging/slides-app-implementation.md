@@ -24,6 +24,7 @@ framework boundary.
 | Application state | Minimal route for sidebar URL/app-state sync | `apps/slides/server/routes/application-state.ts` |
 | Framework core probes | No-op or local defaults for Agent-Native panel/status/resource probes | `apps/slides/server/routes/framework-core.ts` |
 | Local Code Mode terminal | Local PTY WebSocket bridge for known authenticated CLIs | `apps/slides/server/agent-terminal.ts`, `apps/slides/server/index.ts` |
+| Local App Mode runtime | Deck-scoped HTTP chat runtime backed by the action registry | `apps/slides/server/routes/app-agent-runtime.ts`, `apps/slides/src/agent/appAgentRuntime.ts` |
 | Action HTTP mount | `/_agent-native/actions/:name` | `apps/slides/server/routes/agent-native-actions.ts`, `apps/slides/server/app.ts` |
 | Action definitions | `defineAction` wrappers over existing services | `apps/slides/actions/*.ts` |
 | Action discovery | `GET /_agent-native/actions`, `GET /_agent-native/openapi.json` | `apps/slides/server/routes/agent-native-actions.ts` |
@@ -117,12 +118,14 @@ Current implementation note: the app mounts `AgentPanel` directly instead of the
 framework `AgentSidebar` wrapper because this React Router app and
 Agent-Native's bundled router do not share the same router context. The local
 wrapper keeps the panel, suggestions, scope, and persistence behavior while
-avoiding the incompatible URL sync layer. Production `/_agent-native/agent-chat`
-streaming is not mounted yet, so action/MCP/A2A invocation remains the
-functional App Mode path and the panel remains closed by default. In local
-development the panel declares `agentChatSurface="dev-frame"` and uses the local
-terminal bridge as the Code Mode surface; production shell access remains gated
-by the server-side terminal policy.
+avoiding the incompatible URL sync layer. The panel uses a custom
+`AgentChatRuntime` wired to `POST /_agent-native/app-agent` for local,
+deck-scoped App Mode prompts. Production `/_agent-native/agent-chat` streaming
+is not mounted yet, so hosted chat persistence, approvals, memory, and streaming
+remain separate adoption slices. In local development the panel declares
+`agentChatSurface="dev-frame"` and uses the local terminal bridge as the Code
+Mode surface; production shell access remains gated by the server-side terminal
+policy.
 
 ### App Mode And Code Mode
 
@@ -160,6 +163,14 @@ validated service path. The MCP and A2A surfaces are protocol-compatible
 discovery/invocation adapters; they are not yet a full authenticated hosted
 agent runtime with chat state, approvals, memory, or streaming.
 
+The local App Mode runtime is intentionally narrower than the full hosted
+runtime. It accepts a deck scope from the shell, maps simple prompts such as
+`list slides` and `create a title slide called "..."` to existing app actions,
+and returns plain chat text. This gives the embedded panel a real product-safe
+tool path without requiring a Builder.io login. Repository self-modification is
+still Code Mode and should go through the local authenticated CLI bridge or a
+trusted hosted frame.
+
 ### Adoption Notes
 
 - Do not treat the mounted sidebar shell as complete App mode. The panel should
@@ -171,6 +182,9 @@ agent runtime with chat state, approvals, memory, or streaming.
 - Do not require Builder.io auth for local Code Mode. Builder-hosted frames are
   an optional team/cloud path; local development should prefer already-authenticated
   local CLIs.
+- Do not require Builder.io auth for local App Mode either. Local App Mode can
+  use `/_agent-native/app-agent` as long as it stays inside product actions and
+  deck-scoped permissions.
 - Product actions should stay deployable without a writable code workspace.
   Code modification is optional frame capability, not a dependency of the
   deployed slides app.

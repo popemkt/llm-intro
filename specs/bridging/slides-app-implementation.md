@@ -91,11 +91,45 @@ pattern in this repo.
 
 ## Agent Shell Bridge
 
-Agent-Native exposes client shell components such as `AgentSidebar`,
-`AgentToggleButton`, `AgentPanel`, `AgentChatSurface`, and `AgentTerminal`.
-They should be introduced only after the server side has matching production
-agent/chat or terminal endpoints for this app. A visual sidebar without working
-agent transport is not considered adopted.
+Agent-Native Frames define the shell that hosts both the app UI and the agent.
+The important distinction is that code editing is a frame capability, not a
+requirement of the product app itself.
+
+| Frame / surface | Role for this app |
+|---|---|
+| Embedded agent panel | In-app sidebar rendered by the slides app. It should be available in development and production for product actions. |
+| Local dev frame / Agent Native Desktop | Loads the running app and adds code-capable tooling such as terminal, file read/edit/write, and coding CLI integration. |
+| Builder.io cloud frame | Hosted team frame with collaboration, visual editing, and parallel code-agent runs. |
+
+The same app code should run inside every frame. The agent talks to the app
+through the same action registry and application state regardless of which
+frame hosts it.
+
+### App Mode And Code Mode
+
+The agent panel should support two tool modes:
+
+| Mode | Capabilities | Intended audience |
+|---|---|---|
+| App mode | Uses only app tools: deck/slide/group actions, navigation, selection/context, and other product-safe actions. No filesystem or shell access. | End users and production product workflows. |
+| Code mode | Adds coding tools on top of app tools: shell, file read/edit/write, database/workspace access, and coding CLI handoff. | Developers, trusted maintainers, local Desktop, or Builder-hosted code frames. |
+
+Code mode is not the same as Vite dev mode or `NODE_ENV=development`. It is an
+agent capability toggle. If a user asks for a code change from the in-app panel
+and no code-capable frame is connected, the UI should explain that code changes
+need Agent Native Desktop or a Builder cloud frame. If a code-capable frame is
+connected, the request can be routed there while the app keeps showing the
+normal agent/sidebar state.
+
+For this repo, the ideal target is:
+
+1. App mode inside the slides UI for normal product work: create/edit slides,
+   change theme, reorganize deck structure, export, and later prompt-to-deck.
+2. Code mode from the same UI when a maintainer asks to improve the app itself:
+   inspect the current screen/state, edit repo files, run `pnpm typecheck`,
+   `pnpm test`, and `pnpm lint`, then surface a diff/commit/PR.
+3. A clear permission boundary so production users cannot accidentally gain
+   shell or filesystem access.
 
 The current bridge exposes every slide/deck/group action through the shared
 action registry for HTTP, generic invoke, MCP-shaped tools, OpenAPI discovery,
@@ -104,3 +138,16 @@ functions used by the UI action hooks, so reads and writes stay on one
 validated service path. The MCP and A2A surfaces are protocol-compatible
 discovery/invocation adapters; they are not yet a full authenticated hosted
 agent runtime with chat state, approvals, memory, or streaming.
+
+### Adoption Notes
+
+- Do not build a visual-only sidebar. The panel should ship only when it is
+  connected to real App mode chat/tool transport.
+- Do not expose Code mode as plain app actions. Code mode needs a trusted
+  frame/desktop/cloud runner because it can read and modify the repository.
+- Product actions should stay deployable without a writable code workspace.
+  Code modification is optional frame capability, not a dependency of the
+  deployed slides app.
+- Export architecture can stay file-response based. The agent should treat file
+  download generation as a product action or route capability, while code-mode
+  self-improvement remains a separate workspace/coding-agent capability.

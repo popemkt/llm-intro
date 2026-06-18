@@ -10,6 +10,7 @@ Reference documentation:
 - https://www.agent-native.com/docs/client
 - https://www.agent-native.com/docs/server
 - https://www.agent-native.com/docs/actions
+- https://www.agent-native.com/docs/frames
 
 ## Adopted In This Slice
 
@@ -52,6 +53,9 @@ for now. The migration should replace one workflow at a time:
 - richer visual slide editing: inline text edit, block bubble menu, slash menu;
 - design-system storage and apply action, while preserving this app's existing
   `ThemeName` and slide theme model;
+- an Agent-Native frame/panel experience that supports App mode for product
+  actions and Code mode for trusted repo self-modification through Desktop or a
+  Builder-hosted frame;
 - deck version snapshots;
 - speaker notes/fullscreen presentation refinements;
 - import/export expansion after the core action surface is stable.

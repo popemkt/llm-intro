@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
-import { OverviewGrid } from "@/components/OverviewGrid";
+import { OverviewGrid, type NormalSlideQuickLayout } from "@/components/OverviewGrid";
 import { PresentationView } from "@/components/PresentationView";
 import { FullscreenView } from "@/components/FullscreenView";
 import { codeSlideRegistry } from "@/slides/registry";
@@ -21,6 +21,14 @@ function toUnified(slide: ApiSlide, theme: ApiPresentation["theme"]): UnifiedSli
   }
   return { kind: "db", id: slide.id, groupId, title: slide.title, blocks: slide.blocks, theme };
 }
+
+const normalSlideTitles: Record<NormalSlideQuickLayout, string> = {
+  title: "Title slide",
+  bullets: "Key points",
+  "two-column": "Compare ideas",
+  quote: "Quote",
+  metrics: "Metrics",
+};
 
 export function PresentationPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +57,10 @@ export function PresentationPage() {
   );
 
   const createSlide = useActionMutation<ApiSlide, { pid: number; title?: string }>("create-slide");
+  const createNormalSlide = useActionMutation<
+    ApiSlide,
+    { pid: number; layout: NormalSlideQuickLayout; title?: string }
+  >("create-normal-slide");
   const updateSlide = useActionMutation<
     ApiSlide,
     { pid: number; sid: number; title?: string; blocks?: unknown[] }
@@ -127,6 +139,23 @@ export function PresentationPage() {
       showNotice(getErrorMessage(err));
     }
   }, [createSlide, presentation, showNotice]);
+
+  const handleAddNormalSlide = useCallback(
+    async (layout: NormalSlideQuickLayout) => {
+      if (!presentation) return;
+      try {
+        const slide = await createNormalSlide.mutateAsync({
+          pid: presentation.id,
+          layout,
+          title: normalSlideTitles[layout],
+        });
+        setSlides((prev) => [...prev, toUnified(slide, presentation.theme)]);
+      } catch (err) {
+        showNotice(getErrorMessage(err));
+      }
+    },
+    [createNormalSlide, presentation, showNotice],
+  );
 
   const handleLayoutChange = useCallback(
     async (layout: LayoutInput) => {
@@ -385,6 +414,7 @@ export function PresentationPage() {
               setMode("presentation");
             }}
             onAddSlide={handleAddSlide}
+            onAddNormalSlide={handleAddNormalSlide}
             onAddSlideToGroup={handleAddSlideToGroup}
             onLayoutChange={handleLayoutChange}
             onCreateGroup={handleCreateGroup}

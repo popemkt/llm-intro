@@ -49,11 +49,7 @@ function registerFrameworkStatusRoutes(
   options: { terminalBridge?: AgentTerminalBridge },
 ) {
   router.get("/env-status", (_req, res) => {
-    res.json({
-      configured: false,
-      providers: {},
-      missing: [],
-    });
+    res.json([]);
   });
 
   router.get("/builder/status", (_req, res) => {

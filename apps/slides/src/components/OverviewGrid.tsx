@@ -46,6 +46,7 @@ interface OverviewGridProps {
   title: string;
   onSelectSlide: (index: number) => void;
   onAddSlide: () => void;
+  onAddNormalSlide?: (layout: NormalSlideQuickLayout) => void;
   onAddSlideToGroup: (groupId: number) => void;
   onLayoutChange: (layout: LayoutInput) => void;
   onCreateGroup: () => void;
@@ -68,6 +69,15 @@ const groupBucketKey = (id: number) => `bucket:${id}`;
 const LOGICAL_W = 1000;
 const LOGICAL_H = 562.5;
 type ExportMode = "player" | "deck";
+export type NormalSlideQuickLayout = "title" | "bullets" | "two-column" | "quote" | "metrics";
+
+const normalSlideQuickLayouts: Array<{ layout: NormalSlideQuickLayout; label: string }> = [
+  { layout: "title", label: "Title" },
+  { layout: "bullets", label: "Bullets" },
+  { layout: "two-column", label: "Two col" },
+  { layout: "quote", label: "Quote" },
+  { layout: "metrics", label: "Metrics" },
+];
 
 function ThumbnailCell({
   slide,
@@ -584,16 +594,88 @@ function PickSlideDialog({
   );
 }
 
-function AddCard({ onClick }: { onClick: () => void }) {
+function AddCard({
+  onClick,
+  onAddNormalSlide,
+}: {
+  onClick: () => void;
+  onAddNormalSlide?: (layout: NormalSlideQuickLayout) => void;
+}) {
   return (
     <div style={{ paddingBottom: "56.25%", position: "relative", width: "100%" }}>
-      <AddTile
-        icon={<Plus size={20} style={{ color: "var(--color-text-dim)" }} />}
-        label="Add slide"
-        onClick={onClick}
-        testId="add-slide-card"
-        fill
-      />
+      <div
+        className="rounded-xl border-2 border-dashed border-(--color-border) hover:border-(--color-accent)/60 transition-colors"
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          padding: 14,
+          background: "transparent",
+        }}
+      >
+        <button
+          onClick={onClick}
+          aria-label="Add blank slide"
+          data-testid="add-slide-card"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          <Plus size={20} style={{ color: "var(--color-text-dim)" }} />
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--color-text-dim)",
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            Blank slide
+          </span>
+        </button>
+        {onAddNormalSlide && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+              gap: 6,
+            }}
+          >
+            {normalSlideQuickLayouts.map((item) => (
+              <button
+                key={item.layout}
+                type="button"
+                onClick={() => onAddNormalSlide(item.layout)}
+                title={`Add ${item.label.toLowerCase()} slide`}
+                style={{
+                  minWidth: 0,
+                  height: 28,
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 7,
+                  background: "var(--color-surface)",
+                  color: "var(--color-text-dim)",
+                  fontSize: 10,
+                  fontFamily: "Inter, sans-serif",
+                  cursor: "pointer",
+                  padding: "0 4px",
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1158,6 +1240,7 @@ export function OverviewGrid({
   title,
   onSelectSlide,
   onAddSlide,
+  onAddNormalSlide,
   onAddSlideToGroup,
   onLayoutChange,
   onCreateGroup,
@@ -1661,7 +1744,9 @@ export function OverviewGrid({
                       />
                     );
                   })}
-                  {!selectMode && !readonly && <AddCard onClick={onAddSlide} />}
+                  {!selectMode && !readonly && (
+                    <AddCard onClick={onAddSlide} onAddNormalSlide={onAddNormalSlide} />
+                  )}
                 </BucketDrop>
               </SortableContext>
             )}

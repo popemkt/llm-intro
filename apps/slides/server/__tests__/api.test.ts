@@ -319,7 +319,7 @@ describe("Agent Native framework core routes", () => {
   it("GET framework status probes return disabled local defaults", async () => {
     await expect(request(app).get("/_agent-native/env-status")).resolves.toMatchObject({
       status: 200,
-      body: expect.objectContaining({ configured: false, providers: {} }),
+      body: [],
     });
     await expect(request(app).get("/_agent-native/builder/status")).resolves.toMatchObject({
       status: 200,

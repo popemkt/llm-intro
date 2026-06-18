@@ -233,6 +233,34 @@ function useAppThemeCommandBridge() {
   }, []);
 }
 
+function useSelectionContextBridge(location: ReturnType<typeof useLocation>) {
+  const navigationState = useMemo(
+    () => navigationStateFromPath(location.pathname),
+    [location.pathname],
+  );
+
+  useEffect(() => {
+    const publishSelection = () => {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim() ?? "";
+      if (!text) {
+        void deleteAppState("pending-selection-context");
+        return;
+      }
+
+      void writeAppState("pending-selection-context", {
+        text: text.slice(0, 4000),
+        pathname: location.pathname,
+        navigation: navigationState,
+        capturedAt: new Date().toISOString(),
+      });
+    };
+
+    document.addEventListener("selectionchange", publishSelection);
+    return () => document.removeEventListener("selectionchange", publishSelection);
+  }, [location.pathname, navigationState]);
+}
+
 function SlidesAgentSurface({
   runtime,
   suggestions,
@@ -354,6 +382,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const appAgentRuntime = useMemo(() => createSlidesAppAgentRuntime(deckScope), [deckScope]);
   useSlidesRouteStateBridge(location);
   useAppThemeCommandBridge();
+  useSelectionContextBridge(location);
   const agentSuggestions = useMemo(
     () => [
       "Summarize this deck",

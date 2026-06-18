@@ -79,6 +79,8 @@ editing, themed presentation playback, and HTML export.
   future CLI/MCP access.
 - Agents can read the active deck context, including deck metadata, slide list,
   group list, and current navigation state, without shell or filesystem access.
+- Agents can read the current highlighted browser text through app context when
+  the user selects text in the open app.
 - Theme metadata is shared between UI and agent actions so agents use the same
   theme names, labels, and descriptions users see in settings.
 - Borrowed reference-app features are limited to capabilities that improve this

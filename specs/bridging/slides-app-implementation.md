@@ -23,6 +23,7 @@ framework boundary.
 | App shell | Local shell with `AgentPanel`, local toggle, and product rail | `apps/slides/src/components/AppShell.tsx` |
 | Application state | Minimal route for sidebar URL/app-state sync | `apps/slides/server/routes/application-state.ts` |
 | Route state and navigation | Local React Router bridge writes `__url__`/`navigation` and consumes `navigate` commands | `apps/slides/src/components/AppShell.tsx`, `apps/slides/actions/app-context.ts` |
+| Browser selection context | Shell writes selected browser text to `pending-selection-context` for app-context reads | `apps/slides/src/components/AppShell.tsx` |
 | Active deck context | Route-aware read action returns deck metadata, slides, and groups | `apps/slides/actions/active-deck-context.ts` |
 | Framework core probes | No-op or local defaults for Agent-Native panel/status/resource probes | `apps/slides/server/routes/framework-core.ts` |
 | Local Code Mode terminal | Local PTY WebSocket bridge for known authenticated CLIs | `apps/slides/server/agent-terminal.ts`, `apps/slides/server/index.ts` |
@@ -181,9 +182,10 @@ For this repo, the ideal target is:
 The current bridge exposes every slide/deck/group action through the shared
 action registry for HTTP, generic invoke, MCP-shaped tools, OpenAPI discovery,
 and A2A discovery. It also exposes product-safe app context and navigation
-actions: `get-current-app-context` reads the current route state,
-`get-active-deck-context` combines route state with deck, slide, and group
-services, and `navigate-app` queues semantic route commands for the open UI.
+actions: `get-current-app-context` reads the current route state and highlighted
+browser text, `get-active-deck-context` combines route state with deck, slide,
+and group services, and `navigate-app` queues semantic route commands for the
+open UI.
 These endpoints intentionally call the same `run()` functions used by the UI
 action hooks, so reads and writes stay on one validated service path. The MCP
 and A2A surfaces are protocol-compatible discovery/invocation adapters; they

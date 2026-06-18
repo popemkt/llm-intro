@@ -39,6 +39,9 @@ Reference documentation:
 - The shell publishes the current URL and semantic route state into
   Agent-Native application state (`__url__`, `navigation`) and consumes
   product-safe `navigate` commands queued by the `navigate-app` action.
+- The shell publishes selected browser text into `pending-selection-context`,
+  so app agents can inspect what the user highlighted without filesystem or
+  shell access.
 - The embedded `AgentPanel` has a local App Mode runtime at
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
@@ -119,6 +122,8 @@ Taken now:
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Semantic route-state bridge for current app context and product-safe
   navigation commands.
+- Browser selection context bridge that writes highlighted text plus route state
+  into `pending-selection-context`.
 - Active deck context exposure through `get-active-deck-context`, which lets
   agents inspect the current deck, slides, groups, and navigation state without
   code-mode access.

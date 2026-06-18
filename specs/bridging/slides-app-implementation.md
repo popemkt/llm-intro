@@ -119,7 +119,10 @@ Agent-Native's bundled router do not share the same router context. The local
 wrapper keeps the panel, suggestions, scope, and persistence behavior while
 avoiding the incompatible URL sync layer. Production `/_agent-native/agent-chat`
 streaming is not mounted yet, so action/MCP/A2A invocation remains the
-functional App Mode path and the panel remains closed by default.
+functional App Mode path and the panel remains closed by default. In local
+development the panel declares `agentChatSurface="dev-frame"` and uses the local
+terminal bridge as the Code Mode surface; production shell access remains gated
+by the server-side terminal policy.
 
 ### App Mode And Code Mode
 

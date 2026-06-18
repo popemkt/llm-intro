@@ -38,7 +38,8 @@ Reference documentation:
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
   WebSocket bridge that prefers `codex`, then `claude`, then other known local
-  CLIs.
+  CLIs. The embedded panel is marked as the local `dev-frame` surface so the CLI
+  mode is available in local development without Builder.io auth.
 
 ## Migration Direction
 

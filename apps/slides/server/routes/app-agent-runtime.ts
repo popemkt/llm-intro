@@ -309,6 +309,18 @@ function responseTextForExport(result: unknown) {
   return `HTML export${name ? ` for "${name}"` : ""}: ${url}`;
 }
 
+function responseTextForJsonExport(result: unknown) {
+  if (!result || typeof result !== "object") return "The typed JSON export is ready.";
+  const deck =
+    "deck" in result && result.deck && typeof result.deck === "object" ? result.deck : null;
+  const groups = "groups" in result && Array.isArray(result.groups) ? result.groups.length : 0;
+  const slides = "slides" in result && Array.isArray(result.slides) ? result.slides.length : 0;
+  const name = deck && "name" in deck ? getText(deck.name) : "";
+  return `Typed JSON export${name ? ` for "${name}"` : ""}: ${slides} slide${
+    slides === 1 ? "" : "s"
+  }, ${groups} group${groups === 1 ? "" : "s"}. Use export-deck-json for the full payload.`;
+}
+
 function formatSnapshotList(result: unknown) {
   if (!Array.isArray(result)) return "I could not read the snapshot list.";
   if (result.length === 0) return "This deck has no snapshots yet.";
@@ -427,6 +439,11 @@ async function handleDeckReadPrompt(
   if (/\b(list|show|summarize)\b.*\bgroups?\b/.test(normalized)) {
     const groups = await runAction(actions["list-groups"], { pid: deckId });
     return `Groups in this deck:\n${formatGroupList(groups)}`;
+  }
+
+  if (/\b(export|download)\b.*\bjson\b/.test(normalized)) {
+    const result = await runAction(actions["export-deck-json"], { id: deckId });
+    return responseTextForJsonExport(result);
   }
 
   if (/\b(export|download)\b/.test(normalized)) {
@@ -595,6 +612,7 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     '- create a title slide called "Roadmap"',
     "- create a bullets slide with a short outline",
     "- export this deck as HTML",
+    "- export this deck as JSON",
     "",
     "For repository code changes, switch to CLI mode and use your local Codex or Claude Code login.",
   ].join("\n");

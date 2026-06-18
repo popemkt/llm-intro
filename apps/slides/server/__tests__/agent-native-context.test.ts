@@ -550,6 +550,19 @@ describe("App agent export runtime", () => {
     expect(res.body.text).toContain("HTML export");
     expect(res.body.text).toContain(`/api/presentations/${pid}/export`);
   });
+
+  it("POST /_agent-native/app-agent summarizes a typed JSON export", async () => {
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "JSON Slide" });
+
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "export this deck as JSON", scope: { type: "deck", id: String(pid) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Typed JSON export");
+    expect(res.body.text).toContain("1 slide");
+    expect(res.body.text).toContain("export-deck-json");
+  });
 });
 
 describe("App agent snapshot runtime", () => {

@@ -75,6 +75,8 @@ editing, themed presentation playback, and HTML export.
   new deck. Portable JSON preserves DB-backed slides, blocks, notes, groups,
   layout, and theme; code-backed slides are exported as metadata and skipped on
   import because their source modules are not portable user content.
+- Local App Mode can summarize typed JSON exports and direct automation clients
+  to `export-deck-json` for the full payload.
 
 ## Snapshots
 

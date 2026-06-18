@@ -76,6 +76,8 @@ editing, themed presentation playback, and HTML export.
   blocks, and slide groups.
 - Agents can list, inspect, and restore saved deck snapshots. Restore is a
   consequential deck replacement action and requires an explicit snapshot id.
+- Users can save, browse, and restore deck snapshots from deck settings. Restore
+  asks for confirmation before replacing the current deck state.
 
 ## Agent-Native Adoption
 
@@ -123,7 +125,6 @@ editing, themed presentation playback, and HTML export.
   model.
 - Richer visual slide editing controls, such as inline text editing, block
   menus, and slash-style block insertion.
-- Version-history UI for browsing and restoring snapshots.
 - Speaker notes and improved presenter controls.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and

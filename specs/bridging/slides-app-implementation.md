@@ -79,6 +79,7 @@ framework boundary.
 | Create snapshot | `create-deck-snapshot` action captures deck, slides, and groups | Vitest/API plus App Mode smoke |
 | List/read snapshots | `list-deck-snapshots`, `get-deck-snapshot` actions | Vitest/API plus App Mode smoke |
 | Restore snapshot | `restore-deck-snapshot` action replaces the live deck from a snapshot id | Vitest/API |
+| Version-history UI | `SnapshotHistory` in deck settings calls snapshot actions | Browser smoke |
 
 ## Presentation And Editor UI
 

@@ -8,6 +8,7 @@ import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
 import { THEME_META } from "@/lib/themeMeta";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { SnapshotHistory } from "@/components/SnapshotHistory";
 
 const inp: React.CSSProperties = {
   width: "100%",
@@ -321,6 +322,12 @@ export function SettingsPage() {
             })}
           </div>
         </section>
+
+        <SnapshotHistory
+          pid={pid}
+          disabled={loading || !validPid}
+          onRestored={() => void presentationQuery.refetch()}
+        />
       </div>
     </div>
   );

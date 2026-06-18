@@ -96,7 +96,6 @@ for now. The migration should replace one workflow at a time:
 - an Agent-Native frame/panel experience that supports App mode for product
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
-- version-history UI for browsing and restoring snapshots;
 - speaker notes/fullscreen presentation refinements;
 - import/export expansion after the core action surface is stable.
 
@@ -135,6 +134,8 @@ Taken now:
   `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, and
   `restore-deck-snapshot`; restore is consequential and requires an explicit
   snapshot id.
+- Deck settings version-history UI that creates, lists, and restores snapshots
+  through the same Agent-Native action surface.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

@@ -91,7 +91,7 @@ for now. The migration should replace one workflow at a time:
 ## Features To Borrow From The Reference Slides App
 
 - hosted LLM prompt-to-deck generation that streams slides one by one;
-- richer visual slide editing refinements such as formatting controls;
+- richer visual slide editing refinements after the core formatting controls;
 - further design-system management refinements, while preserving this app's
   existing `ThemeName` and slide theme model;
 - an Agent-Native frame/panel experience that supports App mode for product
@@ -152,6 +152,8 @@ Taken now:
 - Visual editor inline text editing and selected-block menus through
   `SlideEditorPage`, keeping updates in the existing typed block model while
   adding edit, duplicate, layer, and delete controls on the canvas.
+- Markdown formatting controls in the canvas and side-panel text editors,
+  preserving the typed text block model and markdown rendering path.
 - Speaker-note persistence on slides through the existing slide model, update
   action, snapshots, and export payloads.
 - Presenter-mode speaker-note display for the active slide, while fullscreen

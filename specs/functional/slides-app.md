@@ -125,6 +125,8 @@ editing, themed presentation playback, and HTML export.
   `/embed`, and `/shape`.
 - Users can edit text blocks directly on the slide canvas and use the selected
   block menu to edit text, duplicate blocks, move layer order, and delete blocks.
+- Text block editors include markdown formatting controls for headings, bold,
+  italic, quotes, and bullet lists while preserving plain markdown storage.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
@@ -142,7 +144,7 @@ editing, themed presentation playback, and HTML export.
 
 - Hosted LLM prompt-to-deck streaming that emits slides incrementally into the
   current deck model.
-- Additional visual editor refinements such as richer inline formatting controls.
+- Additional visual editor refinements after the core formatting controls.
 - Additional presenter refinements such as external presenter display.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and

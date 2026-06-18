@@ -90,6 +90,7 @@ framework boundary.
 | Insert content presets | `SlideBlockInsertPanel` adds title, bullets, quote, and metric typed block sets | Browser smoke |
 | Slash insert commands | `SlideBlockInsertPanel` maps `/title`, `/bullets`, `/quote`, `/metric`, and primitive commands to the same typed block creation paths | Browser smoke |
 | Inline text editing | `InlineTextBlockEditor` edits selected text blocks directly on the canvas and writes markdown back to the typed block | Browser smoke, typecheck |
+| Markdown formatting controls | `MarkdownFormatToolbar` applies headings, bold, italic, quote, and bullet markdown in inline and side-panel text editors | Browser smoke, typecheck |
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
 | Edit speaker notes | `slides.notes`, `update-slide`, and `SlideEditorPage` notes field | Vitest/API plus browser smoke |
 | Display speaker notes | `PresentationView` renders active slide notes above controls outside fullscreen | Browser smoke |

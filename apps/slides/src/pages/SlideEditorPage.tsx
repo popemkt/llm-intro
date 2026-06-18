@@ -3,6 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowDown,
   ArrowUp,
+  Bold,
+  Heading1,
+  Heading2,
+  Italic,
+  List,
   Copy,
   Edit3,
   Globe,
@@ -13,6 +18,7 @@ import {
   Trash2,
   Circle,
   Check,
+  Quote,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
@@ -90,6 +96,13 @@ const inp: React.CSSProperties = {
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
+
+type MarkdownFormatResult = {
+  value: string;
+  selectionStart: number;
+  selectionEnd: number;
+};
 
 export function SlideEditorPage() {
   const { id: pidStr, sid: sidStr } = useParams<{ id: string; sid: string }>();
@@ -832,32 +845,10 @@ export function SlideEditorPage() {
 
                 {/* Type-specific fields */}
                 {selectedBlock.type === "text" && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 9,
-                        color: C.textDim,
-                        marginBottom: 4,
-                        fontFamily: "JetBrains Mono, monospace",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Markdown
-                    </div>
-                    <textarea
-                      value={selectedBlock.markdown}
-                      onChange={(e) => updateBlock(selectedBlock.id, { markdown: e.target.value })}
-                      placeholder="Markdown content…"
-                      rows={7}
-                      style={{
-                        ...inp,
-                        resize: "vertical",
-                        fontFamily: "JetBrains Mono, monospace",
-                        fontSize: 11,
-                      }}
-                    />
-                  </div>
+                  <TextBlockPropertyEditor
+                    block={selectedBlock}
+                    onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
+                  />
                 )}
 
                 {selectedBlock.type === "image" && (
@@ -1084,6 +1075,164 @@ export function SlideEditorPage() {
 
 // ─── Canvas block content (WYSIWYG preview) ─────────────────────────────────
 
+function applyMarkdownFormat(
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+  format: MarkdownFormat,
+): MarkdownFormatResult {
+  const selected = value.slice(selectionStart, selectionEnd);
+  const fallback = format === "bullets" ? "List item" : "text";
+
+  if (format === "bold" || format === "italic") {
+    const mark = format === "bold" ? "**" : "_";
+    const text = selected || fallback;
+    const next = `${value.slice(0, selectionStart)}${mark}${text}${mark}${value.slice(selectionEnd)}`;
+    return {
+      value: next,
+      selectionStart: selectionStart + mark.length,
+      selectionEnd: selectionStart + mark.length + text.length,
+    };
+  }
+
+  const lineStart = value.lastIndexOf("\n", Math.max(0, selectionStart - 1)) + 1;
+  const lineEndIndex = value.indexOf("\n", selectionEnd);
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+  const lineValue = value.slice(lineStart, lineEnd) || fallback;
+  const prefix =
+    format === "h1" ? "# " : format === "h2" ? "## " : format === "quote" ? "> " : "- ";
+  const formatted = lineValue
+    .split("\n")
+    .map((line) => {
+      const cleaned = line.replace(/^\s*(#{1,6}\s+|>\s+|[-*]\s+)/, "");
+      return `${prefix}${cleaned || fallback}`;
+    })
+    .join("\n");
+  const next = `${value.slice(0, lineStart)}${formatted}${value.slice(lineEnd)}`;
+  return {
+    value: next,
+    selectionStart: lineStart,
+    selectionEnd: lineStart + formatted.length,
+  };
+}
+
+function MarkdownFormatToolbar({
+  onChange,
+  textareaRef,
+  value,
+}: {
+  onChange: (value: string) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  value: string;
+}) {
+  const buttonStyle: React.CSSProperties = {
+    width: 25,
+    height: 25,
+    borderRadius: 6,
+    border: `1px solid ${C.border}`,
+    background: C.bg,
+    color: C.textDim,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
+  };
+
+  const applyFormat = (format: MarkdownFormat) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const result = applyMarkdownFormat(
+      value,
+      textarea.selectionStart,
+      textarea.selectionEnd,
+      format,
+    );
+    onChange(result.value);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+  };
+
+  return (
+    <div
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      style={{ display: "flex", gap: 4, flexWrap: "wrap" }}
+    >
+      {[
+        { format: "h1" as const, label: "Heading 1", icon: <Heading1 size={13} /> },
+        { format: "h2" as const, label: "Heading 2", icon: <Heading2 size={13} /> },
+        { format: "bold" as const, label: "Bold", icon: <Bold size={13} /> },
+        { format: "italic" as const, label: "Italic", icon: <Italic size={13} /> },
+        { format: "quote" as const, label: "Quote", icon: <Quote size={13} /> },
+        { format: "bullets" as const, label: "Bullets", icon: <List size={13} /> },
+      ].map(({ format, icon, label }) => (
+        <button
+          key={format}
+          type="button"
+          title={label}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyFormat(format);
+          }}
+          style={buttonStyle}
+        >
+          {icon}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TextBlockPropertyEditor({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "text" }>;
+  onUpdate: (markdown: string) => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 9,
+          color: C.textDim,
+          marginBottom: 4,
+          fontFamily: "JetBrains Mono, monospace",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        Markdown
+      </div>
+      <div style={{ marginBottom: 6 }}>
+        <MarkdownFormatToolbar
+          textareaRef={textareaRef}
+          value={block.markdown}
+          onChange={onUpdate}
+        />
+      </div>
+      <textarea
+        ref={textareaRef}
+        value={block.markdown}
+        onChange={(e) => onUpdate(e.target.value)}
+        placeholder="Markdown content..."
+        rows={7}
+        style={{
+          ...inp,
+          resize: "vertical",
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: 11,
+        }}
+      />
+    </div>
+  );
+}
+
 function BlockBubbleMenu({
   canEditText,
   editing,
@@ -1186,35 +1335,56 @@ function InlineTextBlockEditor({
   }, []);
 
   return (
-    <textarea
-      ref={inputRef}
-      value={block.markdown}
-      onChange={(event) => onChange(event.target.value)}
-      onBlur={onDone}
+    <div
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-          event.preventDefault();
-          onDone();
-        }
-      }}
-      placeholder="Type markdown..."
       style={{
         width: "100%",
         height: "100%",
-        resize: "none",
         boxSizing: "border-box",
-        border: "none",
-        outline: "none",
         background: "rgba(13, 15, 14, 0.62)",
-        color: "var(--theme-text)",
-        padding: "6px 10px",
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: "clamp(0.58rem, 0.82vw, 0.78rem)",
-        lineHeight: 1.5,
+        display: "flex",
+        flexDirection: "column",
       }}
-    />
+    >
+      <div
+        style={{
+          padding: "5px 6px",
+          background: "rgba(13, 15, 14, 0.72)",
+          borderBottom: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        <MarkdownFormatToolbar textareaRef={inputRef} value={block.markdown} onChange={onChange} />
+      </div>
+      <textarea
+        ref={inputRef}
+        value={block.markdown}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onDone}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            event.preventDefault();
+            onDone();
+          }
+        }}
+        placeholder="Type markdown..."
+        style={{
+          flex: 1,
+          minHeight: 0,
+          width: "100%",
+          resize: "none",
+          boxSizing: "border-box",
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          color: "var(--theme-text)",
+          padding: "6px 10px",
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "clamp(0.58rem, 0.82vw, 0.78rem)",
+          lineHeight: 1.5,
+        }}
+      />
+    </div>
   );
 }
 

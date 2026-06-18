@@ -5,7 +5,7 @@ import { createPresentationsRouter } from './routes/presentations.js'
 import { createSlidesRouter } from './routes/slides.js'
 import { createGroupsRouter } from './routes/groups.js'
 import { createExportHandler } from './routes/export.js'
-import { createAgentNativeActionsRouter } from './routes/agent-native-actions.js'
+import { createAgentNativeActionsRouter, createAgentNativeDiscoveryRouter } from './routes/agent-native-actions.js'
 import type { SlideDeckActions } from '../actions/index.js'
 import type { createPresentationsService } from './services/presentations.js'
 import type { createSlidesService } from './services/slides.js'
@@ -26,6 +26,7 @@ export function createApp(services: {
   app.use(cors())
   app.use(express.json())
 
+  app.use('/_agent-native', createAgentNativeDiscoveryRouter(services.actions))
   app.use('/_agent-native/actions', createAgentNativeActionsRouter(services.actions))
   app.post('/api/presentations/:pid/export', createExportHandler(services.presentationsService, services.slidesService, services.groupsService))
   app.use('/api/presentations', createPresentationsRouter(services.presentationsService))

@@ -22,6 +22,10 @@ framework boundary.
 | App providers and query cache | `AppProviders`, `createAgentNativeQueryClient()` | `apps/slides/src/main.tsx` |
 | Action HTTP mount | `/_agent-native/actions/:name` | `apps/slides/server/routes/agent-native-actions.ts`, `apps/slides/server/app.ts` |
 | Action definitions | `defineAction` wrappers over existing services | `apps/slides/actions/*.ts` |
+| Action discovery | `GET /_agent-native/actions`, `GET /_agent-native/openapi.json` | `apps/slides/server/routes/agent-native-actions.ts` |
+| Generic agent invocation | `POST /_agent-native/actions/invoke`, `POST /_agent-native/actions/invoke/:name` | `apps/slides/server/routes/agent-native-actions.ts` |
+| MCP-compatible tool calls | `POST /_agent-native/actions/mcp`, `GET /_agent-native/actions/mcp/tools` | `apps/slides/server/routes/agent-native-actions.ts` |
+| A2A discovery card | `GET /_agent-native/a2a/agent-card` | `apps/slides/server/routes/agent-native-actions.ts` |
 | Browser action transport | `callAction`, `useActionQuery`, `useActionMutation` | `apps/slides/src/api/client.ts`, route pages |
 | Legacy REST API | Kept for compatibility and export/download behavior | `apps/slides/server/routes/*` |
 
@@ -92,3 +96,11 @@ Agent-Native exposes client shell components such as `AgentSidebar`,
 They should be introduced only after the server side has matching production
 agent/chat or terminal endpoints for this app. A visual sidebar without working
 agent transport is not considered adopted.
+
+The current bridge exposes every slide/deck/group action through the shared
+action registry for HTTP, generic invoke, MCP-shaped tools, OpenAPI discovery,
+and A2A discovery. These endpoints intentionally call the same `run()`
+functions used by the UI action hooks, so reads and writes stay on one
+validated service path. The MCP and A2A surfaces are protocol-compatible
+discovery/invocation adapters; they are not yet a full authenticated hosted
+agent runtime with chat state, approvals, memory, or streaming.

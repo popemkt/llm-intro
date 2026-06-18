@@ -5,6 +5,9 @@ import { z } from 'zod'
 
 type PresentationsService = ReturnType<typeof createPresentationsService>
 
+const publicReadAction = { expose: true, readOnly: true, requiresAuth: false }
+const publicWriteAction = { expose: true, readOnly: false, requiresAuth: false, isConsequential: true }
+
 export function createDeckActions(presentationsService: PresentationsService) {
   return {
     'list-decks': defineAction({
@@ -16,6 +19,11 @@ export function createDeckActions(presentationsService: PresentationsService) {
       },
       requiresAuth: false,
       readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: 'List decks',
+        description: 'List available presentation decks.',
+      },
       run: () => presentationsService.list(),
     }),
 
@@ -30,6 +38,11 @@ export function createDeckActions(presentationsService: PresentationsService) {
       },
       requiresAuth: false,
       readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: 'Get deck',
+        description: 'Get one presentation deck by id.',
+      },
       run: ({ id }) => presentationsService.get(id),
     }),
 
@@ -44,6 +57,11 @@ export function createDeckActions(presentationsService: PresentationsService) {
         path: 'create-deck',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Create deck',
+        description: 'Create a new presentation deck.',
+      },
       run: (input) => presentationsService.create(parsePresentationCreate(input)),
     }),
 
@@ -59,6 +77,11 @@ export function createDeckActions(presentationsService: PresentationsService) {
         path: 'update-deck',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Update deck',
+        description: 'Update a presentation deck name or theme.',
+      },
       run: ({ id, ...patch }) => presentationsService.update(id, parsePresentationPatch(patch)),
     }),
 
@@ -72,6 +95,11 @@ export function createDeckActions(presentationsService: PresentationsService) {
         path: 'delete-deck',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Delete deck',
+        description: 'Delete a presentation deck.',
+      },
       run: ({ id }) => {
         presentationsService.delete(id)
         return null

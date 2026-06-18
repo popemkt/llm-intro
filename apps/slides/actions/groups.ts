@@ -5,6 +5,9 @@ import { z } from 'zod'
 
 type GroupsService = ReturnType<typeof createGroupsService>
 
+const publicReadAction = { expose: true, readOnly: true, requiresAuth: false }
+const publicWriteAction = { expose: true, readOnly: false, requiresAuth: false, isConsequential: true }
+
 export function createGroupActions(groupsService: GroupsService) {
   return {
     'list-groups': defineAction({
@@ -18,6 +21,11 @@ export function createGroupActions(groupsService: GroupsService) {
       },
       requiresAuth: false,
       readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: 'List groups',
+        description: 'List slide groups for a presentation deck.',
+      },
       run: ({ pid }) => groupsService.list(pid),
     }),
 
@@ -32,6 +40,11 @@ export function createGroupActions(groupsService: GroupsService) {
         path: 'create-group',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Create group',
+        description: 'Create a slide group.',
+      },
       run: ({ pid, ...input }) => groupsService.create(pid, parseGroupCreate(input).title),
     }),
 
@@ -48,6 +61,11 @@ export function createGroupActions(groupsService: GroupsService) {
         path: 'update-group',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Update group',
+        description: 'Update a slide group title or collapsed state.',
+      },
       run: ({ pid, gid, ...patch }) => groupsService.update(pid, gid, parseGroupPatch(patch)),
     }),
 
@@ -62,6 +80,11 @@ export function createGroupActions(groupsService: GroupsService) {
         path: 'delete-group',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Delete group',
+        description: 'Delete a slide group and ungroup its slides.',
+      },
       run: ({ pid, gid }) => {
         groupsService.delete(pid, gid)
         return null

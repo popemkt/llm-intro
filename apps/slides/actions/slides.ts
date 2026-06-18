@@ -6,6 +6,8 @@ import { z } from 'zod'
 type SlidesService = ReturnType<typeof createSlidesService>
 
 const blockInput = z.record(z.string(), z.unknown())
+const publicReadAction = { expose: true, readOnly: true, requiresAuth: false }
+const publicWriteAction = { expose: true, readOnly: false, requiresAuth: false, isConsequential: true }
 
 export function createSlideActions(slidesService: SlidesService) {
   return {
@@ -20,6 +22,11 @@ export function createSlideActions(slidesService: SlidesService) {
       },
       requiresAuth: false,
       readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: 'List slides',
+        description: 'List slides for a presentation deck.',
+      },
       run: ({ pid }) => slidesService.list(pid),
     }),
 
@@ -35,6 +42,11 @@ export function createSlideActions(slidesService: SlidesService) {
         path: 'create-slide',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Create slide',
+        description: 'Create a database-backed slide.',
+      },
       run: ({ pid, ...input }) => slidesService.create(pid, parseSlideCreate(input)),
     }),
 
@@ -51,6 +63,11 @@ export function createSlideActions(slidesService: SlidesService) {
         path: 'update-slide',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Update slide',
+        description: 'Update slide title or blocks.',
+      },
       run: ({ pid, sid, ...patch }) => slidesService.update(pid, sid, parseSlidePatch(patch)),
     }),
 
@@ -65,6 +82,11 @@ export function createSlideActions(slidesService: SlidesService) {
         path: 'delete-slide',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Delete slide',
+        description: 'Delete a database-backed slide.',
+      },
       run: ({ pid, sid }) => {
         slidesService.delete(pid, sid)
         return null
@@ -86,6 +108,11 @@ export function createSlideActions(slidesService: SlidesService) {
         path: 'update-deck-layout',
       },
       requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: 'Update deck layout',
+        description: 'Apply slide and group ordering for a deck.',
+      },
       run: ({ pid, ...layout }) => slidesService.applyLayout(pid, parseLayout(layout)),
     }),
   }

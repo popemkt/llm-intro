@@ -308,6 +308,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       "Create a title slide for this deck",
       "Add a bullets slide after the current topic",
       "Turn this outline into normal slides",
+      "Export this deck as HTML",
     ],
     [],
   );

@@ -41,7 +41,7 @@ Reference documentation:
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
   listing, normal slide creation, multi-slide outline creation, group creation,
-  and deck theme changes.
+  deck theme changes, and HTML export links.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -75,7 +75,7 @@ for now. The migration should replace one workflow at a time:
 | reorder slides/groups | `update-deck-layout` mutating action, mounted and used by client |
 | read current app context | `get-current-app-context` read action over Agent-Native app state |
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
-| export HTML | keep `/api` route until file/download handling moves to an action-safe endpoint |
+| export HTML | `get-deck-export` read action returns the existing `/api` download URL |
 
 ## Features To Borrow From The Reference Slides App
 
@@ -107,6 +107,9 @@ Taken now:
 - Home deck creation UI exposes the same action-backed deck creation modes:
   blank deck creation through `create-deck` and outline deck creation through
   `create-deck-from-outline`.
+- HTML export exposure through `get-deck-export`, keeping the existing file
+  response route while making export discoverable to App Mode and external
+  action clients.
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Semantic route-state bridge for current app context and product-safe
   navigation commands.

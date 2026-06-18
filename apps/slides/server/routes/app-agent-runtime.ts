@@ -194,6 +194,15 @@ function responseTextForCreatedGroup(result: unknown) {
   return `Created group ${title ? `"${title}"` : "in this deck"}.`;
 }
 
+function responseTextForExport(result: unknown) {
+  if (!result || typeof result !== "object" || !("url" in result)) {
+    return "The HTML export is ready.";
+  }
+  const url = getText(result.url);
+  const name = "name" in result ? getText(result.name) : "";
+  return `HTML export${name ? ` for "${name}"` : ""}: ${url}`;
+}
+
 async function handleNavigationPrompt(
   actions: SlideDeckActions,
   prompt: string,
@@ -283,6 +292,11 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     return `Changed this deck's theme to ${theme}.`;
   }
 
+  if (/\b(export|download)\b/.test(normalized)) {
+    const result = await runAction(actions["get-deck-export"], { id: deckId });
+    return responseTextForExport(result);
+  }
+
   if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
     const title = inferTitle(prompt, "Group");
     const group = await runAction(actions["create-group"], { pid: deckId, title });
@@ -317,6 +331,7 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     "- list slides",
     '- create a title slide called "Roadmap"',
     "- create a bullets slide with a short outline",
+    "- export this deck as HTML",
     "",
     "For repository code changes, switch to CLI mode and use your local Codex or Claude Code login.",
   ].join("\n");

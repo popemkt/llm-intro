@@ -65,6 +65,8 @@ editing, themed presentation playback, and HTML export.
   slide content.
 - Export keeps the existing REST download route until the file/download flow is
   intentionally migrated.
+- Agents can prepare an HTML export for the active deck through a product-safe
+  action that returns the existing download URL.
 
 ## Agent-Native Adoption
 
@@ -81,7 +83,7 @@ editing, themed presentation playback, and HTML export.
 - In App Mode, agents can use product-safe deck actions without shell or
   filesystem access. The current local runtime can list slides and create
   standard normal slides, multi-slide outlines, slide groups, and deck theme
-  changes in the active deck from simple prompts.
+  changes, and HTML export links in the active deck from simple prompts.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

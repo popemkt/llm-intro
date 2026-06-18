@@ -13,6 +13,36 @@ const publicWriteAction = {
   isConsequential: true,
 };
 
+function createDeckExportAction(presentationsService: PresentationsService) {
+  return defineAction({
+    description: "Prepare an HTML export download URL for a presentation deck.",
+    schema: z.object({
+      id: z.coerce.number().int().positive(),
+    }),
+    http: {
+      method: "GET",
+      path: "get-deck-export",
+    },
+    requiresAuth: false,
+    readOnly: true,
+    publicAgent: {
+      ...publicReadAction,
+      title: "Get deck export",
+      description: "Return the existing HTML export download URL for a presentation deck.",
+    },
+    run: ({ id }) => {
+      const deck = presentationsService.get(id);
+      return {
+        id: deck.id,
+        name: deck.name,
+        format: "html",
+        method: "GET",
+        url: `/api/presentations/${deck.id}/export`,
+      };
+    },
+  });
+}
+
 export function createDeckActions(presentationsService: PresentationsService) {
   return {
     "list-decks": defineAction({
@@ -89,6 +119,8 @@ export function createDeckActions(presentationsService: PresentationsService) {
       },
       run: ({ id, ...patch }) => presentationsService.update(id, parsePresentationPatch(patch)),
     }),
+
+    "get-deck-export": createDeckExportAction(presentationsService),
 
     "delete-deck": defineAction({
       description: "Delete a presentation deck.",

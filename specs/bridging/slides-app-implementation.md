@@ -93,12 +93,14 @@ framework boundary.
 | Functional behavior | Code implementation |
 |---|---|
 | Export deck as HTML | `apps/slides/server/routes/export.ts` |
+| Agent export action | `get-deck-export` action returns `/api/presentations/:id/export` |
 | Export viewer bootstrap | `apps/slides/src/export-viewer.tsx` |
 | Static data provider | `apps/slides/src/data/static-provider.ts` |
 
 The export route remains on `/api` because it returns a downloadable HTML file.
-Move it only when the Agent-Native action layer has an intentional file response
-pattern in this repo.
+`get-deck-export` exposes that capability to agents by returning the existing
+download URL. Move the file response only when the Agent-Native action layer has
+an intentional file response pattern in this repo.
 
 ## Agent Shell Bridge
 
@@ -186,10 +188,11 @@ The local App Mode runtime is intentionally narrower than the full hosted
 runtime. It accepts a deck scope from the shell, maps simple prompts to existing
 app actions, and returns plain chat text. Current supported prompt families
 include listing slides, listing groups, creating one normal slide, creating a
-multi-slide normal outline, creating a group, and changing the deck theme. This
-gives the embedded panel a real product-safe tool path without requiring a
-Builder.io login. Repository self-modification is still Code Mode and should go
-through the local authenticated CLI bridge or a trusted hosted frame.
+multi-slide normal outline, creating a group, changing the deck theme, and
+preparing an HTML export link. This gives the embedded panel a real product-safe
+tool path without requiring a Builder.io login. Repository self-modification is
+still Code Mode and should go through the local authenticated CLI bridge or a
+trusted hosted frame.
 
 ### Adoption Notes
 

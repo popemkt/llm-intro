@@ -20,6 +20,8 @@ framework boundary.
 | Functional behavior | Agent-Native/action bridge | Current code |
 |---|---|---|
 | App providers and query cache | `AppProviders`, `createAgentNativeQueryClient()` | `apps/slides/src/main.tsx` |
+| App shell | Local shell with `AgentSidebar`, `AgentToggleButton`, and product rail | `apps/slides/src/components/AppShell.tsx` |
+| Application state | Minimal route for sidebar URL/app-state sync | `apps/slides/server/routes/application-state.ts` |
 | Action HTTP mount | `/_agent-native/actions/:name` | `apps/slides/server/routes/agent-native-actions.ts`, `apps/slides/server/app.ts` |
 | Action definitions | `defineAction` wrappers over existing services | `apps/slides/actions/*.ts` |
 | Action discovery | `GET /_agent-native/actions`, `GET /_agent-native/openapi.json` | `apps/slides/server/routes/agent-native-actions.ts` |
@@ -44,6 +46,7 @@ framework boundary.
 |---|---|---|
 | List slides | `list-slides` action, slide service | Vitest API tests |
 | Create slide | `create-slide` action, `PresentationPage` handlers | Vitest/API plus browser flow |
+| Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Rename slide | `update-slide` action | Browser flow or focused smoke |
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |
 | Reorder slides/groups | `update-deck-layout` action, slide service validation | Vitest/API plus Playwright |
@@ -105,6 +108,12 @@ The same app code should run inside every frame. The agent talks to the app
 through the same action registry and application state regardless of which
 frame hosts it.
 
+Current implementation note: the app mounts `AgentSidebar` and the
+application-state route it polls, but the production `/_agent-native/agent-chat`
+stream is not mounted yet. Until that runtime is adopted, action/MCP/A2A
+invocation is the functional agent path and the sidebar remains closed by
+default.
+
 ### App Mode And Code Mode
 
 The agent panel should support two tool modes:
@@ -141,8 +150,9 @@ agent runtime with chat state, approvals, memory, or streaming.
 
 ### Adoption Notes
 
-- Do not build a visual-only sidebar. The panel should ship only when it is
-  connected to real App mode chat/tool transport.
+- Do not treat the mounted sidebar shell as complete App mode. The panel should
+  become the primary agent surface only when connected to real App mode
+  chat/tool transport.
 - Do not expose Code mode as plain app actions. Code mode needs a trusted
   frame/desktop/cloud runner because it can read and modify the repository.
 - Product actions should stay deployable without a writable code workspace.

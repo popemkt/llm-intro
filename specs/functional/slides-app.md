@@ -75,6 +75,12 @@ editing, themed presentation playback, and HTML export.
   future CLI/MCP access.
 - Borrowed reference-app features are limited to capabilities that improve this
   product, especially advanced slide creation and stronger shell/agent UX.
+- The app shell includes an Agent-Native-style product rail and a real
+  `AgentSidebar` toggle. The sidebar starts closed until the full production
+  chat runtime is mounted.
+- Agents can create standard themeable DB-backed slide layouts through
+  `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
+  and closing.
 
 ## Candidate Reference Features
 
@@ -84,4 +90,6 @@ editing, themed presentation playback, and HTML export.
   menus, and slash-style block insertion.
 - Deck snapshots or version history.
 - Speaker notes and improved presenter controls.
-- Agent sidebar or terminal shell after matching backend agent endpoints exist.
+- Full production agent chat and terminal runtime wiring. The current app has
+  the shell surface and application-state route; action/MCP/A2A endpoints remain
+  the working agent integration.

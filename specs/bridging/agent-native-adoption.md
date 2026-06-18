@@ -19,8 +19,16 @@ Reference documentation:
 - The React root uses Agent-Native's shared `AppProviders`.
 - The app uses `createAgentNativeQueryClient()` so future action hooks share the
   framework's cache defaults.
-- Agent-Native base styles are loaded before local app styles; local theme
-  variables and slide themeability remain authoritative.
+- Agent-Native global styles remain behind a TODO because the reset/token layer
+  collides with the existing deck CSS. Local theme variables and slide
+  themeability remain authoritative during the shell migration.
+- The root is wrapped in a local `AppShell` that ports the useful shell shape
+  from the Agent-Native Slides app: left product rail, deck-scoped
+  `AgentSidebar`, and an agent toggle. The sidebar starts closed while the full
+  production chat handler is still pending.
+- A minimal `/_agent-native/application-state/:key` route supports the
+  framework sidebar's URL/application-state polling. It is intentionally narrow
+  and in-memory until the full Agent-Native server plugin is adopted.
 - `GET /_agent-native/actions/list-decks` is mounted as the first framework-style
   action bridge, backed by the existing presentation service.
 - Deck, slide, group, and layout JSON operations are available through
@@ -41,6 +49,7 @@ for now. The migration should replace one workflow at a time:
 | update presentation theme/name | `update-deck` mutating action, mounted and used by client |
 | list slides/groups | `list-slides` and `list-groups` read actions, mounted and used by client |
 | create slide | `create-slide` mutating action, mounted and used by client |
+| create normal slide | `create-normal-slide` mutating action translating reference layouts to typed blocks |
 | patch slide | `update-slide` mutating action, mounted and used by client |
 | delete slide | `delete-slide` mutating action, mounted and used by client |
 | create/update/delete groups | `create-group`, `update-group`, `delete-group`, mounted and used by client |
@@ -60,6 +69,24 @@ for now. The migration should replace one workflow at a time:
 - speaker notes/fullscreen presentation refinements;
 - import/export expansion after the core action surface is stable.
 
+## Ported From Agent-Native Slides
+
+Taken now:
+
+- Product shell pattern: left navigation rail plus right `AgentSidebar`.
+- Agent sidebar prompt suggestions scoped to deck creation/editing.
+- Normal slide layout vocabulary: title, section, bullets, two-column, quote,
+  metrics, and closing.
+- Application-state endpoint shape needed by the sidebar's URL sync.
+
+Translated rather than copied:
+
+- Reference Slides stores slide content as raw HTML. This app keeps its typed
+  block model so themeability, the existing editor, code slides, and HTML export
+  continue to work.
+- Reference template design systems remain out of scope; current app themes are
+  still the design contract.
+
 ## Non-Goals
 
 - Do not wholesale copy the reference app routes or data model.
@@ -70,8 +97,7 @@ for now. The migration should replace one workflow at a time:
 
 ## Current Slice
 
-Replace imperative `callAction` usage in render-load paths with
-`useActionQuery` and `useActionMutation`, starting with `HomePage`, then
-`PresentationPage`, `SlideEditorPage`, and `SettingsPage`. Keep `callAction`
-available for compatibility helpers and one-off flows where a React hook is not
-ergonomic.
+Port the reference Slides shell and normal-slide creation shape without
+wholesale replacement: `AppShell`, minimal application-state routing, and
+`create-normal-slide` are adopted while raw-HTML slides, design systems,
+comments, collaboration, and production chat remain separate slices.

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AppProviders, createAgentNativeQueryClient } from '@agent-native/core/client'
 import './index.css'
 import { applyAppTheme, getStoredAppTheme } from './lib/appTheme'
+import { AppShell } from './components/AppShell'
 
 // Apply saved app theme before first render to avoid flash
 applyAppTheme(getStoredAppTheme())
@@ -33,15 +34,17 @@ createRoot(document.getElementById('root')!).render(
       isPublicPath
     >
       <BrowserRouter>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/p/:id" element={<PresentationPage />} />
-            <Route path="/p/:id/edit/:sid" element={<SlideEditorPage />} />
-            <Route path="/p/:id/settings" element={<SettingsPage />} />
-            <Route path="/settings" element={<AppSettingsPage />} />
-          </Routes>
-        </Suspense>
+        <AppShell>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/p/:id" element={<PresentationPage />} />
+              <Route path="/p/:id/edit/:sid" element={<SlideEditorPage />} />
+              <Route path="/p/:id/settings" element={<SettingsPage />} />
+              <Route path="/settings" element={<AppSettingsPage />} />
+            </Routes>
+          </Suspense>
+        </AppShell>
       </BrowserRouter>
     </AppProviders>
   </StrictMode>,

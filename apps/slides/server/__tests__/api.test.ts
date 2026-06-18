@@ -109,6 +109,16 @@ describe('Agent Native action exposure', () => {
         name: expect.objectContaining({ type: 'string' }),
       },
     })
+    expect(res.body.actions['create-normal-slide']).toMatchObject({
+      name: 'create-normal-slide',
+      readOnly: false,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    })
   })
 
   it('POST /_agent-native/actions/invoke/:name runs an action as a tool caller', async () => {
@@ -168,7 +178,40 @@ describe('Agent Native action exposure', () => {
         id: 'update-slide',
         name: 'Update slide',
       }),
+      expect.objectContaining({
+        id: 'create-normal-slide',
+        name: 'Create normal slide',
+      }),
     ]))
+  })
+
+})
+
+describe('Agent Native framework core routes', () => {
+  const { app } = createTestContext({ seedSystemPresentation: false })
+
+  it('GET /_agent-native/poll and /demo/status provide no-op framework core routes', async () => {
+    const pollRes = await request(app).get('/_agent-native/poll?since=0')
+    expect(pollRes.status).toBe(200)
+    expect(pollRes.body).toEqual({ version: 0, events: [] })
+
+    const demoRes = await request(app).get('/_agent-native/demo/status')
+    expect(demoRes.status).toBe(200)
+    expect(demoRes.body).toEqual({ enabled: false, forced: false })
+  })
+
+  it('GET/PUT/DELETE /_agent-native/application-state stores shell state', async () => {
+    const value = { pathname: '/p/12', search: '', hash: '', searchParams: {} }
+    const putRes = await request(app).put('/_agent-native/application-state/__url__').send(value)
+
+    expect(putRes.status).toBe(200)
+
+    const getRes = await request(app).get('/_agent-native/application-state/__url__')
+    expect(getRes.status).toBe(200)
+    expect(getRes.body).toEqual(value)
+
+    expect((await request(app).delete('/_agent-native/application-state/__url__')).status).toBe(200)
+    expect((await request(app).get('/_agent-native/application-state/__url__')).status).toBe(204)
   })
 })
 
@@ -195,6 +238,27 @@ describe('Slides API', () => {
     expect(res.body.title).toBe('S1')
     expect(res.body.kind).toBe('db')
     expect(Array.isArray(res.body.blocks)).toBe(true)
+  })
+
+  it('POST /_agent-native/actions/create-normal-slide creates a standard layout slide', async () => {
+    const res = await request(app)
+      .post('/_agent-native/actions/create-normal-slide')
+      .send({
+        pid,
+        layout: 'bullets',
+        title: 'Agent Native Adoption',
+        label: 'Migration',
+        bullets: ['Keep themeability', 'Expose actions', 'Use the shell'],
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body.title).toBe('Agent Native Adoption')
+    expect(res.body.kind).toBe('db')
+    expect(res.body.blocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'title', type: 'text', markdown: '## Agent Native Adoption' }),
+      expect.objectContaining({ id: 'bullets', type: 'text', markdown: expect.stringContaining('Keep themeability') }),
+    ]))
+    expect(res.body.blocks.every((block: { x?: number }) => typeof block.x === 'number')).toBe(true)
   })
 
   it('PATCH /:sid updates a slide', async () => {

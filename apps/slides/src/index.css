@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "./themes.css";
 
+/* TODO(agent-native-shell): Import @agent-native/core/styles/agent-native.css
+   once the global token/reset collision is resolved. The app shell below uses
+   local variables so deck CSS stays stable during the migration. */
+
 @theme {
   --color-bg: #0d0f0e;
   --color-surface: #141a17;
@@ -39,4 +43,158 @@
   ::-webkit-scrollbar-track { background: var(--color-surface); }
   ::-webkit-scrollbar-thumb { background: var(--color-muted); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--color-text-dim); }
+}
+
+@layer components {
+  .slides-app-shell {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .slides-app-rail {
+    width: 224px;
+    flex: 0 0 224px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-right: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 92%, black);
+    color: var(--color-text);
+    transition: width 160ms ease, flex-basis 160ms ease;
+  }
+
+  .slides-app-shell[data-shell-collapsed="true"] .slides-app-rail {
+    width: 52px;
+    flex-basis: 52px;
+    align-items: center;
+  }
+
+  .slides-app-rail__brand {
+    height: 56px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0;
+    box-sizing: border-box;
+  }
+
+  .slides-app-rail__mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  .slides-app-rail__button,
+  .slides-app-rail__link,
+  .slides-app-rail__agent button {
+    min-width: 0;
+  }
+
+  .slides-app-rail__button {
+    height: 36px;
+    margin: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--color-text-dim);
+    cursor: pointer;
+  }
+
+  .slides-app-rail__button:hover {
+    color: var(--color-text);
+    background: var(--color-accent-subtle);
+  }
+
+  .slides-app-rail__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 0 8px;
+    box-sizing: border-box;
+  }
+
+  .slides-app-rail__link {
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    color: var(--color-text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 650;
+    box-sizing: border-box;
+  }
+
+  .slides-app-rail__link:hover {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  }
+
+  .slides-app-rail__link[data-active="true"] {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  .slides-app-shell[data-shell-collapsed="true"] .slides-app-rail__link {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .slides-app-rail__agent {
+    width: 100%;
+    margin-top: auto;
+    padding: 8px;
+    border-top: 1px solid var(--color-border);
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+  }
+
+  .slides-app-shell__main {
+    min-width: 0;
+    height: 100%;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  @media (max-width: 760px) {
+    .slides-app-rail {
+      width: 52px;
+      flex-basis: 52px;
+      align-items: center;
+    }
+
+    .slides-app-rail__brand span,
+    .slides-app-rail__link span {
+      display: none;
+    }
+
+    .slides-app-rail__link {
+      justify-content: center;
+      padding: 0;
+    }
+  }
 }

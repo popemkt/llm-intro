@@ -121,6 +121,8 @@ editing, themed presentation playback, and HTML export.
 - Users can insert visual editor blocks from the keyboard with slash commands:
   `/title`, `/bullets`, `/quote`, `/metric`, `/text`, `/image`, `/iframe`,
   `/embed`, and `/shape`.
+- Users can edit text blocks directly on the slide canvas and use the selected
+  block menu to edit text, duplicate blocks, move layer order, and delete blocks.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
@@ -136,7 +138,7 @@ editing, themed presentation playback, and HTML export.
 
 - Hosted LLM prompt-to-deck streaming that emits slides incrementally into the
   current deck model.
-- Inline text editing and block bubble menus.
+- Additional visual editor refinements such as richer inline formatting controls.
 - Additional presenter refinements such as timer, next-slide preview, and
   external presenter display.
 - Full production agent chat wiring. The current app has the shell surface,

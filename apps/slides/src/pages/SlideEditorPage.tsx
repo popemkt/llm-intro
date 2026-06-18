@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Image as ImageIcon, Globe, Square, Trash2, Settings, Circle, Pill } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  Edit3,
+  Globe,
+  Image as ImageIcon,
+  Pill,
+  Settings,
+  Square,
+  Trash2,
+  Circle,
+  Check,
+} from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
@@ -91,6 +104,7 @@ export function SlideEditorPage() {
   const [notes, setNotes] = useState("");
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -351,10 +365,41 @@ export function SlideEditorPage() {
   const deleteBlock = useCallback((id: string) => {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedId((s) => (s === id ? null : s));
+    setEditingTextId((s) => (s === id ? null : s));
   }, []);
 
   const updateBlock = useCallback(<K extends Block>(id: string, patch: Partial<K>) => {
     setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
+  }, []);
+
+  const duplicateBlock = useCallback((id: string) => {
+    const source = blocksRef.current.find((block) => block.id === id);
+    if (!source) return;
+    const copy: Block = {
+      ...source,
+      id: nanoid(),
+      x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
+      y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
+    };
+    setBlocks((prev) => {
+      const index = prev.findIndex((block) => block.id === id);
+      if (index < 0) return [...prev, copy];
+      return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)];
+    });
+    setSelectedId(copy.id);
+    setEditingTextId(null);
+  }, []);
+
+  const moveBlockLayer = useCallback((id: string, direction: "forward" | "back") => {
+    setBlocks((prev) => {
+      const index = prev.findIndex((block) => block.id === id);
+      if (index < 0) return prev;
+      const nextIndex = direction === "forward" ? index + 1 : index - 1;
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
   }, []);
 
   const selectedBlock = blocks.find((b) => b.id === selectedId) ?? null;
@@ -585,6 +630,7 @@ export function SlideEditorPage() {
 
             {blocks.map((block) => {
               const isSelected = selectedId === block.id;
+              const isInlineEditing = editingTextId === block.id && block.type === "text";
               const x = block.x ?? 5;
               const y = block.y ?? 5;
               const w = block.w ?? 80;
@@ -593,6 +639,12 @@ export function SlideEditorPage() {
                 <div
                   key={block.id}
                   onPointerDown={(e) => startDrag(e, block, "move")}
+                  onDoubleClick={(e) => {
+                    if (block.type !== "text") return;
+                    e.stopPropagation();
+                    setSelectedId(block.id);
+                    setEditingTextId(block.id);
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedId(block.id);
@@ -608,15 +660,41 @@ export function SlideEditorPage() {
                       ? "2px solid var(--theme-accent, #25d366)"
                       : "1px dashed transparent",
                     outlineOffset: 1,
-                    overflow: "hidden",
+                    overflow: isSelected ? "visible" : "hidden",
                     userSelect: "none",
                     boxSizing: "border-box",
                   }}
                 >
-                  <CanvasBlockContent block={block} />
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      overflow: "hidden",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {isInlineEditing ? (
+                      <InlineTextBlockEditor
+                        block={block}
+                        onChange={(markdown) => updateBlock(block.id, { markdown })}
+                        onDone={() => setEditingTextId(null)}
+                      />
+                    ) : (
+                      <CanvasBlockContent block={block} />
+                    )}
+                  </div>
 
                   {isSelected && (
                     <>
+                      <BlockBubbleMenu
+                        canEditText={block.type === "text"}
+                        onEditText={() => setEditingTextId(block.id)}
+                        onDuplicate={() => duplicateBlock(block.id)}
+                        onBringForward={() => moveBlockLayer(block.id, "forward")}
+                        onSendBack={() => moveBlockLayer(block.id, "back")}
+                        onDelete={() => deleteBlock(block.id)}
+                        editing={isInlineEditing}
+                      />
                       {/* Resize handles */}
                       {(["tl", "tr", "bl", "br"] as const).map((handle) => (
                         <div
@@ -1005,6 +1083,140 @@ export function SlideEditorPage() {
 }
 
 // ─── Canvas block content (WYSIWYG preview) ─────────────────────────────────
+
+function BlockBubbleMenu({
+  canEditText,
+  editing,
+  onBringForward,
+  onDelete,
+  onDuplicate,
+  onEditText,
+  onSendBack,
+}: {
+  canEditText: boolean;
+  editing: boolean;
+  onBringForward: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+  onEditText: () => void;
+  onSendBack: () => void;
+}) {
+  const button: React.CSSProperties = {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    border: `1px solid ${C.border}`,
+    background: C.surface,
+    color: C.textDim,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
+  };
+
+  return (
+    <div
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      style={{
+        position: "absolute",
+        top: -36,
+        right: 0,
+        zIndex: 30,
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        padding: 4,
+        borderRadius: 8,
+        background: "rgba(13, 15, 14, 0.92)",
+        border: `1px solid ${C.border}`,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+      }}
+    >
+      {canEditText && (
+        <button
+          type="button"
+          onClick={onEditText}
+          title={editing ? "Editing text" : "Edit text"}
+          style={{
+            ...button,
+            color: editing ? C.accent : C.textDim,
+            background: editing ? C.accentSubtle : C.surface,
+          }}
+        >
+          {editing ? <Check size={13} /> : <Edit3 size={13} />}
+        </button>
+      )}
+      <button type="button" onClick={onDuplicate} title="Duplicate block" style={button}>
+        <Copy size={13} />
+      </button>
+      <button type="button" onClick={onBringForward} title="Bring forward" style={button}>
+        <ArrowUp size={13} />
+      </button>
+      <button type="button" onClick={onSendBack} title="Send backward" style={button}>
+        <ArrowDown size={13} />
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        title="Delete block"
+        style={{ ...button, color: "#ff8a8a" }}
+      >
+        <Trash2 size={13} />
+      </button>
+    </div>
+  );
+}
+
+function InlineTextBlockEditor({
+  block,
+  onChange,
+  onDone,
+}: {
+  block: Extract<Block, { type: "text" }>;
+  onChange: (markdown: string) => void;
+  onDone: () => void;
+}) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  return (
+    <textarea
+      ref={inputRef}
+      value={block.markdown}
+      onChange={(event) => onChange(event.target.value)}
+      onBlur={onDone}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          event.preventDefault();
+          onDone();
+        }
+      }}
+      placeholder="Type markdown..."
+      style={{
+        width: "100%",
+        height: "100%",
+        resize: "none",
+        boxSizing: "border-box",
+        border: "none",
+        outline: "none",
+        background: "rgba(13, 15, 14, 0.62)",
+        color: "var(--theme-text)",
+        padding: "6px 10px",
+        fontFamily: "JetBrains Mono, monospace",
+        fontSize: "clamp(0.58rem, 0.82vw, 0.78rem)",
+        lineHeight: 1.5,
+      }}
+    />
+  );
+}
 
 function CanvasBlockContent({ block }: { block: Block }) {
   switch (block.type) {

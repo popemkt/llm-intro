@@ -46,8 +46,8 @@ Reference documentation:
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
   listing, normal slide creation, multi-slide outline creation, group creation,
-  deck theme changes, theme catalog/app-shell changes, HTML export links, and
-  active deck summaries, and deck snapshot capture/listing.
+  deck theme changes, theme catalog/app-shell changes, HTML export links,
+  active deck summaries, and deck snapshot capture/listing/restore.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -85,7 +85,7 @@ for now. The migration should replace one workflow at a time:
 | change app shell theme | `set-app-theme` mutating action that queues a browser-local app theme command |
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
 | export HTML | `get-deck-export` read action returns the existing `/api` download URL |
-| create/list/read snapshots | `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot` actions over captured typed deck state |
+| create/list/read/restore snapshots | `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, `restore-deck-snapshot` actions over captured typed deck state |
 
 ## Features To Borrow From The Reference Slides App
 
@@ -96,7 +96,7 @@ for now. The migration should replace one workflow at a time:
 - an Agent-Native frame/panel experience that supports App mode for product
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
-- snapshot restore/version-history UI;
+- version-history UI for browsing and restoring snapshots;
 - speaker notes/fullscreen presentation refinements;
 - import/export expansion after the core action surface is stable.
 
@@ -131,9 +131,10 @@ Taken now:
 - Theme catalog and app-shell-theme command exposure through `get-theme-catalog`
   and `set-app-theme`, preserving this app's existing `ThemeName` model while
   giving agents design context.
-- Deck snapshot capture and inspection through `create-deck-snapshot`,
-  `list-deck-snapshots`, and `get-deck-snapshot`; restore remains a separate
-  consequential slice.
+- Deck snapshot capture, inspection, and restore through
+  `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, and
+  `restore-deck-snapshot`; restore is consequential and requires an explicit
+  snapshot id.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

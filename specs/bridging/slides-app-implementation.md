@@ -78,6 +78,7 @@ framework boundary.
 | Persist deck snapshots | `deck_snapshots` migration, snapshot repository/service | Vitest/API |
 | Create snapshot | `create-deck-snapshot` action captures deck, slides, and groups | Vitest/API plus App Mode smoke |
 | List/read snapshots | `list-deck-snapshots`, `get-deck-snapshot` actions | Vitest/API plus App Mode smoke |
+| Restore snapshot | `restore-deck-snapshot` action replaces the live deck from a snapshot id | Vitest/API |
 
 ## Presentation And Editor UI
 
@@ -208,7 +209,9 @@ multi-slide normal outline, creating a group, changing the deck theme, and
 preparing an HTML export link. It can also summarize the active deck through
 `get-active-deck-context`, list theme metadata through `get-theme-catalog`, and
 queue app-shell theme changes through `set-app-theme`. It can capture and list
-deck snapshots through `create-deck-snapshot` and `list-deck-snapshots`. This
+deck snapshots through `create-deck-snapshot` and `list-deck-snapshots`, and
+restore a snapshot through `restore-deck-snapshot` when the prompt includes an
+explicit snapshot id. This
 gives the embedded panel a real product-safe tool path without requiring a
 Builder.io login. Repository self-modification is still Code Mode and should go
 through the local authenticated CLI bridge or a trusted hosted frame.

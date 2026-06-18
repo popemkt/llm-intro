@@ -277,6 +277,21 @@ function responseTextForCreatedSnapshot(result: unknown) {
   }.`;
 }
 
+function responseTextForRestoredSnapshot(result: unknown) {
+  if (!result || typeof result !== "object") return "Restored the deck snapshot.";
+  const snapshot =
+    "snapshot" in result && result.snapshot && typeof result.snapshot === "object"
+      ? result.snapshot
+      : null;
+  const deck =
+    "deck" in result && result.deck && typeof result.deck === "object" ? result.deck : null;
+  const label = snapshot && "label" in snapshot ? getText(snapshot.label) : "";
+  const deckName = deck && "name" in deck ? getText(deck.name) : "";
+  return `Restored ${deckName ? `"${deckName}"` : "this deck"} from snapshot${
+    label ? ` "${label}"` : ""
+  }.`;
+}
+
 async function handleNavigationPrompt(
   actions: SlideDeckActions,
   prompt: string,
@@ -381,6 +396,30 @@ async function handleThemePrompt(actions: SlideDeckActions, prompt: string, norm
   return null;
 }
 
+async function handleSnapshotPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number,
+) {
+  if (/\b(create|save|capture|make)\b.*\bsnapshots?\b/.test(normalized)) {
+    const label = inferTitle(prompt, "Snapshot");
+    const snapshot = await runAction(actions["create-deck-snapshot"], { pid: deckId, label });
+    return responseTextForCreatedSnapshot(snapshot);
+  }
+
+  if (/\b(restore|revert|rollback|roll back)\b.*\bsnapshots?\b/.test(normalized)) {
+    const snapshotId = inferPositiveIntegerAfter(prompt, ["snapshot"]);
+    if (!snapshotId) {
+      return "Tell me which snapshot id to restore, for example: restore snapshot 3.";
+    }
+    const restored = await runAction(actions["restore-deck-snapshot"], { pid: deckId, snapshotId });
+    return responseTextForRestoredSnapshot(restored);
+  }
+
+  return null;
+}
+
 async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
@@ -416,11 +455,8 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     return `Changed this deck's theme to ${theme}.`;
   }
 
-  if (/\b(create|save|capture|make)\b.*\bsnapshots?\b/.test(normalized)) {
-    const label = inferTitle(prompt, "Snapshot");
-    const snapshot = await runAction(actions["create-deck-snapshot"], { pid: deckId, label });
-    return responseTextForCreatedSnapshot(snapshot);
-  }
+  const snapshotResponse = await handleSnapshotPrompt(actions, prompt, normalized, deckId);
+  if (snapshotResponse) return snapshotResponse;
 
   if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
     const title = inferTitle(prompt, "Group");

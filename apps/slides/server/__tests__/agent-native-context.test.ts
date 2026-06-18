@@ -2,6 +2,23 @@ import { beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createTestContext } from "./test-context.js";
 
+function expectPublicAction(
+  actions: Record<string, unknown>,
+  name: string,
+  input: { readOnly: boolean; isConsequential?: boolean },
+) {
+  expect(actions[name]).toMatchObject({
+    name,
+    ...input,
+    exposure: {
+      http: true,
+      agentTool: true,
+      mcp: true,
+      a2a: true,
+    },
+  });
+}
+
 describe("Agent Native app context actions", () => {
   const { app } = createTestContext({ seedSystemPresentation: false });
 
@@ -9,75 +26,16 @@ describe("Agent Native app context actions", () => {
     const res = await request(app).get("/_agent-native/actions");
 
     expect(res.status).toBe(200);
-    expect(res.body.actions["get-current-app-context"]).toMatchObject({
-      name: "get-current-app-context",
-      readOnly: true,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
-    });
-    expect(res.body.actions["navigate-app"]).toMatchObject({
-      name: "navigate-app",
+    expectPublicAction(res.body.actions, "get-current-app-context", { readOnly: true });
+    expectPublicAction(res.body.actions, "navigate-app", { readOnly: false });
+    expectPublicAction(res.body.actions, "get-active-deck-context", { readOnly: true });
+    expectPublicAction(res.body.actions, "get-theme-catalog", { readOnly: true });
+    expectPublicAction(res.body.actions, "set-app-theme", { readOnly: false });
+    expectPublicAction(res.body.actions, "create-deck-snapshot", { readOnly: false });
+    expectPublicAction(res.body.actions, "list-deck-snapshots", { readOnly: true });
+    expectPublicAction(res.body.actions, "restore-deck-snapshot", {
       readOnly: false,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
-    });
-    expect(res.body.actions["get-active-deck-context"]).toMatchObject({
-      name: "get-active-deck-context",
-      readOnly: true,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
-    });
-    expect(res.body.actions["get-theme-catalog"]).toMatchObject({
-      name: "get-theme-catalog",
-      readOnly: true,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
-    });
-    expect(res.body.actions["set-app-theme"]).toMatchObject({
-      name: "set-app-theme",
-      readOnly: false,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
-    });
-    expect(res.body.actions["create-deck-snapshot"]).toMatchObject({
-      name: "create-deck-snapshot",
-      readOnly: false,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
-    });
-    expect(res.body.actions["list-deck-snapshots"]).toMatchObject({
-      name: "list-deck-snapshots",
-      readOnly: true,
-      exposure: {
-        http: true,
-        agentTool: true,
-        mcp: true,
-        a2a: true,
-      },
+      isConsequential: true,
     });
   });
 
@@ -239,6 +197,32 @@ describe("Agent Native deck snapshots", () => {
     expect(getRes.body.payload.slides).toEqual([
       expect.objectContaining({ title: "Snapshot Slide" }),
     ]);
+  });
+
+  it("POST /_agent-native/actions/restore-deck-snapshot replaces live deck state", async () => {
+    const snapshotRes = await request(app)
+      .post("/_agent-native/actions/create-deck-snapshot")
+      .send({ pid, label: "Original" });
+
+    await request(app)
+      .post(`/api/presentations/${pid}/slides`)
+      .send({ title: "Later Slide" })
+      .expect(201);
+
+    const restoreRes = await request(app)
+      .post("/_agent-native/actions/restore-deck-snapshot")
+      .send({ pid, snapshotId: snapshotRes.body.id });
+
+    expect(restoreRes.status).toBe(200);
+    expect(restoreRes.body).toMatchObject({
+      snapshot: { id: snapshotRes.body.id, label: "Original" },
+      deck: { id: pid, name: "Snapshot Deck" },
+      slides: [expect.objectContaining({ title: "Snapshot Slide" })],
+      groups: [expect.objectContaining({ title: "Snapshot Group" })],
+    });
+
+    const slidesRes = await request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`);
+    expect(slidesRes.body).toEqual([expect.objectContaining({ title: "Snapshot Slide" })]);
   });
 });
 
@@ -439,6 +423,28 @@ describe("App agent snapshot runtime", () => {
 
     expect(listRes.status).toBe(200);
     expect(listRes.body.text).toContain("Checkpoint");
+  });
+
+  it("POST /_agent-native/app-agent restores a named snapshot id", async () => {
+    const snapshotRes = await request(app)
+      .post("/_agent-native/actions/create-deck-snapshot")
+      .send({ pid, label: "Runtime Original" });
+    await request(app)
+      .post(`/api/presentations/${pid}/slides`)
+      .send({ title: "Runtime Later Slide" });
+
+    const restoreRes = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: `restore snapshot ${snapshotRes.body.id}`,
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(restoreRes.status).toBe(200);
+    expect(restoreRes.body.text).toContain("Runtime Original");
+
+    const slidesRes = await request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`);
+    expect(slidesRes.body).toEqual([expect.objectContaining({ title: "Runtime Slide" })]);
   });
 });
 

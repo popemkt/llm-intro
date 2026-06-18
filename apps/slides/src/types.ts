@@ -5,6 +5,7 @@ export type {
   ApiPresentation,
   ApiDeckSnapshot,
   ApiDeckSnapshotDetail,
+  ApiDeckSnapshotRestoreResult,
   ApiSlide,
   ApiSlideGroup,
   Block,

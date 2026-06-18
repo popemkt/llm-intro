@@ -1,5 +1,9 @@
 import type Database from "better-sqlite3";
-import type { ApiDeckSnapshot, ApiDeckSnapshotDetail } from "@llm-intro/api-contract";
+import type {
+  ApiDeckSnapshot,
+  ApiDeckSnapshotDetail,
+  ApiDeckSnapshotRestoreResult,
+} from "@llm-intro/api-contract";
 
 type SnapshotRow = {
   id: number;
@@ -24,6 +28,11 @@ function mapSnapshotDetail(row: SnapshotRow): ApiDeckSnapshotDetail {
   };
 }
 
+function snapshotDetailToSummary(snapshot: ApiDeckSnapshotDetail): ApiDeckSnapshot {
+  const { payload: _payload, ...summary } = snapshot;
+  return summary;
+}
+
 export function createSnapshotsRepository(db: Database.Database) {
   const listStmt = db.prepare(
     "SELECT * FROM deck_snapshots WHERE presentation_id=? ORDER BY created_at DESC, id DESC",
@@ -33,6 +42,21 @@ export function createSnapshotsRepository(db: Database.Database) {
     INSERT INTO deck_snapshots
       (presentation_id, label, deck_name, slide_count, group_count, payload)
     VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  const updatePresentationStmt = db.prepare(
+    "UPDATE presentations SET name=?, theme=?, updated_at=datetime('now') WHERE id=?",
+  );
+  const deleteSlidesStmt = db.prepare("DELETE FROM slides WHERE presentation_id=?");
+  const deleteGroupsStmt = db.prepare("DELETE FROM slide_groups WHERE presentation_id=?");
+  const insertGroupStmt = db.prepare(`
+    INSERT INTO slide_groups
+      (id, presentation_id, title, position, collapsed, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertSlideStmt = db.prepare(`
+    INSERT INTO slides
+      (id, presentation_id, position, group_id, kind, code_id, title, blocks, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   return {
@@ -64,6 +88,50 @@ export function createSnapshotsRepository(db: Database.Database) {
         JSON.stringify(input.payload),
       );
       return this.getById(presentationId, Number(lastInsertRowid))!;
+    },
+
+    restore(presentationId: number, snapshot: ApiDeckSnapshotDetail): ApiDeckSnapshotRestoreResult {
+      const { deck, groups, slides } = snapshot.payload;
+
+      db.transaction(() => {
+        updatePresentationStmt.run(deck.name, deck.theme, presentationId);
+        deleteSlidesStmt.run(presentationId);
+        deleteGroupsStmt.run(presentationId);
+
+        for (const group of groups) {
+          insertGroupStmt.run(
+            group.id,
+            presentationId,
+            group.title,
+            group.position,
+            group.collapsed ? 1 : 0,
+            group.created_at,
+            group.updated_at,
+          );
+        }
+
+        for (const slide of slides) {
+          insertSlideStmt.run(
+            slide.id,
+            presentationId,
+            slide.position,
+            slide.group_id,
+            slide.kind,
+            slide.code_id,
+            slide.title,
+            JSON.stringify(slide.blocks),
+            slide.created_at,
+            slide.updated_at,
+          );
+        }
+      })();
+
+      return {
+        snapshot: snapshotDetailToSummary(snapshot),
+        deck: { ...deck, id: presentationId },
+        groups: groups.map((group) => ({ ...group, presentation_id: presentationId })),
+        slides: slides.map((slide) => ({ ...slide, presentation_id: presentationId })),
+      };
     },
   };
 }

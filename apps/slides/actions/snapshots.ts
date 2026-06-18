@@ -71,5 +71,26 @@ export function createSnapshotActions(snapshotsService: SnapshotsService) {
       },
       run: ({ pid, label }) => snapshotsService.create(pid, { label }),
     }),
+
+    "restore-deck-snapshot": defineAction({
+      description:
+        "Restore a deck to one saved snapshot. This replaces the live deck, slide list, and groups.",
+      schema: z.object({
+        pid: z.coerce.number().int().positive(),
+        snapshotId: z.coerce.number().int().positive(),
+      }),
+      http: {
+        method: "POST",
+        path: "restore-deck-snapshot",
+      },
+      requiresAuth: false,
+      publicAgent: {
+        ...publicWriteAction,
+        title: "Restore deck snapshot",
+        description:
+          "Restore a deck to one saved snapshot. This replaces the live deck, slide list, and groups.",
+      },
+      run: ({ pid, snapshotId }) => snapshotsService.restore(pid, snapshotId),
+    }),
   };
 }

@@ -89,6 +89,13 @@ export interface ApiDeckSnapshotDetail extends ApiDeckSnapshot {
   };
 }
 
+export interface ApiDeckSnapshotRestoreResult {
+  snapshot: ApiDeckSnapshot;
+  deck: ApiPresentation;
+  slides: ApiSlide[];
+  groups: ApiSlideGroup[];
+}
+
 export interface LayoutInput {
   ungrouped: number[];
   groups: Array<{ id: number; slideIds: number[] }>;

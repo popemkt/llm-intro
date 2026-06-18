@@ -46,5 +46,12 @@ export function createSnapshotsService(
         payload: { deck, slides, groups },
       });
     },
+
+    restore(presentationId: number, snapshotId: number) {
+      presentationsService.get(presentationId);
+      const snapshot = snapshotsRepo.getById(presentationId, snapshotId);
+      if (!snapshot) throw new AppError(404, "snapshot not found");
+      return snapshotsRepo.restore(presentationId, snapshot);
+    },
   };
 }

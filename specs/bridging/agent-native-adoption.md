@@ -68,4 +68,5 @@ for now. The migration should replace one workflow at a time:
 
 Replace imperative `callAction` usage in render-load paths with
 `useActionQuery` and `useActionMutation`, starting with `HomePage`, then
-`PresentationPage`.
+`PresentationPage`, then `SlideEditorPage`. Keep `callAction` available for
+compatibility helpers and one-off flows where a React hook is not ergonomic.

@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Type, Image as ImageIcon, Globe, Square, Trash2, Settings, Circle, Pill } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import ReactMarkdown from 'react-markdown'
-import type { Block, ShapeBlock, ThemeName } from '@/types'
-import { api, getErrorMessage } from '@/api/client'
-import { data } from '@/data'
+import { useActionMutation, useActionQuery } from '@agent-native/core/client'
+import type { ApiPresentation, ApiSlide, Block, ShapeBlock, ThemeName } from '@/types'
+import { getErrorMessage } from '@/api/client'
 import { C } from '@/design/tokens'
 import { getReadableTextColor } from '@/lib/color'
 import { Breadcrumb } from '@/components/Breadcrumb'
@@ -58,6 +58,7 @@ export function SlideEditorPage() {
   const navigate = useNavigate()
   const pid = Number(pidStr)
   const sid = Number(sidStr)
+  const validRoute = Boolean(pidStr && sidStr && !isNaN(pid) && !isNaN(sid))
 
   const [title, setTitle]       = useState('Untitled')
   const [presName, setPresName] = useState('')
@@ -75,6 +76,10 @@ export function SlideEditorPage() {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const presentationQuery = useActionQuery<ApiPresentation>('get-deck', { id: pid }, { enabled: validRoute })
+  const slidesQuery = useActionQuery<ApiSlide[]>('list-slides', { pid }, { enabled: validRoute })
+  const updateSlide = useActionMutation<ApiSlide, { pid: number; sid: number; title?: string; blocks?: unknown[] }>('update-slide', { method: 'PUT' })
+
   // Current values ref (for keyboard handler)
   const blocksRef = useRef(blocks)
   const titleRef = useRef(title)
@@ -84,26 +89,63 @@ export function SlideEditorPage() {
   useEffect(() => {
     setLoading(true)
     setLoadError(null)
-    Promise.all([data.presentations.get(pid), data.slides.list(pid)])
-      .then(([pres, slides]) => {
-        const slide = slides.find(s => s.id === sid)
-        if (!slide) {
-          setLoadError('Slide not found')
-          return
-        }
-        if (slide.kind !== 'db') {
-          setLoadError('Only custom slides can be edited here')
-          return
-        }
-        setPresName(pres.name)
-        setTitle(slide.title)
-        setBlocks(slide.blocks)
-        setTheme(pres.theme)
-        hasLoadedRef.current = true
-      })
-      .catch(err => setLoadError(getErrorMessage(err)))
-      .finally(() => setLoading(false))
+    setSaveError(null)
+    setSaveStatus('idle')
+    hasLoadedRef.current = false
   }, [pid, sid])
+
+  useEffect(() => {
+    if (!validRoute) {
+      setLoadError('Invalid slide route')
+      setLoading(false)
+      return
+    }
+    if (hasLoadedRef.current) return
+    if (presentationQuery.error) {
+      setLoadError(getErrorMessage(presentationQuery.error))
+      setLoading(false)
+      return
+    }
+    if (slidesQuery.error) {
+      setLoadError(getErrorMessage(slidesQuery.error))
+      setLoading(false)
+      return
+    }
+    if (presentationQuery.isLoading || slidesQuery.isLoading) return
+
+    const pres = presentationQuery.data
+    const slides = slidesQuery.data as ApiSlide[] | undefined
+    if (!pres || !slides) return
+
+    const slide = slides.find(s => s.id === sid)
+    if (!slide) {
+      setLoadError('Slide not found')
+      setLoading(false)
+      return
+    }
+    if (slide.kind !== 'db') {
+      setLoadError('Only custom slides can be edited here')
+      setLoading(false)
+      return
+    }
+
+    setPresName(pres.name)
+    setTitle(slide.title)
+    setBlocks(slide.blocks)
+    setTheme(pres.theme)
+    hasLoadedRef.current = true
+    setLoading(false)
+  }, [
+    pid,
+    sid,
+    validRoute,
+    presentationQuery.data,
+    presentationQuery.error,
+    presentationQuery.isLoading,
+    slidesQuery.data,
+    slidesQuery.error,
+    slidesQuery.isLoading,
+  ])
 
   // Global pointer handlers (ref-based — no re-render on drag)
   useEffect(() => {
@@ -154,7 +196,7 @@ export function SlideEditorPage() {
       setSaveStatus('saving')
       setSaveError(null)
       try {
-        await api.slides.update(pid, sid, { title: titleRef.current, blocks: blocksRef.current })
+        await updateSlide.mutateAsync({ pid, sid, title: titleRef.current, blocks: blocksRef.current })
         setSaveStatus('saved')
         if (savedStatusTimerRef.current) clearTimeout(savedStatusTimerRef.current)
         savedStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
@@ -172,13 +214,13 @@ export function SlideEditorPage() {
     setSaveStatus('saving')
     setSaveError(null)
     try {
-      await api.slides.update(pid, sid, { title: titleRef.current, blocks: blocksRef.current })
+      await updateSlide.mutateAsync({ pid, sid, title: titleRef.current, blocks: blocksRef.current })
       navigate(`/p/${pid}`)
     } catch (err) {
       setSaveStatus('error')
       setSaveError(getErrorMessage(err))
     }
-  }, [pid, sid, navigate])
+  }, [pid, sid, navigate, updateSlide])
 
   // Keyboard shortcuts
   useEffect(() => {

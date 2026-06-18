@@ -83,6 +83,8 @@ editing, themed presentation playback, and HTML export.
   and closing.
 - Agents can create a sequence of standard DB-backed slides from a structured
   outline through `create-normal-slides`.
+- Users can create common normal slide layouts from the overview add tile
+  without opening the manual editor first.
 - In local development, trusted maintainers can use local authenticated coding
   CLIs such as Codex or Claude Code through the Agent-Native terminal bridge.
   This is a Code Mode capability and must not imply production shell access.

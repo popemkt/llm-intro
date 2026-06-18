@@ -49,6 +49,7 @@ framework boundary.
 | List slides | `list-slides` action, slide service | Vitest API tests |
 | Create slide | `create-slide` action, `PresentationPage` handlers | Vitest/API plus browser flow |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
+| Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
 | Rename slide | `update-slide` action | Browser flow or focused smoke |
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |

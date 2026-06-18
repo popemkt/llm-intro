@@ -26,6 +26,7 @@ export type UnifiedSlide =
       id: number;
       groupId: number | null;
       title: string;
+      notes: string;
       component: ComponentType<SlideProps>;
     }
   | {
@@ -33,6 +34,7 @@ export type UnifiedSlide =
       id: number;
       groupId: number | null;
       title: string;
+      notes: string;
       blocks: Block[];
       theme: ThemeName;
     };

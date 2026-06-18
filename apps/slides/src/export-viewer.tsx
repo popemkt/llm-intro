@@ -47,6 +47,7 @@ function resolve(
       id: apiSlide.id,
       groupId,
       title: apiSlide.title,
+      notes: apiSlide.notes,
       component: registry[apiSlide.code_id],
     };
   }
@@ -56,6 +57,7 @@ function resolve(
     id: apiSlide.id,
     groupId,
     title: apiSlide.title,
+    notes: apiSlide.notes,
     blocks: apiSlide.blocks,
     theme: pres.theme,
   };

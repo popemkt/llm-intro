@@ -119,6 +119,8 @@ editing, themed presentation playback, and HTML export.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
+- Presenter mode displays the active slide's speaker notes above the controls
+  when notes are present. Fullscreen mode remains audience-only.
 - In local development, trusted maintainers can use local authenticated coding
   CLIs such as Codex or Claude Code through the Agent-Native terminal bridge.
   This is a Code Mode capability and must not imply production shell access.
@@ -130,7 +132,8 @@ editing, themed presentation playback, and HTML export.
 - Prompt-to-deck generation that streams usable slides into the current deck
   model.
 - Inline text editing, block bubble menus, and slash-style keyboard insertion.
-- Presenter controls for displaying speaker notes during live presentation.
+- Additional presenter refinements such as timer, next-slide preview, and
+  external presenter display.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and
   local-development terminal bridge; hosted production chat remains a separate

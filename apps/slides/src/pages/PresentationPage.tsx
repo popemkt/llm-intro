@@ -15,11 +15,34 @@ function toUnified(slide: ApiSlide, theme: ApiPresentation["theme"]): UnifiedSli
     const component = codeSlideRegistry[slide.code_id ?? ""];
     if (!component) {
       console.warn(`Unknown code_id: ${slide.code_id}`);
-      return { kind: "db", id: slide.id, groupId, title: slide.title, blocks: [], theme };
+      return {
+        kind: "db",
+        id: slide.id,
+        groupId,
+        title: slide.title,
+        notes: slide.notes,
+        blocks: [],
+        theme,
+      };
     }
-    return { kind: "code", id: slide.id, groupId, title: slide.title, component };
+    return {
+      kind: "code",
+      id: slide.id,
+      groupId,
+      title: slide.title,
+      notes: slide.notes,
+      component,
+    };
   }
-  return { kind: "db", id: slide.id, groupId, title: slide.title, blocks: slide.blocks, theme };
+  return {
+    kind: "db",
+    id: slide.id,
+    groupId,
+    title: slide.title,
+    notes: slide.notes,
+    blocks: slide.blocks,
+    theme,
+  };
 }
 
 const normalSlideTitles: Record<NormalSlideQuickLayout, string> = {

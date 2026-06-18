@@ -36,6 +36,40 @@ const SHORTCUTS = [
   { key: "?", desc: "Toggle shortcuts" },
 ];
 
+function SpeakerNotesPanel({ notes }: { notes: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.18 }}
+      className="rounded-xl border border-(--color-border) p-3"
+      style={{
+        position: "absolute",
+        left: 24,
+        right: 24,
+        bottom: 68,
+        zIndex: 20,
+        maxHeight: 120,
+        overflow: "auto",
+        background: "color-mix(in srgb, var(--color-surface) 94%, transparent)",
+        color: "var(--color-text-dim)",
+        fontSize: 12,
+        lineHeight: 1.5,
+        boxShadow: "0 8px 32px rgba(0,0,0,.35)",
+      }}
+    >
+      <div
+        className="text-[9px] font-mono uppercase tracking-widest mb-1"
+        style={{ color: "var(--color-muted)" }}
+      >
+        Speaker notes
+      </div>
+      <div style={{ whiteSpace: "pre-wrap" }}>{notes}</div>
+    </motion.div>
+  );
+}
+
 export function PresentationView({
   slides,
   activeIndex,
@@ -128,6 +162,7 @@ export function PresentationView({
   }
 
   const progress = slides.length > 1 ? ((activeIndex + 1) / slides.length) * 100 : 100;
+  const speakerNotes = activeSlide.notes.trim();
 
   return (
     <motion.div
@@ -207,6 +242,11 @@ export function PresentationView({
           </div>
         </div>
       </div>
+
+      {/* Speaker notes — presenter mode only */}
+      <AnimatePresence>
+        {controlsVisible && speakerNotes && <SpeakerNotesPanel notes={speakerNotes} />}
+      </AnimatePresence>
 
       {/* Bottom bar — auto-hides after 3s of inactivity */}
       <AnimatePresence>

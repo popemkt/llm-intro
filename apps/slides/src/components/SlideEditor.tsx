@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Trash2, GripVertical, Type, Image as ImageIcon, Globe, Square, Circle, Pill } from 'lucide-react'
 import { nanoid } from 'nanoid'
+import { useActionMutation } from '@agent-native/core/client'
 import type { Block, ShapeBlock, ApiSlide, ThemeName } from '@/types'
-import { api } from '@/api/client'
 import { DbSlideRenderer } from './DbSlideRenderer'
 import { T } from '@/design/tokens'
 
@@ -42,6 +42,7 @@ export function SlideEditor({ pid, slide, theme, onClose, onSaved }: Props) {
   const [title, setTitle] = useState(slide.title)
   const [blocks, setBlocks] = useState<Block[]>(slide.blocks)
   const [saving, setSaving] = useState(false)
+  const updateSlide = useActionMutation<ApiSlide, { pid: number; sid: number; title?: string; blocks?: unknown[] }>('update-slide', { method: 'PUT' })
 
   const addBlock = useCallback((type: Block['type']) => {
     setBlocks(b => [...b, makeBlock(type)])
@@ -56,7 +57,7 @@ export function SlideEditor({ pid, slide, theme, onClose, onSaved }: Props) {
   const save = async () => {
     setSaving(true)
     try {
-      const updated = await api.slides.update(pid, slide.id, { title, blocks })
+      const updated = await updateSlide.mutateAsync({ pid, sid: slide.id, title, blocks })
       onSaved(updated)
       onClose()
     } finally {

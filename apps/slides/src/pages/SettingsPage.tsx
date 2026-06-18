@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Check } from 'lucide-react'
-import type { ThemeName } from '@/types'
+import { useActionMutation, useActionQuery } from '@agent-native/core/client'
+import type { ApiPresentation, ThemeName } from '@/types'
 import { THEME_NAMES } from '@/types'
-import { api, getErrorMessage } from '@/api/client'
-import { data } from '@/data'
+import { getErrorMessage } from '@/api/client'
 import { C } from '@/design/tokens'
 import { THEME_META } from '@/lib/themeMeta'
 import { Breadcrumb } from '@/components/Breadcrumb'
@@ -18,6 +18,7 @@ const inp: React.CSSProperties = {
 export function SettingsPage() {
   const { id } = useParams<{ id: string }>()
   const pid = Number(id)
+  const validPid = Boolean(id && !isNaN(pid))
 
   const [name,       setName]  = useState('')
   const [slideTheme, setSlideTheme] = useState<ThemeName>('dark-green')
@@ -26,20 +27,38 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const presentationQuery = useActionQuery<ApiPresentation>('get-deck', { id: pid }, { enabled: validPid })
+  const updatePresentation = useActionMutation<ApiPresentation, { id: number; name?: string; theme?: ThemeName }>('update-deck', { method: 'PUT' })
+
   useEffect(() => {
     setLoading(true)
     setError(null)
-    data.presentations.get(pid)
-      .then(p => { setName(p.name); setSlideTheme(p.theme) })
-      .catch(err => setError(getErrorMessage(err)))
-      .finally(() => setLoading(false))
   }, [pid])
+
+  useEffect(() => {
+    if (!validPid) {
+      setError('Invalid deck route')
+      setLoading(false)
+      return
+    }
+    if (presentationQuery.error) {
+      setError(getErrorMessage(presentationQuery.error))
+      setLoading(false)
+      return
+    }
+    if (presentationQuery.isLoading) return
+    const presentation = presentationQuery.data
+    if (!presentation) return
+    setName(presentation.name)
+    setSlideTheme(presentation.theme)
+    setLoading(false)
+  }, [presentationQuery.data, presentationQuery.error, presentationQuery.isLoading, validPid])
 
   const save = async () => {
     setSaving(true)
     setError(null)
     try {
-      await api.presentations.update(pid, { name, theme: slideTheme })
+      await updatePresentation.mutateAsync({ id: pid, name, theme: slideTheme })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {

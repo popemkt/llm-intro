@@ -8,6 +8,7 @@ import { createPresentationsService } from "./services/presentations.js";
 import { createSlidesService } from "./services/slides.js";
 import { createGroupsService } from "./services/groups.js";
 import { createSlideDeckActions } from "../actions/index.js";
+import { createAgentTerminalBridge } from "./agent-terminal.js";
 
 export function buildRuntime(db: Database.Database) {
   const presentationsRepo = createPresentationsRepository(db);
@@ -17,6 +18,7 @@ export function buildRuntime(db: Database.Database) {
   const slidesService = createSlidesService(presentationsRepo, slidesRepo);
   const groupsService = createGroupsService(presentationsRepo, groupsRepo);
   const actions = createSlideDeckActions({ presentationsService, slidesService, groupsService });
+  const agentTerminalBridge = createAgentTerminalBridge({ appDir: process.cwd() });
 
   return {
     app: createApp({
@@ -24,7 +26,9 @@ export function buildRuntime(db: Database.Database) {
       slidesService,
       groupsService,
       actions,
+      agentTerminalBridge,
     }),
+    agentTerminalBridge,
   };
 }
 

@@ -1,9 +1,6 @@
 @import "tailwindcss";
+@import "@agent-native/core/styles/agent-native.css";
 @import "./themes.css";
-
-/* TODO(agent-native-shell): Import @agent-native/core/styles/agent-native.css
-   once the global token/reset collision is resolved. The app shell below uses
-   local variables so deck CSS stays stable during the migration. */
 
 @theme {
   --color-bg: #0d0f0e;
@@ -124,6 +121,12 @@
     background: var(--color-accent-subtle);
   }
 
+  .slides-app-rail__button[data-active="true"] {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
   .slides-app-rail__nav {
     display: flex;
     flex-direction: column;
@@ -180,6 +183,21 @@
     overflow: hidden;
   }
 
+  .slides-app-agent-panel {
+    width: min(420px, 42vw);
+    min-width: 360px;
+    height: 100%;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-left: 1px solid hsl(var(--border));
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .slides-app-agent-panel > div {
+    height: 100%;
+  }
+
   @media (max-width: 760px) {
     .slides-app-rail {
       width: 52px;
@@ -195,6 +213,17 @@
     .slides-app-rail__link {
       justify-content: center;
       padding: 0;
+    }
+
+    .slides-app-agent-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 240;
+      width: min(420px, calc(100vw - 52px));
+      min-width: 0;
+      box-shadow: 0 20px 60px rgb(0 0 0 / 0.45);
     }
   }
 }

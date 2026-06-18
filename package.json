@@ -40,12 +40,14 @@
     "lucide-react": "^0.511.0",
     "motion": "^12.9.4",
     "nanoid": "^5.1.7",
+    "node-pty": "^1.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.2",
     "tailwind-merge": "^3.2.0",
     "vite-plugin-singlefile": "^2.3.2",
+    "ws": "^8.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -85,7 +87,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "better-sqlite3"
+      "better-sqlite3",
+      "node-pty"
     ]
   },
   "lint-staged": {

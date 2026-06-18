@@ -215,6 +215,84 @@ describe("Agent Native framework core routes", () => {
     expect(demoRes.body).toEqual({ enabled: false, forced: false });
   });
 
+  it("GET framework status probes return disabled local defaults", async () => {
+    await expect(request(app).get("/_agent-native/env-status")).resolves.toMatchObject({
+      status: 200,
+      body: expect.objectContaining({ configured: false, providers: {} }),
+    });
+    await expect(request(app).get("/_agent-native/builder/status")).resolves.toMatchObject({
+      status: 200,
+      body: expect.objectContaining({ configured: false, connected: false }),
+    });
+    await expect(request(app).get("/_agent-native/agent-engine/status")).resolves.toMatchObject({
+      status: 200,
+      body: expect.objectContaining({ configured: false, connected: false }),
+    });
+    await expect(request(app).get("/_agent-native/available-clis")).resolves.toMatchObject({
+      status: 200,
+      body: expect.arrayContaining([
+        expect.objectContaining({ command: "codex", label: "Codex" }),
+        expect.objectContaining({ command: "claude", label: "Claude Code" }),
+      ]),
+    });
+    await expect(request(app).get("/_agent-native/agent-terminal-info")).resolves.toMatchObject({
+      status: 200,
+      body: { available: false },
+    });
+  });
+
+  it("GET chat shell probes return empty runtime defaults", async () => {
+    await expect(request(app).get("/_agent-native/auth/session")).resolves.toMatchObject({
+      status: 200,
+      body: { error: "not_authenticated" },
+    });
+    await expect(request(app).get("/_agent-native/org/me")).resolves.toMatchObject({
+      status: 200,
+      body: { org: null, user: null },
+    });
+    await expect(request(app).get("/_agent-native/agent-chat/mode")).resolves.toMatchObject({
+      status: 200,
+      body: { mode: "app" },
+    });
+    await expect(request(app).get("/_agent-native/agent-chat/threads")).resolves.toMatchObject({
+      status: 200,
+      body: { threads: [] },
+    });
+    await expect(
+      request(app).get("/_agent-native/agent-chat/runs/list?goalId=agent-team"),
+    ).resolves.toMatchObject({
+      status: 200,
+      body: { runs: [] },
+    });
+    await expect(
+      request(app).get("/_agent-native/agent-chat/runs/active?threadId=test"),
+    ).resolves.toMatchObject({
+      status: 200,
+      body: { active: false, status: "idle" },
+    });
+  });
+
+  it("GET workspace resource probes return empty shell defaults", async () => {
+    await expect(
+      request(app).get("/_agent-native/resources/tree?scope=workspace"),
+    ).resolves.toMatchObject({
+      status: 200,
+      body: expect.objectContaining({ resources: [], tree: [] }),
+    });
+    await expect(request(app).get("/_agent-native/resources")).resolves.toMatchObject({
+      status: 200,
+      body: { resources: [] },
+    });
+    await expect(request(app).get("/_agent-native/mcp/servers")).resolves.toMatchObject({
+      status: 200,
+      body: { servers: [] },
+    });
+    await expect(request(app).get("/_agent-native/mcp/builtin")).resolves.toMatchObject({
+      status: 200,
+      body: { tools: [] },
+    });
+  });
+
   it("GET/PUT/DELETE /_agent-native/application-state stores shell state", async () => {
     const value = { pathname: "/p/12", search: "", hash: "", searchParams: {} };
     const putRes = await request(app).put("/_agent-native/application-state/__url__").send(value);

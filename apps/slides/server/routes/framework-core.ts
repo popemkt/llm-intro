@@ -1,8 +1,18 @@
 import { Router } from "express";
+import type { AgentTerminalBridge } from "../agent-terminal.js";
 
-export function createFrameworkCoreRouter() {
+export function createFrameworkCoreRouter(options: { terminalBridge?: AgentTerminalBridge } = {}) {
   const router = Router();
 
+  registerFrameworkHealthRoutes(router);
+  registerFrameworkStatusRoutes(router, options);
+  registerFrameworkChatRoutes(router);
+  registerFrameworkResourceRoutes(router);
+
+  return router;
+}
+
+function registerFrameworkHealthRoutes(router: Router) {
   router.get("/ping", (_req, res) => {
     res.json({ ok: true });
   });
@@ -32,6 +42,114 @@ export function createFrameworkCoreRouter() {
   router.get("/demo/status", (_req, res) => {
     res.json({ enabled: false, forced: false });
   });
+}
 
-  return router;
+function registerFrameworkStatusRoutes(
+  router: Router,
+  options: { terminalBridge?: AgentTerminalBridge },
+) {
+  router.get("/env-status", (_req, res) => {
+    res.json({
+      configured: false,
+      providers: {},
+      missing: [],
+    });
+  });
+
+  router.get("/builder/status", (_req, res) => {
+    res.json({
+      configured: false,
+      connected: false,
+      builderAvailable: false,
+    });
+  });
+
+  router.get("/agent-engine/status", (_req, res) => {
+    res.json({
+      configured: false,
+      connected: false,
+      available: false,
+    });
+  });
+
+  router.get("/available-clis", async (_req, res) => {
+    res.json((await options.terminalBridge?.listAvailableClis()) ?? []);
+  });
+
+  router.get("/agent-terminal-info", (_req, res) => {
+    res.json(options.terminalBridge?.getTerminalInfo() ?? { available: false });
+  });
+
+  router.get("/agent-loop-settings", (_req, res) => {
+    res.json({});
+  });
+
+  router.get("/agent-model-defaults", (_req, res) => {
+    res.json({});
+  });
+
+  router.post("/actions/manage-agent-engine", (_req, res) => {
+    res.json({
+      engines: [],
+      providers: [],
+      configured: false,
+    });
+  });
+}
+
+function registerFrameworkChatRoutes(router: Router) {
+  router.get("/auth/session", (_req, res) => {
+    res.json({ error: "not_authenticated" });
+  });
+
+  router.get("/org/me", (_req, res) => {
+    res.json({ org: null, user: null });
+  });
+
+  router.get("/agent-chat/mode", (_req, res) => {
+    res.json({ mode: "app" });
+  });
+
+  router.get("/agent-chat/threads", (_req, res) => {
+    res.json({ threads: [] });
+  });
+
+  router.get("/agent-chat/threads/:threadId", (req, res) => {
+    res.json({
+      id: req.params.threadId,
+      title: "",
+      preview: "",
+      messages: [],
+      messageCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      scope: null,
+    });
+  });
+
+  router.get("/agent-chat/runs/list", (_req, res) => {
+    res.json({ runs: [] });
+  });
+
+  router.get("/agent-chat/runs/active", (_req, res) => {
+    res.json({ active: false, status: "idle" });
+  });
+}
+
+function registerFrameworkResourceRoutes(router: Router) {
+  router.get("/resources/tree", (_req, res) => {
+    res.json({ items: [], resources: [], tree: [] });
+  });
+
+  router.get("/resources", (_req, res) => {
+    res.json({ resources: [] });
+  });
+
+  router.get("/mcp/servers", (_req, res) => {
+    res.json({ servers: [] });
+  });
+
+  router.get("/mcp/builtin", (_req, res) => {
+    res.json({ tools: [] });
+  });
 }

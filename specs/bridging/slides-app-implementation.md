@@ -143,6 +143,11 @@ another allowed CLI runs as the local user and reads its own local auth state. I
 production, Code Mode must remain disabled unless a trusted authenticated frame
 or server-side auth gate is added.
 
+The stock Agent-Native terminal UI lazy-loads xterm packages. Keep
+`@xterm/xterm`, `@xterm/addon-fit`, and `@xterm/addon-web-links` installed with
+`@agent-native/core`; otherwise the Code Mode terminal header can render while
+the terminal body fails to mount.
+
 For this repo, the ideal target is:
 
 1. App mode inside the slides UI for normal product work: create/edit slides,

@@ -80,6 +80,7 @@ function SlidesAgentSurface({
           emptyStateText="Ask about this deck"
           suggestions={suggestions}
           dynamicSuggestions
+          className="slides-agent-surface__panel"
           storageKey="llm-intro-slides-code-agent"
           agentChatSurface="dev-frame"
           codeAccess={localCodeAccess}

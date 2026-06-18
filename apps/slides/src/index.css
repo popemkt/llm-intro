@@ -254,7 +254,8 @@
     color: hsl(var(--foreground));
   }
 
-  .slides-agent-surface__chat {
+  .slides-agent-surface__chat,
+  .slides-agent-surface__panel {
     min-height: 0;
     flex: 1;
   }

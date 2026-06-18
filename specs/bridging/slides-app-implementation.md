@@ -41,6 +41,7 @@ framework boundary.
 |---|---|---|
 | List decks | `list-decks` action, `HomePage` query | `apps/slides/server/__tests__/api.test.ts`, browser smoke |
 | Create deck | `create-deck` action, presentation service | Vitest API tests |
+| Create deck from Home outline | `DeckCreatePanel` parses one-slide-per-line input and calls `create-deck-from-outline` | Browser smoke plus action tests |
 | Delete deck | `delete-deck` action, presentation service protection rules | Vitest API tests |
 | Deck settings | `SettingsPage`, `update-deck` action/client helper | Vitest/API plus browser flow when UI changes |
 
@@ -53,7 +54,7 @@ framework boundary.
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
-| Create deck from outline | `create-deck-from-outline` action creates a deck and typed normal slides from an outline | Vitest/API plus App Mode smoke |
+| Create deck from outline | `create-deck-from-outline` action creates a deck and typed normal slides from an outline | Vitest/API plus App Mode and Home UI smoke |
 | Rename slide | `update-slide` action | Browser flow or focused smoke |
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |
 | Reorder slides/groups | `update-deck-layout` action, slide service validation | Vitest/API plus Playwright |

@@ -87,6 +87,9 @@ editing, themed presentation playback, and HTML export.
   and closing.
 - Agents can create a sequence of standard DB-backed slides from a structured
   outline through `create-normal-slides`.
+- Users can create a new deck from Home in either blank mode or outline mode.
+  Outline mode parses one slide per line into standard themeable DB-backed
+  layouts and uses `create-deck-from-outline`.
 - Users can create common normal slide layouts from the overview add tile
   without opening the manual editor first.
 - In local development, trusted maintainers can use local authenticated coding

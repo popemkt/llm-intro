@@ -104,6 +104,9 @@ Taken now:
 - Deck-level outline creation through `create-deck-from-outline`, which borrows
   the reference app's prompt-to-deck direction while preserving this app's typed
   DB slide blocks and theme model.
+- Home deck creation UI exposes the same action-backed deck creation modes:
+  blank deck creation through `create-deck` and outline deck creation through
+  `create-deck-from-outline`.
 - Application-state endpoint shape needed by the sidebar's URL sync.
 - Semantic route-state bridge for current app context and product-safe
   navigation commands.

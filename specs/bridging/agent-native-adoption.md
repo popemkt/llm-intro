@@ -97,8 +97,7 @@ for now. The migration should replace one workflow at a time:
 - an Agent-Native frame/panel experience that supports App mode for product
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
-- fullscreen/presenter refinements such as timer, next-slide preview, and
-  external presenter display;
+- fullscreen/presenter refinements such as external presenter display;
 - import/export expansion after the core action surface is stable.
 
 ## Ported From Agent-Native Slides
@@ -156,6 +155,8 @@ Taken now:
   action, snapshots, and export payloads.
 - Presenter-mode speaker-note display for the active slide, while fullscreen
   stays audience-only.
+- Presenter-mode timer and next-slide preview through `PresentationView`, while
+  fullscreen stays audience-only.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 

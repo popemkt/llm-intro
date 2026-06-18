@@ -130,6 +130,8 @@ editing, themed presentation playback, and HTML export.
   payloads as the rest of the slide model.
 - Presenter mode displays the active slide's speaker notes above the controls
   when notes are present. Fullscreen mode remains audience-only.
+- Presenter mode displays an elapsed timer and compact next-slide preview while
+  controls are visible. Fullscreen mode remains audience-only.
 - In local development, trusted maintainers can use local authenticated coding
   CLIs such as Codex or Claude Code through the Agent-Native terminal bridge.
   This is a Code Mode capability and must not imply production shell access.
@@ -141,8 +143,7 @@ editing, themed presentation playback, and HTML export.
 - Hosted LLM prompt-to-deck streaming that emits slides incrementally into the
   current deck model.
 - Additional visual editor refinements such as richer inline formatting controls.
-- Additional presenter refinements such as timer, next-slide preview, and
-  external presenter display.
+- Additional presenter refinements such as external presenter display.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and
   local-development terminal bridge; hosted production chat remains a separate

@@ -1,6 +1,15 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronLeft, ChevronRight, Grid2X2, Home, Maximize2, Keyboard } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Grid2X2,
+  Home,
+  Keyboard,
+  Maximize2,
+  RotateCcw,
+} from "lucide-react";
 import type { UnifiedSlide } from "@/types";
 import { SlideShell } from "./SlideShell";
 import { DbSlideRenderer } from "./DbSlideRenderer";
@@ -36,6 +45,12 @@ const SHORTCUTS = [
   { key: "?", desc: "Toggle shortcuts" },
 ];
 
+function formatElapsed(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
 function SpeakerNotesPanel({ notes }: { notes: string }) {
   return (
     <motion.div
@@ -70,6 +85,130 @@ function SpeakerNotesPanel({ notes }: { notes: string }) {
   );
 }
 
+function MiniSlidePreview({ slide }: { slide: UnifiedSlide | undefined }) {
+  if (!slide) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "var(--color-muted)",
+          fontSize: 11,
+          background: "var(--color-bg)",
+        }}
+      >
+        End
+      </div>
+    );
+  }
+
+  return slide.kind === "code" ? (
+    <SlideShell>
+      <slide.component isActive={false} />
+    </SlideShell>
+  ) : (
+    <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
+  );
+}
+
+function PresenterHud({
+  elapsedSeconds,
+  nextSlide,
+  onResetTimer,
+}: {
+  elapsedSeconds: number;
+  nextSlide: UnifiedSlide | undefined;
+  onResetTimer: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.18 }}
+      className="rounded-xl border border-(--color-border)"
+      style={{
+        position: "absolute",
+        top: 18,
+        right: 24,
+        zIndex: 20,
+        width: 210,
+        padding: 10,
+        background: "color-mix(in srgb, var(--color-surface) 94%, transparent)",
+        boxShadow: "0 8px 32px rgba(0,0,0,.35)",
+        color: "var(--color-text-dim)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <Clock3 size={14} />
+        <span
+          style={{
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 18,
+            color: "var(--color-text)",
+          }}
+        >
+          {formatElapsed(elapsedSeconds)}
+        </span>
+        <button
+          type="button"
+          onClick={onResetTimer}
+          title="Reset timer"
+          style={{
+            marginLeft: "auto",
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            border: "none",
+            background: "transparent",
+            color: "var(--color-muted)",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <RotateCcw size={13} />
+        </button>
+      </div>
+      <div
+        className="text-[9px] font-mono uppercase tracking-widest mb-2"
+        style={{ color: "var(--color-muted)" }}
+      >
+        Next
+      </div>
+      <div
+        style={{
+          width: "100%",
+          aspectRatio: "16 / 9",
+          overflow: "hidden",
+          borderRadius: 7,
+          border: "1px solid var(--color-border)",
+          background: "var(--color-bg)",
+        }}
+      >
+        <MiniSlidePreview slide={nextSlide} />
+      </div>
+      <div
+        style={{
+          marginTop: 6,
+          fontSize: 11,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          color: "var(--color-text-dim)",
+        }}
+        title={nextSlide?.title ?? "End"}
+      >
+        {nextSlide?.title ?? "End of deck"}
+      </div>
+    </motion.div>
+  );
+}
+
 export function PresentationView({
   slides,
   activeIndex,
@@ -84,7 +223,13 @@ export function PresentationView({
   const isTransitioning = useRef(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setElapsedSeconds((value) => value + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const resetHideTimer = useCallback(() => {
     setControlsVisible(true);
@@ -163,6 +308,7 @@ export function PresentationView({
 
   const progress = slides.length > 1 ? ((activeIndex + 1) / slides.length) * 100 : 100;
   const speakerNotes = activeSlide.notes.trim();
+  const nextSlide = slides[activeIndex + 1];
 
   return (
     <motion.div
@@ -246,6 +392,17 @@ export function PresentationView({
       {/* Speaker notes — presenter mode only */}
       <AnimatePresence>
         {controlsVisible && speakerNotes && <SpeakerNotesPanel notes={speakerNotes} />}
+      </AnimatePresence>
+
+      {/* Presenter HUD — presenter mode only */}
+      <AnimatePresence>
+        {controlsVisible && (
+          <PresenterHud
+            elapsedSeconds={elapsedSeconds}
+            nextSlide={nextSlide}
+            onResetTimer={() => setElapsedSeconds(0)}
+          />
+        )}
       </AnimatePresence>
 
       {/* Bottom bar — auto-hides after 3s of inactivity */}

@@ -93,6 +93,7 @@ framework boundary.
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
 | Edit speaker notes | `slides.notes`, `update-slide`, and `SlideEditorPage` notes field | Vitest/API plus browser smoke |
 | Display speaker notes | `PresentationView` renders active slide notes above controls outside fullscreen | Browser smoke |
+| Presenter timer and next preview | `PresentationView` renders elapsed time and a compact next-slide preview in presenter mode only | Browser smoke |
 
 ## Presentation And Editor UI
 

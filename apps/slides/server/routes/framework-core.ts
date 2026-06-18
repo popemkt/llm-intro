@@ -1,6 +1,10 @@
 import { Router } from "express";
 import type { AgentTerminalBridge } from "../agent-terminal.js";
 
+function localCodeModeEnabled() {
+  return process.env.NODE_ENV !== "production" && !process.env.FRAME_PORT;
+}
+
 export function createFrameworkCoreRouter(options: { terminalBridge?: AgentTerminalBridge } = {}) {
   const router = Router();
 
@@ -103,7 +107,7 @@ function registerFrameworkChatRoutes(router: Router) {
   });
 
   router.get("/agent-chat/mode", (_req, res) => {
-    res.json({ mode: "app" });
+    res.json({ devMode: localCodeModeEnabled(), canToggle: false });
   });
 
   router.get("/agent-chat/threads", (_req, res) => {

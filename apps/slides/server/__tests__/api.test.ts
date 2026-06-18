@@ -353,7 +353,7 @@ describe("Agent Native framework core routes", () => {
     });
     await expect(request(app).get("/_agent-native/agent-chat/mode")).resolves.toMatchObject({
       status: 200,
-      body: { mode: "app" },
+      body: { devMode: true, canToggle: false },
     });
     await expect(request(app).get("/_agent-native/agent-chat/threads")).resolves.toMatchObject({
       status: 200,

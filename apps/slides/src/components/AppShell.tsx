@@ -15,6 +15,13 @@ const navItems = [
   { label: "Theme", to: "/settings", icon: Settings },
 ];
 
+const localCodeAccess = {
+  enabled: true,
+  unavailableTitle: "Local CLI unavailable",
+  unavailableDescription:
+    "Start the local dev server to use Codex or Claude Code from the app shell.",
+};
+
 function deckScopeFromPath(pathname: string) {
   const match = pathname.match(/^\/p\/(\d+)/);
   if (!match) return null;
@@ -131,6 +138,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onCollapse={() => setAgentOpenPersisted(false)}
             storageKey="llm-intro-slides-agent"
             scope={deckScope}
+            agentChatSurface="dev-frame"
+            codeAccess={localCodeAccess}
           />
         </aside>
       )}

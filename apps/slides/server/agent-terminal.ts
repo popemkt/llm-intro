@@ -1,10 +1,5 @@
-import {
-  CLI_REGISTRY,
-  commandExists,
-  createPtyWebSocketServer,
-  isAllowedCommand,
-  type PtyServerResult,
-} from "@agent-native/core/terminal/server";
+import { CLI_REGISTRY, commandExists, isAllowedCommand } from "@agent-native/core/terminal/server";
+import { createLocalPtyWebSocketServer, type LocalPtyServerResult } from "./local-pty-server.js";
 
 export type AgentCliStatus = {
   command: string;
@@ -34,7 +29,7 @@ export type AgentTerminalBridge = {
 const LOCAL_CLI_PREFERENCE = ["codex", "claude", "gemini", "opencode", "builder"];
 
 export function createAgentTerminalBridge(options: { appDir?: string } = {}): AgentTerminalBridge {
-  let ptyServer: PtyServerResult | undefined;
+  let ptyServer: LocalPtyServerResult | undefined;
   let terminalInfo: AgentTerminalInfo = { available: false };
 
   async function listAvailableClis() {
@@ -88,7 +83,7 @@ export function createAgentTerminalBridge(options: { appDir?: string } = {}): Ag
       const port = process.env.AGENT_TERMINAL_PORT ? Number(process.env.AGENT_TERMINAL_PORT) : 0;
 
       try {
-        ptyServer = await createPtyWebSocketServer({
+        ptyServer = await createLocalPtyWebSocketServer({
           appDir: options.appDir ?? process.cwd(),
           command,
           port,

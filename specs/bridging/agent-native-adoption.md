@@ -43,8 +43,10 @@ Reference documentation:
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
   WebSocket bridge that prefers `codex`, then `claude`, then other known local
-  CLIs. The embedded panel is marked as the local `dev-frame` surface so the CLI
-  mode is available in local development without Builder.io auth.
+  CLIs. The sidebar Code tab renders Agent-Native `AgentTerminal` with an
+  explicit `ws://127.0.0.1:<port>/ws` endpoint so HTTPS `portless` development
+  does not mis-detect the local bridge as `wss`. This keeps local Code mode
+  available without Builder.io auth.
 
 ## Migration Direction
 

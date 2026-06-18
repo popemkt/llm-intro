@@ -148,6 +148,12 @@ The stock Agent-Native terminal UI lazy-loads xterm packages. Keep
 `@agent-native/core`; otherwise the Code Mode terminal header can render while
 the terminal body fails to mount.
 
+When the app is served through the HTTPS `portless` hostname, the Code Mode UI
+must pass an explicit `ws://127.0.0.1:<port>/ws` URL to `AgentTerminal`. Letting
+the stock terminal infer the WebSocket URL from `location.protocol` produces a
+`wss://...:<port>` URL, which cannot connect to the plain local PTY bridge and
+causes the terminal to reconnect forever.
+
 For this repo, the ideal target is:
 
 1. App mode inside the slides UI for normal product work: create/edit slides,

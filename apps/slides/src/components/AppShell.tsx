@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AgentPanel, AssistantChat } from "@agent-native/core/client";
+import { AgentTerminal, AssistantChat, agentNativePath } from "@agent-native/core/client";
 import type { AgentChatRuntime } from "@agent-native/core/client/chat";
 import {
   LayoutDashboard,
@@ -17,12 +17,17 @@ const navItems = [
   { label: "Theme", to: "/settings", icon: Settings },
 ];
 
-const localCodeAccess = {
-  enabled: true,
-  unavailableTitle: "Local CLI unavailable",
-  unavailableDescription:
-    "Start the local dev server to use Codex or Claude Code from the app shell.",
-};
+type AgentTerminalInfo =
+  | {
+      available: true;
+      wsPort: number;
+      command: string;
+    }
+  | {
+      available: false;
+      command?: string;
+      error?: string;
+    };
 
 function deckScopeFromPath(pathname: string) {
   const match = pathname.match(/^\/(?:p|presentations)\/(\d+)/);
@@ -40,6 +45,42 @@ function SlidesAgentSurface({
   onCollapse: () => void;
 }) {
   const [mode, setMode] = useState<"app" | "code">("app");
+  const [terminalInfo, setTerminalInfo] = useState<AgentTerminalInfo | null>(null);
+  const [terminalConnected, setTerminalConnected] = useState(false);
+
+  useEffect(() => {
+    if (mode !== "code") return;
+
+    let active = true;
+    setTerminalInfo(null);
+
+    fetch(agentNativePath("/_agent-native/agent-terminal-info"))
+      .then((response) => response.json() as Promise<AgentTerminalInfo>)
+      .then((info) => {
+        if (active) setTerminalInfo(info);
+      })
+      .catch(() => {
+        if (active) {
+          setTerminalInfo({
+            available: false,
+            error: "Start the local dev server to use Codex or Claude Code from the app shell.",
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+      setTerminalConnected(false);
+    };
+  }, [mode]);
+
+  const terminalWsUrl =
+    terminalInfo?.available === true ? `ws://127.0.0.1:${terminalInfo.wsPort}/ws` : null;
+  const terminalUnavailableMessage =
+    terminalInfo?.available === false
+      ? terminalInfo.error ||
+        "Start the local dev server to use Codex or Claude Code from the app shell."
+      : "Start the local dev server to use Codex or Claude Code from the app shell.";
 
   return (
     <div className="slides-agent-surface">
@@ -75,16 +116,29 @@ function SlidesAgentSurface({
           className="slides-agent-surface__chat"
         />
       ) : (
-        <AgentPanel
-          defaultMode="cli"
-          emptyStateText="Ask about this deck"
-          suggestions={suggestions}
-          dynamicSuggestions
-          className="slides-agent-surface__panel"
-          storageKey="llm-intro-slides-code-agent"
-          agentChatSurface="dev-frame"
-          codeAccess={localCodeAccess}
-        />
+        <div className="slides-agent-surface__terminal">
+          <div className="slides-agent-surface__terminal-status">
+            <span>{terminalInfo?.available ? terminalInfo.command : "Local CLI"}</span>
+            <span data-connected={terminalConnected ? "true" : "false"}>
+              {terminalConnected ? "Connected" : "Local"}
+            </span>
+          </div>
+          {terminalInfo === null ? (
+            <div className="slides-agent-surface__terminal-message">Starting local CLI...</div>
+          ) : terminalInfo.available && terminalWsUrl ? (
+            <AgentTerminal
+              command={terminalInfo.command}
+              wsUrl={terminalWsUrl}
+              hideInFrame={false}
+              className="slides-agent-surface__terminal-frame"
+              onConnectionChange={setTerminalConnected}
+            />
+          ) : (
+            <div className="slides-agent-surface__terminal-message">
+              {terminalUnavailableMessage}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

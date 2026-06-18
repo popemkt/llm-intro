@@ -86,8 +86,10 @@ framework boundary.
 |---|---|
 | App shell theme | `data-app-theme` on `<html>`, app CSS tokens |
 | Slide content theme | `data-theme` on slide containers, `apps/slides/src/themes.css` |
-| Theme metadata | `apps/slides/src/lib/themeMeta.ts`, `ThemeName` contract |
+| Theme metadata | shared `THEME_META` and `ThemeName` contract in `libs/api-contract/src/index.ts` |
 | Per-deck theme persistence | presentation service, `update-deck` action/REST route |
+| Agent theme catalog | `get-theme-catalog` action returns shared theme metadata |
+| Agent app-shell theme change | `set-app-theme` queues `app-theme-command`; `AppShell` applies it through `applyAppTheme` |
 
 ## Export Bridge
 
@@ -194,10 +196,11 @@ app actions, and returns plain chat text. Current supported prompt families
 include listing slides, listing groups, creating one normal slide, creating a
 multi-slide normal outline, creating a group, changing the deck theme, and
 preparing an HTML export link. It can also summarize the active deck through
-`get-active-deck-context`. This gives the embedded panel a real product-safe tool
-path without requiring a Builder.io login. Repository self-modification is still
-Code Mode and should go through the local authenticated CLI bridge or a trusted
-hosted frame.
+`get-active-deck-context`, list theme metadata through `get-theme-catalog`, and
+queue app-shell theme changes through `set-app-theme`. This gives the embedded
+panel a real product-safe tool path without requiring a Builder.io login.
+Repository self-modification is still Code Mode and should go through the local
+authenticated CLI bridge or a trusted hosted frame.
 
 ### Adoption Notes
 

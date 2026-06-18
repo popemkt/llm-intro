@@ -10,7 +10,7 @@ export type {
   ShapeBlock,
   ThemeName,
 } from "@llm-intro/api-contract";
-export { THEME_NAMES } from "@llm-intro/api-contract";
+export { THEME_NAMES, THEME_META } from "@llm-intro/api-contract";
 
 export interface SlideProps {
   isActive: boolean;

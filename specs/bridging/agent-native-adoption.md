@@ -23,6 +23,8 @@ Reference documentation:
   `themes.css`. Existing app and slide theme variables remain authoritative;
   Agent-Native HSL tokens are derived from them so framework components do not
   fight the deck CSS.
+- Theme metadata is shared through `@llm-intro/api-contract`, and Agent-Native
+  actions expose the theme catalog plus a queued app-shell-theme command.
 - The root is wrapped in a local `AppShell` that ports the useful shell shape
   from the Agent-Native Slides app: left product rail, agent toggle, App mode
   `AssistantChat`, and Code mode `AgentPanel`. The panel starts closed while
@@ -41,7 +43,8 @@ Reference documentation:
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
   listing, normal slide creation, multi-slide outline creation, group creation,
-  deck theme changes, HTML export links, and active deck summaries.
+  deck theme changes, theme catalog/app-shell changes, HTML export links, and
+  active deck summaries.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -75,6 +78,8 @@ for now. The migration should replace one workflow at a time:
 | reorder slides/groups | `update-deck-layout` mutating action, mounted and used by client |
 | read current app context | `get-current-app-context` read action over Agent-Native app state |
 | read active deck context | `get-active-deck-context` read action over route state plus deck, slide, and group services |
+| read theme catalog | `get-theme-catalog` read action over shared `ThemeName` metadata |
+| change app shell theme | `set-app-theme` mutating action that queues a browser-local app theme command |
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
 | export HTML | `get-deck-export` read action returns the existing `/api` download URL |
 
@@ -117,6 +122,9 @@ Taken now:
 - Active deck context exposure through `get-active-deck-context`, which lets
   agents inspect the current deck, slides, groups, and navigation state without
   code-mode access.
+- Theme catalog and app-shell-theme command exposure through `get-theme-catalog`
+  and `set-app-theme`, preserving this app's existing `ThemeName` model while
+  giving agents design context.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
 
@@ -126,7 +134,8 @@ Translated rather than copied:
   block model so themeability, the existing editor, code slides, and HTML export
   continue to work.
 - Reference template design systems remain out of scope; current app themes are
-  still the design contract.
+  still the design contract. The action bridge exposes these themes rather than
+  replacing them.
 
 ## Non-Goals
 

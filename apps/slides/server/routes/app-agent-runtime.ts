@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { THEME_NAMES, type ThemeName } from "@llm-intro/api-contract";
+import { THEME_META, THEME_NAMES, type ThemeName } from "@llm-intro/api-contract";
 import { AppError } from "../errors.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import type { NormalSlideLayout } from "../../actions/normal-slide-layouts.js";
@@ -83,6 +83,28 @@ function inferLayout(prompt: string) {
 function inferTheme(prompt: string) {
   const normalized = prompt.toLowerCase();
   return THEME_NAMES.find((theme) => normalized.includes(theme)) ?? themeAliases[normalized];
+}
+
+function formatThemeCatalog(result: unknown) {
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("themes" in result) ||
+    !Array.isArray(result.themes)
+  ) {
+    return `Available themes: ${THEME_NAMES.join(", ")}.`;
+  }
+
+  return result.themes
+    .map((theme) => {
+      if (!theme || typeof theme !== "object" || !("name" in theme)) return null;
+      const name = getText(theme.name);
+      const label = "label" in theme ? getText(theme.label) : THEME_META[name as ThemeName]?.label;
+      const desc = "desc" in theme ? getText(theme.desc) : THEME_META[name as ThemeName]?.desc;
+      return `${name}${label ? ` (${label})` : ""}${desc ? `: ${desc}` : ""}`;
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function inferPositiveIntegerAfter(prompt: string, terms: string[]) {
@@ -308,12 +330,31 @@ async function handleDeckReadPrompt(
   return null;
 }
 
+async function handleThemePrompt(actions: SlideDeckActions, prompt: string, normalized: string) {
+  if (/\b(list|show|what|available)\b.*\bthemes?\b/.test(normalized)) {
+    const catalog = await runAction(actions["get-theme-catalog"], {});
+    return `Available themes:\n${formatThemeCatalog(catalog)}`;
+  }
+
+  if (/\b(change|set|update|apply)\b.*\bapp (shell )?themes?\b/.test(normalized)) {
+    const theme = inferTheme(prompt);
+    if (!theme) return `Pick one of these app themes: ${THEME_NAMES.join(", ")}.`;
+    await runAction(actions["set-app-theme"], { theme });
+    return `Changing the app shell theme to ${theme}.`;
+  }
+
+  return null;
+}
+
 async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
   const normalized = prompt.toLowerCase();
   const navigationResponse = await handleNavigationPrompt(actions, prompt, normalized, deckId);
   if (navigationResponse) return navigationResponse;
+
+  const themeResponse = await handleThemePrompt(actions, prompt, normalized);
+  if (themeResponse) return themeResponse;
 
   const readResponse = await handleDeckReadPrompt(actions, normalized, deckId);
   if (readResponse) return readResponse;
@@ -372,6 +413,7 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
     "",
     "Try:",
     "- summarize this deck",
+    "- list available themes",
     "- list slides",
     '- create a title slide called "Roadmap"',
     "- create a bullets slide with a short outline",

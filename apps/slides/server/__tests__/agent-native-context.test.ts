@@ -39,6 +39,26 @@ describe("Agent Native app context actions", () => {
         a2a: true,
       },
     });
+    expect(res.body.actions["get-theme-catalog"]).toMatchObject({
+      name: "get-theme-catalog",
+      readOnly: true,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
+    expect(res.body.actions["set-app-theme"]).toMatchObject({
+      name: "set-app-theme",
+      readOnly: false,
+      exposure: {
+        http: true,
+        agentTool: true,
+        mcp: true,
+        a2a: true,
+      },
+    });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -76,6 +96,45 @@ describe("Agent Native app context actions", () => {
       deckId: 7,
       slideId: 9,
     });
+    expect(commandRes.body._writeId).toEqual(expect.any(String));
+  });
+});
+
+describe("Agent Native theme design actions", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
+
+  it("GET /_agent-native/actions/get-theme-catalog returns shared theme metadata", async () => {
+    const res = await request(app).get("/_agent-native/actions/get-theme-catalog");
+
+    expect(res.status).toBe(200);
+    expect(res.body.themes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "dark-green",
+          label: "Dark Green",
+          desc: "Terminal signal green",
+        }),
+        expect.objectContaining({
+          name: "ocean",
+          label: "Ocean",
+        }),
+      ]),
+    );
+  });
+
+  it("POST /_agent-native/actions/set-app-theme queues a browser app theme command", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/set-app-theme")
+      .send({ theme: "ocean" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      queued: true,
+      command: { theme: "ocean" },
+    });
+
+    const commandRes = await request(app).get("/_agent-native/application-state/app-theme-command");
+    expect(commandRes.body).toMatchObject({ theme: "ocean" });
     expect(commandRes.body._writeId).toEqual(expect.any(String));
   });
 });
@@ -229,6 +288,32 @@ describe("App agent active deck context runtime", () => {
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("Runtime Context");
     expect(res.body.text).toContain("1 slide");
+  });
+});
+
+describe("App agent theme runtime", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
+
+  it("POST /_agent-native/app-agent lists available themes", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "list available themes" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("dark-green");
+    expect(res.body.text).toContain("Ocean");
+  });
+
+  it("POST /_agent-native/app-agent queues an app shell theme change", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "set app theme to ocean" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("app shell theme");
+
+    const commandRes = await request(app).get("/_agent-native/application-state/app-theme-command");
+    expect(commandRes.body).toMatchObject({ theme: "ocean" });
   });
 });
 

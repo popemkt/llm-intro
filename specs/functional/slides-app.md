@@ -55,6 +55,8 @@ editing, themed presentation playback, and HTML export.
 - App shell theme controls workspace chrome.
 - Slide content theme controls rendered slide backgrounds, text, surfaces,
   borders, and accents.
+- Agents can list the supported theme catalog and can apply the app shell theme
+  in the open browser session through a queued, product-safe command.
 - Framework adoption must not collapse existing `ThemeName` behavior into a
   fixed reference-app palette.
 
@@ -77,6 +79,8 @@ editing, themed presentation playback, and HTML export.
   future CLI/MCP access.
 - Agents can read the active deck context, including deck metadata, slide list,
   group list, and current navigation state, without shell or filesystem access.
+- Theme metadata is shared between UI and agent actions so agents use the same
+  theme names, labels, and descriptions users see in settings.
 - Borrowed reference-app features are limited to capabilities that improve this
   product, especially advanced slide creation and stronger shell/agent UX.
 - The app shell includes an Agent-Native-style product rail and a real
@@ -86,7 +90,8 @@ editing, themed presentation playback, and HTML export.
   filesystem access. The current local runtime can list slides and create
   standard normal slides, multi-slide outlines, slide groups, and deck theme
   changes, HTML export links, and active deck summaries in the active deck from
-  simple prompts.
+  simple prompts. It can also list available themes and change the app shell
+  theme.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

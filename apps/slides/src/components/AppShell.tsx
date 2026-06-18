@@ -11,6 +11,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { createSlidesAppAgentRuntime } from "@/agent/appAgentRuntime";
+import { applyAppTheme } from "@/lib/appTheme";
+import { THEME_NAMES, type ThemeName } from "@/types";
 
 const navItems = [
   { label: "Decks", to: "/", icon: LayoutDashboard },
@@ -40,6 +42,11 @@ type SlidesNavigationCommand = {
   view: "decks" | "deck" | "slide-editor" | "deck-settings" | "app-settings";
   deckId?: number;
   slideId?: number;
+};
+
+type AppThemeCommand = {
+  theme: ThemeName;
+  _writeId?: string;
 };
 
 function deckScopeFromPath(pathname: string) {
@@ -129,6 +136,15 @@ async function readNavigateCommand() {
   return (await response.json()) as SlidesNavigationCommand & { _writeId?: string };
 }
 
+async function readAppThemeCommand() {
+  const response = await fetch(
+    agentNativePath("/_agent-native/application-state/app-theme-command"),
+  );
+  if (!response.ok || response.status === 204) return null;
+  const command = (await response.json()) as AppThemeCommand;
+  return THEME_NAMES.includes(command.theme) ? command : null;
+}
+
 function useSlidesRouteStateBridge(location: ReturnType<typeof useLocation>) {
   const lastNavigationCommandRef = useRef<string | null>(null);
   const navigationState = useMemo(
@@ -181,6 +197,40 @@ function useSlidesRouteStateBridge(location: ReturnType<typeof useLocation>) {
       window.clearInterval(interval);
     };
   }, [location.hash, location.pathname, location.search]);
+}
+
+function useAppThemeCommandBridge() {
+  const lastThemeCommandRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const poll = async () => {
+      try {
+        if (document.visibilityState !== "visible") return;
+        const command = await readAppThemeCommand();
+        if (!active || !command) return;
+
+        const dedupKey = command._writeId ?? command.theme;
+        if (lastThemeCommandRef.current === dedupKey) {
+          await deleteAppState("app-theme-command");
+          return;
+        }
+        lastThemeCommandRef.current = dedupKey;
+        await deleteAppState("app-theme-command");
+        applyAppTheme(command.theme);
+      } catch {
+        // Best-effort agent command bridge.
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => void poll(), 1000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 }
 
 function SlidesAgentSurface({
@@ -303,9 +353,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const deckScope = useMemo(() => deckScopeFromPath(location.pathname), [location.pathname]);
   const appAgentRuntime = useMemo(() => createSlidesAppAgentRuntime(deckScope), [deckScope]);
   useSlidesRouteStateBridge(location);
+  useAppThemeCommandBridge();
   const agentSuggestions = useMemo(
     () => [
       "Summarize this deck",
+      "List available themes",
       "Create a title slide for this deck",
       "Add a bullets slide after the current topic",
       "Turn this outline into normal slides",

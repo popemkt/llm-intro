@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BarChart3, Globe, Image as ImageIcon, List, Quote, Square, Type } from "lucide-react";
 import { nanoid } from "nanoid";
 import type { Block } from "@/types";
@@ -20,6 +21,13 @@ const primitiveBlocks = [
   { type: "iframe" as const, icon: <Globe size={12} />, label: "Embed" },
   { type: "shape" as const, icon: <Square size={12} />, label: "Shape" },
 ];
+
+type PrimitiveBlockType = (typeof primitiveBlocks)[number]["type"];
+
+const primitiveByCommand = new Map<string, PrimitiveBlockType>([
+  ...primitiveBlocks.map((block) => [block.type, block.type] as const),
+  ["embed", "iframe"],
+]);
 
 function textBlock(markdown: string, pos: { x: number; y: number; w: number; h: number }): Block {
   return { id: nanoid(), type: "text", markdown, ...pos };
@@ -73,6 +81,13 @@ const insertPresets: InsertPreset[] = [
   },
 ];
 
+const presetByCommand = new Map(
+  insertPresets.flatMap((preset) => [
+    [preset.label.toLowerCase(), preset],
+    [preset.label.toLowerCase().replace(/\s+/g, "-"), preset],
+  ]),
+);
+
 const buttonStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -89,8 +104,48 @@ const buttonStyle: React.CSSProperties = {
 };
 
 export function SlideBlockInsertPanel({ onAddBlock, onAddBlocks }: SlideBlockInsertPanelProps) {
+  const [command, setCommand] = useState("");
+
+  function runCommand() {
+    const value = command.trim().replace(/^\//, "").toLowerCase();
+    if (!value) return;
+
+    const primitive = primitiveByCommand.get(value);
+    if (primitive) {
+      onAddBlock(primitive);
+      setCommand("");
+      return;
+    }
+
+    const preset = presetByCommand.get(value);
+    if (preset) {
+      onAddBlocks(preset.blocks());
+      setCommand("");
+    }
+  }
+
   return (
     <div style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+      <input
+        value={command}
+        onChange={(event) => setCommand(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") runCommand();
+        }}
+        placeholder="/title, /bullets, /quote, /metric"
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: 7,
+          padding: "7px 10px",
+          color: C.text,
+          fontSize: 12,
+          outline: "none",
+          marginBottom: 12,
+        }}
+      />
       <div
         style={{
           fontSize: 9,

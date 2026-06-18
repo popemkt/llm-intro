@@ -88,6 +88,7 @@ framework boundary.
 |---|---|---|
 | Insert primitive blocks | `SlideBlockInsertPanel` adds text, image, embed, and shape blocks | Browser smoke |
 | Insert content presets | `SlideBlockInsertPanel` adds title, bullets, quote, and metric typed block sets | Browser smoke |
+| Slash insert commands | `SlideBlockInsertPanel` maps `/title`, `/bullets`, `/quote`, `/metric`, and primitive commands to the same typed block creation paths | Browser smoke |
 | Edit speaker notes | `slides.notes`, `update-slide`, and `SlideEditorPage` notes field | Vitest/API plus browser smoke |
 | Display speaker notes | `PresentationView` renders active slide notes above controls outside fullscreen | Browser smoke |
 

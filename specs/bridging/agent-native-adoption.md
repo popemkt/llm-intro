@@ -91,7 +91,7 @@ for now. The migration should replace one workflow at a time:
 ## Features To Borrow From The Reference Slides App
 
 - hosted LLM prompt-to-deck generation that streams slides one by one;
-- richer visual slide editing: inline text edit, block bubble menu, slash menu;
+- richer visual slide editing: inline text edit and block bubble menus;
 - design-system storage and apply action, while preserving this app's existing
   `ThemeName` and slide theme model;
 - an Agent-Native frame/panel experience that supports App mode for product
@@ -143,6 +143,9 @@ Taken now:
   through the same Agent-Native action surface.
 - Visual editor insertion presets for title, bullets, quote, and metric content
   that compile back to typed blocks instead of raw reference-app HTML.
+- Visual editor slash insertion through `SlideBlockInsertPanel`, mapping `/title`,
+  `/bullets`, `/quote`, `/metric`, and primitive commands to this app's typed
+  block model.
 - Speaker-note persistence on slides through the existing slide model, update
   action, snapshots, and export payloads.
 - Presenter-mode speaker-note display for the active slide, while fullscreen

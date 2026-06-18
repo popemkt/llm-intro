@@ -24,9 +24,9 @@ Reference documentation:
   Agent-Native HSL tokens are derived from them so framework components do not
   fight the deck CSS.
 - The root is wrapped in a local `AppShell` that ports the useful shell shape
-  from the Agent-Native Slides app: left product rail, deck-scoped
-  `AgentPanel`, and an agent toggle. The panel starts closed while the full
-  production chat handler is still pending.
+  from the Agent-Native Slides app: left product rail, agent toggle, App mode
+  `AssistantChat`, and Code mode `AgentPanel`. The panel starts closed while
+  the full hosted production chat handler is still pending.
 - A minimal `/_agent-native/application-state/:key` route supports the
   framework sidebar's URL/application-state polling. It is intentionally narrow
   and in-memory until the full Agent-Native server plugin is adopted.

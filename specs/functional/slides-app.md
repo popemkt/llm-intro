@@ -76,8 +76,8 @@ editing, themed presentation playback, and HTML export.
 - Borrowed reference-app features are limited to capabilities that improve this
   product, especially advanced slide creation and stronger shell/agent UX.
 - The app shell includes an Agent-Native-style product rail and a real
-  `AgentPanel` toggle. The panel starts closed and uses a deck-scoped local App
-  Mode runtime for supported product prompts.
+  agent toggle. The panel starts closed, uses Agent-Native `AssistantChat` for
+  deck-scoped App Mode prompts, and keeps `AgentPanel` for local Code Mode.
 - In App Mode, agents can use product-safe deck actions without shell or
   filesystem access. The current local runtime can list slides and create
   standard normal slides, multi-slide outlines, slide groups, and deck theme

@@ -114,17 +114,16 @@ through the same action registry and application state regardless of which
 frame hosts it.
 
 Current implementation note: the app mounts `AgentSidebar` and the
-Current implementation note: the app mounts `AgentPanel` directly instead of the
+Current implementation note: the app uses a local shell wrapper instead of the
 framework `AgentSidebar` wrapper because this React Router app and
-Agent-Native's bundled router do not share the same router context. The local
-wrapper keeps the panel, suggestions, scope, and persistence behavior while
-avoiding the incompatible URL sync layer. The panel uses a custom
-`AgentChatRuntime` wired to `POST /_agent-native/app-agent` for local,
-deck-scoped App Mode prompts. Production `/_agent-native/agent-chat` streaming
-is not mounted yet, so hosted chat persistence, approvals, memory, and streaming
-remain separate adoption slices. In local development the panel declares
-`agentChatSurface="dev-frame"` and uses the local terminal bridge as the Code
-Mode surface; production shell access remains gated by the server-side terminal
+Agent-Native's bundled router do not share the same router context. App Mode
+renders Agent-Native `AssistantChat` with a custom `AgentChatRuntime` wired to
+`POST /_agent-native/app-agent` for local, deck-scoped product prompts. Code
+Mode renders the stock `AgentPanel` with `agentChatSurface="dev-frame"` so the
+local terminal bridge remains available for trusted local coding CLIs.
+Production `/_agent-native/agent-chat` streaming is not mounted yet, so hosted
+chat persistence, approvals, memory, and streaming remain separate adoption
+slices. Production shell access remains gated by the server-side terminal
 policy.
 
 ### App Mode And Code Mode

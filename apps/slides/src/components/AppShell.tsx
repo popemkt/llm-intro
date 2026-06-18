@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AgentPanel } from "@agent-native/core/client";
+import { AgentPanel, AssistantChat } from "@agent-native/core/client";
+import type { AgentChatRuntime } from "@agent-native/core/client/chat";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -24,9 +25,68 @@ const localCodeAccess = {
 };
 
 function deckScopeFromPath(pathname: string) {
-  const match = pathname.match(/^\/p\/(\d+)/);
+  const match = pathname.match(/^\/(?:p|presentations)\/(\d+)/);
   if (!match) return null;
   return { type: "deck" as const, id: match[1], label: `Deck ${match[1]}` };
+}
+
+function SlidesAgentSurface({
+  runtime,
+  suggestions,
+  onCollapse,
+}: {
+  runtime: AgentChatRuntime;
+  suggestions: string[];
+  onCollapse: () => void;
+}) {
+  const [mode, setMode] = useState<"app" | "code">("app");
+
+  return (
+    <div className="slides-agent-surface">
+      <div className="slides-agent-surface__header">
+        <div className="slides-agent-surface__modes" aria-label="Agent mode">
+          <button type="button" data-active={mode === "app"} onClick={() => setMode("app")}>
+            App
+          </button>
+          <button type="button" data-active={mode === "code"} onClick={() => setMode("code")}>
+            Code
+          </button>
+        </div>
+        <button
+          type="button"
+          className="slides-agent-surface__collapse"
+          onClick={onCollapse}
+          aria-label="Collapse agent"
+          title="Collapse agent"
+        >
+          <PanelLeftClose size={15} />
+        </button>
+      </div>
+
+      {mode === "app" ? (
+        <AssistantChat
+          runtime={runtime}
+          emptyStateText="Ask about this deck"
+          suggestions={suggestions}
+          dynamicSuggestions={false}
+          providerStatusChecksEnabled={false}
+          plusMenuMode="hidden"
+          showHeader={false}
+          className="slides-agent-surface__chat"
+        />
+      ) : (
+        <AgentPanel
+          defaultMode="cli"
+          emptyStateText="Ask about this deck"
+          suggestions={suggestions}
+          dynamicSuggestions
+          storageKey="llm-intro-slides-code-agent"
+          agentChatSurface="dev-frame"
+          codeAccess={localCodeAccess}
+        />
+      )}
+    </div>
+  );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -133,16 +193,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {agentOpen && (
         <aside className="slides-app-agent-panel agent-sidebar-panel" aria-label="Agent">
-          <AgentPanel
-            emptyStateText="Ask about this deck"
-            suggestions={agentSuggestions}
-            dynamicSuggestions
-            onCollapse={() => setAgentOpenPersisted(false)}
-            storageKey="llm-intro-slides-agent"
-            scope={deckScope}
+          <SlidesAgentSurface
             runtime={appAgentRuntime}
-            agentChatSurface="dev-frame"
-            codeAccess={localCodeAccess}
+            suggestions={agentSuggestions}
+            onCollapse={() => setAgentOpenPersisted(false)}
           />
         </aside>
       )}

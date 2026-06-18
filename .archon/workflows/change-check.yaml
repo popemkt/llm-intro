@@ -1,0 +1,64 @@
+# Adapted from Draiver.Application's Archon harness.
+# Purpose: run a small spec-aware check loop for llm-intro changes without
+# importing Draiver-specific Nx, NestJS, or swimlane assumptions.
+
+name: change-check
+description: Read the llm-intro harness docs, inspect the diff, and recommend validation commands.
+
+provider: codex
+interactive: true
+
+triggers:
+  - slash: /change-check
+  - manual
+
+isolation:
+  type: git-worktree
+  base: main
+
+nodes:
+  - id: read_harness
+    context: fresh
+    prompt: |
+      Read these files. Do not edit:
+        - README.md
+        - PLAN.md
+        - docs/harness.md
+      Emit JSON:
+        { rules_in_scope: string[], validation_surface: string[] }
+    output_format:
+      type: object
+      required: [rules_in_scope, validation_surface]
+      properties:
+        rules_in_scope: { type: array, items: { type: string } }
+        validation_surface: { type: array, items: { type: string } }
+
+  - id: scope_diff
+    depends_on: [read_harness]
+    context: shared
+    prompt: |
+      Base ref / scope: $ARGUMENTS (default to "main" if empty).
+      Inspect changed files with `git diff --name-only <base>...HEAD`
+      (fallback: `git diff --name-only <base>`).
+      Classify the change as one or more of:
+        app-ui, app-api, persistence, slide-content, demos, docs, harness.
+      Emit JSON: { base: string, files: string[], areas: string[] }
+    output_format:
+      type: object
+      required: [base, files, areas]
+
+  - id: recommend_validation
+    depends_on: [scope_diff]
+    context: shared
+    prompt: |
+      Harness rules: $read_harness.output
+      Diff scope: $scope_diff.output
+
+      Recommend the smallest sufficient validation command set from:
+        - pnpm test
+        - pnpm build
+        - pnpm test:e2e
+        - pnpm tsx demos/<demo>.ts
+
+      Explain why each command is included. Do not edit files and do not run
+      commands; this workflow is advisory.

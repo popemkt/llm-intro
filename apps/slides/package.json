@@ -1,0 +1,36 @@
+{
+  "name": "llm-intro-slides",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"portless run --name llm-intro vite\" \"tsx watch server/index.ts\"",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "server": "tsx server/index.ts",
+    "lint": "cd ../.. && oxlint apps/slides -c .oxlintrc.json",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:e2e": "cd ../.. && playwright test",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@llm-intro/api-contract": "workspace:*"
+  },
+  "nx": {
+    "implicitDependencies": [
+      "@llm-intro/api-contract"
+    ],
+    "targets": {
+      "build": {
+        "outputs": [
+          "{projectRoot}/dist"
+        ]
+      }
+    },
+    "tags": [
+      "scope:app",
+      "type:slides"
+    ]
+  }
+}

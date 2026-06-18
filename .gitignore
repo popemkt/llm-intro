@@ -1,9 +1,11 @@
 # Dependencies
 node_modules/
+.nx/
 
 # Build output
 dist/
 dist-ssr/
+dist-server/
 
 # TypeScript build info
 *.tsbuildinfo
@@ -31,9 +33,11 @@ logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+.entire/
 
 # Test screenshots (Playwright verification only)
 *.png
+.playwright-mcp/
 playwright-report/
 test-results/
 
@@ -44,7 +48,9 @@ vite.config.export.ts
 index.export.html
 
 # SQLite database
-server/data/*.db
-server/data/*.db-shm
-server/data/*.db-wal
+apps/slides/server/data/*.db
+apps/slides/server/data/*.db-shm
+apps/slides/server/data/*.db-wal
 .worktrees/
+.claude/settings.local.json
+.codex/config.toml

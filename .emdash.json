@@ -1,0 +1,15 @@
+{
+  "preservePatterns": [
+    ".env.development",
+    "**/.env",
+    "*/.env",
+    ".env.keys",
+    ".env.local",
+    ".env.*.local",
+    ".envrc",
+    "demos/.env"
+  ],
+  "scripts": {
+    "setup": "pnpm setup:worktree"
+  }
+}

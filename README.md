@@ -13,12 +13,18 @@ The app has two presentation modes:
 - Express 5 + better-sqlite3
 - Playwright + Vitest
 - Tailwind CSS v4 and `motion`
+- Nx package workspace with `apps/*` and `libs/*`
+- Agent-Native framework foundation
 
 ## Architecture
 
+The dev/test/agent harness is specified in [`docs/harness.md`](docs/harness.md).
+The Agent-Native adoption path is tracked in [`docs/agent-native-migration.md`](docs/agent-native-migration.md).
+
 ### Shared contract
 
-`shared/api.ts` is the API boundary shared by client and server. It defines:
+`libs/api-contract` is the API boundary shared by client and server.
+`apps/slides/shared/api.ts` remains as a compatibility re-export. The contract defines:
 
 - presentation types
 - slide block types
@@ -28,13 +34,13 @@ The app has two presentation modes:
 
 The backend is intentionally split into layers:
 
-- `server/db.ts`: database bootstrap, migrations, and system deck seeding
-- `server/repositories/*`: raw SQL/data access
-- `server/services/*`: business rules and invariants
-- `server/routes/*`: HTTP adapters and request parsing
-- `server/app.ts`: Express app construction
-- `server/runtime.ts`: production/test wiring
-- `server/index.ts`: process entrypoint
+- `apps/slides/server/db.ts`: database bootstrap, migrations, and system deck seeding
+- `apps/slides/server/repositories/*`: raw SQL/data access
+- `apps/slides/server/services/*`: business rules and invariants
+- `apps/slides/server/routes/*`: HTTP adapters and request parsing
+- `apps/slides/server/app.ts`: Express app construction
+- `apps/slides/server/runtime.ts`: production/test wiring
+- `apps/slides/server/index.ts`: process entrypoint
 
 Key rules:
 
@@ -44,15 +50,15 @@ Key rules:
 
 ### Client
 
-The React app is route-split and lazy-loaded from `src/main.tsx`.
+The React app is route-split and lazy-loaded from `apps/slides/src/main.tsx`.
 
 Main areas:
 
-- `src/pages/HomePage.tsx`: deck list and creation
-- `src/pages/PresentationPage.tsx`: overview/presentation/fullscreen shell
-- `src/pages/SlideEditorPage.tsx`: DB slide editor
-- `src/pages/SettingsPage.tsx`: per-deck settings
-- `src/components/*`: overview grid, presentation views, DB slide renderer
+- `apps/slides/src/pages/HomePage.tsx`: deck list and creation
+- `apps/slides/src/pages/PresentationPage.tsx`: overview/presentation/fullscreen shell
+- `apps/slides/src/pages/SlideEditorPage.tsx`: DB slide editor
+- `apps/slides/src/pages/SettingsPage.tsx`: per-deck settings
+- `apps/slides/src/components/*`: overview grid, presentation views, DB slide renderer
 
 Client themes are split in two:
 
@@ -85,6 +91,7 @@ Client themes are split in two:
 
 ```bash
 pnpm dev
+pnpm lint
 pnpm build
 pnpm test
 pnpm test:e2e

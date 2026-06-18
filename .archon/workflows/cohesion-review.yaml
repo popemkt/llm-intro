@@ -1,0 +1,77 @@
+# Adapted from Draiver.Application's L3 cohesion reviewer.
+
+name: cohesion-review
+description: Advisory cohesion review of a diff (KEEP/PROMOTE/SPLIT/MERGE). Never edits or gates.
+
+provider: codex
+
+triggers:
+  - slash: /cohesion-review
+  - manual
+
+isolation:
+  type: git-worktree
+  base: main
+
+nodes:
+  - id: read_rubric
+    context: fresh
+    prompt: |
+      Read, do not edit:
+        - docs/code-unit-cohesion.md
+        - AGENTS.md
+        - docs/harness.md
+      Emit JSON:
+        { verdicts: string[], unit_families: string[], advisory_only: bool }
+    output_format:
+      type: object
+      required: [verdicts, unit_families, advisory_only]
+
+  - id: scope_diff
+    depends_on: [read_rubric]
+    context: shared
+    prompt: |
+      Base ref / scope: $ARGUMENTS (default to "main" if empty).
+      List changed source/config/doc files with:
+        git diff --name-only <base>...HEAD
+      Fallback:
+        git diff --name-only <base>
+      Exclude generated output, lockfiles, node_modules, test-results, and build artifacts.
+      Emit JSON: { base: string, files: string[] }
+    output_format:
+      type: object
+      required: [base, files]
+
+  - id: ground_units
+    depends_on: [scope_diff]
+    context: shared
+    prompt: |
+      Changed files: $scope_diff.output
+
+      For each changed unit, gather evidence:
+        - direct imports;
+        - fan-in via ripgrep imports/callers;
+        - relevant test files;
+        - unit family from docs/code-unit-cohesion.md.
+
+      Emit JSON:
+        { units: [ { file: string, family: string, imports: string[], fanInHints: string[], tests: string[] } ] }
+    output_format:
+      type: object
+      required: [units]
+
+  - id: review
+    depends_on: [ground_units]
+    context: shared
+    prompt: |
+      Rubric: $read_rubric.output
+      Evidence: $ground_units.output
+
+      Apply KEEP/PROMOTE/SPLIT/MERGE from docs/code-unit-cohesion.md.
+      Every coupling claim must cite file/import/test evidence.
+      Output the COHESION REVIEW report and final machine-parseable status:
+        COHESION_STATUS: CLEAN
+      or
+        COHESION_STATUS: ISSUES(<n>)
+
+      Never edit files.

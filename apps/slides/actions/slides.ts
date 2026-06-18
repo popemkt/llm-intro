@@ -1,0 +1,92 @@
+import { defineAction } from '@agent-native/core'
+import type { createSlidesService } from '../server/services/slides.js'
+import { parseLayout, parseSlideCreate, parseSlidePatch } from '../server/validation.js'
+import { z } from 'zod'
+
+type SlidesService = ReturnType<typeof createSlidesService>
+
+const blockInput = z.record(z.string(), z.unknown())
+
+export function createSlideActions(slidesService: SlidesService) {
+  return {
+    'list-slides': defineAction({
+      description: 'List slides for a presentation deck.',
+      schema: z.object({
+        pid: z.coerce.number().int().positive(),
+      }),
+      http: {
+        method: 'GET',
+        path: 'list-slides',
+      },
+      requiresAuth: false,
+      readOnly: true,
+      run: ({ pid }) => slidesService.list(pid),
+    }),
+
+    'create-slide': defineAction({
+      description: 'Create a database-backed slide.',
+      schema: z.object({
+        pid: z.coerce.number().int().positive(),
+        title: z.string().optional(),
+        blocks: z.array(blockInput).optional(),
+      }),
+      http: {
+        method: 'POST',
+        path: 'create-slide',
+      },
+      requiresAuth: false,
+      run: ({ pid, ...input }) => slidesService.create(pid, parseSlideCreate(input)),
+    }),
+
+    'update-slide': defineAction({
+      description: 'Update slide title or blocks.',
+      schema: z.object({
+        pid: z.coerce.number().int().positive(),
+        sid: z.coerce.number().int().positive(),
+        title: z.string().optional(),
+        blocks: z.array(blockInput).optional(),
+      }),
+      http: {
+        method: 'PUT',
+        path: 'update-slide',
+      },
+      requiresAuth: false,
+      run: ({ pid, sid, ...patch }) => slidesService.update(pid, sid, parseSlidePatch(patch)),
+    }),
+
+    'delete-slide': defineAction({
+      description: 'Delete a database-backed slide.',
+      schema: z.object({
+        pid: z.coerce.number().int().positive(),
+        sid: z.coerce.number().int().positive(),
+      }),
+      http: {
+        method: 'DELETE',
+        path: 'delete-slide',
+      },
+      requiresAuth: false,
+      run: ({ pid, sid }) => {
+        slidesService.delete(pid, sid)
+        return null
+      },
+    }),
+
+    'update-deck-layout': defineAction({
+      description: 'Apply slide and group ordering for a deck.',
+      schema: z.object({
+        pid: z.coerce.number().int().positive(),
+        ungrouped: z.array(z.coerce.number().int().positive()).default([]),
+        groups: z.array(z.object({
+          id: z.coerce.number().int().positive(),
+          slideIds: z.array(z.coerce.number().int().positive()).default([]),
+        })),
+      }),
+      http: {
+        method: 'PUT',
+        path: 'update-deck-layout',
+      },
+      requiresAuth: false,
+      run: ({ pid, ...layout }) => slidesService.applyLayout(pid, parseLayout(layout)),
+    }),
+  }
+}

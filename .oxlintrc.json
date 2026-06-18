@@ -1,0 +1,85 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "oxc",
+    "typescript",
+    "unicorn",
+    "react"
+  ],
+  "env": {
+    "browser": true,
+    "builtin": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    ".nx",
+    "dist",
+    "**/dist/**",
+    "dist-server",
+    "**/dist-server/**",
+    "node_modules",
+    "playwright-report",
+    "test-results"
+  ],
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "max-lines-per-function": [
+      "warn",
+      {
+        "max": 120
+      }
+    ],
+    "max-params": [
+      "warn",
+      5
+    ],
+    "complexity": [
+      "warn",
+      20
+    ],
+    "max-depth": [
+      "warn",
+      5
+    ],
+    "max-nested-callbacks": [
+      "warn",
+      4
+    ],
+    "max-lines": [
+      "warn",
+      {
+        "max": 900
+      }
+    ],
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unused-vars": "error",
+    "no-unused-vars": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.tsx"
+      ],
+      "rules": {
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "warn",
+        "react/only-export-components": [
+          "error",
+          {
+            "allowConstantExport": true
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "apps/slides/src/main.tsx"
+      ],
+      "rules": {
+        "react/only-export-components": "off"
+      }
+    }
+  ]
+}

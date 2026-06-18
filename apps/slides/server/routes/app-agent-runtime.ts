@@ -40,6 +40,15 @@ const themeAliases: Record<string, ThemeName> = {
   ocean: "ocean",
 };
 
+const designSystemAliases = [
+  { id: "signal-console", terms: ["signal console", "signal", "terminal", "green"] },
+  { id: "midnight-workbench", terms: ["midnight workbench", "midnight", "workbench", "blue"] },
+  { id: "clean-briefing", terms: ["clean briefing", "clean", "briefing", "light"] },
+  { id: "neon-lab", terms: ["neon lab", "neon"] },
+  { id: "warm-studio", terms: ["warm studio", "warm", "studio"] },
+  { id: "ocean-system", terms: ["ocean system", "ocean", "teal"] },
+];
+
 function getDeckId(scope: AppAgentRequest["scope"]) {
   if (scope?.type !== "deck") return null;
   const id = Number(scope.id);
@@ -111,6 +120,46 @@ function formatThemeCatalog(result: unknown) {
     })
     .filter(Boolean)
     .join("\n");
+}
+
+function formatDesignSystemCatalog(result: unknown) {
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("designSystems" in result) ||
+    !Array.isArray(result.designSystems)
+  ) {
+    return "I could not read the design-system catalog.";
+  }
+
+  return result.designSystems
+    .map((system) => {
+      if (!system || typeof system !== "object" || !("id" in system)) return null;
+      const id = getText(system.id);
+      const name = "name" in system ? getText(system.name) : id;
+      const theme = "theme" in system ? getText(system.theme) : "";
+      const description = "description" in system ? getText(system.description) : "";
+      return `${id}${name ? ` (${name})` : ""}${theme ? ` -> ${theme}` : ""}${
+        description ? `: ${description}` : ""
+      }`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function inferDesignSystem(prompt: string) {
+  const normalized = prompt.toLowerCase();
+  return designSystemAliases.find(({ id, terms }) => {
+    return normalized.includes(id) || terms.some((term) => normalized.includes(term));
+  })?.id;
+}
+
+function inferDesignSystemTarget(normalized: string) {
+  const mentionsApp = /\b(app|shell|chrome|workspace)\b/.test(normalized);
+  const mentionsDeck = /\b(deck|slides?|presentation)\b/.test(normalized);
+  if (mentionsApp && mentionsDeck) return "both";
+  if (mentionsApp) return "app";
+  return "deck";
 }
 
 function inferPositiveIntegerAfter(prompt: string, terms: string[]) {
@@ -393,7 +442,38 @@ async function handleDeckReadPrompt(
   return null;
 }
 
-async function handleThemePrompt(actions: SlideDeckActions, prompt: string, normalized: string) {
+async function handleThemePrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number | null,
+) {
+  if (/\b(list|show|what|available)\b.*\bdesign systems?\b/.test(normalized)) {
+    const catalog = await runAction(actions["list-design-systems"], {});
+    return `Available design systems:\n${formatDesignSystemCatalog(catalog)}`;
+  }
+
+  if (/\b(apply|use|set|change)\b.*\bdesign system\b/.test(normalized)) {
+    const systemId = inferDesignSystem(prompt);
+    if (!systemId) return "Pick a design system first. Try: list available design systems.";
+    const target = inferDesignSystemTarget(normalized);
+    if ((target === "deck" || target === "both") && !deckId) {
+      return "Open a deck first, then I can apply a design system to it.";
+    }
+    const result = await runAction(actions["apply-design-system"], {
+      systemId,
+      target,
+      deckId: target === "app" ? undefined : deckId,
+    });
+    const designSystem =
+      result && typeof result === "object" && "designSystem" in result ? result.designSystem : null;
+    const name =
+      designSystem && typeof designSystem === "object" && "name" in designSystem
+        ? getText(designSystem.name)
+        : systemId;
+    return `Applied ${name} to ${target}.`;
+  }
+
   if (/\b(list|show|what|available)\b.*\bthemes?\b/.test(normalized)) {
     const catalog = await runAction(actions["get-theme-catalog"], {});
     return `Available themes:\n${formatThemeCatalog(catalog)}`;
@@ -440,7 +520,7 @@ async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const navigationResponse = await handleNavigationPrompt(actions, prompt, normalized, deckId);
   if (navigationResponse) return navigationResponse;
 
-  const themeResponse = await handleThemePrompt(actions, prompt, normalized);
+  const themeResponse = await handleThemePrompt(actions, prompt, normalized, deckId);
   if (themeResponse) return themeResponse;
 
   const readResponse = await handleDeckReadPrompt(actions, normalized, deckId);

@@ -108,7 +108,8 @@ Taken now:
 - Agent sidebar prompt suggestions scoped to deck creation/editing.
 - Local App Mode chat runtime that can list deck slides and create normal
   slides, groups, multi-slide outlines, and theme changes through product
-  actions without hosted Builder.io auth.
+  actions without hosted Builder.io auth. It can also list and apply built-in
+  design systems through the same action registry.
 - Normal slide layout vocabulary and outline creation: title, section, bullets,
   two-column, quote, metrics, closing, and multi-slide sequence creation.
 - Deck-level outline creation through `create-deck-from-outline`, which borrows

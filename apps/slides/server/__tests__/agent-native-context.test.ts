@@ -415,7 +415,11 @@ describe("App agent active deck context runtime", () => {
 });
 
 describe("App agent theme runtime", () => {
-  const { app } = createTestContext({ seedSystemPresentation: false });
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+
+  beforeEach(() => {
+    db.exec("DELETE FROM presentations;");
+  });
 
   it("POST /_agent-native/app-agent lists available themes", async () => {
     const res = await request(app)
@@ -437,6 +441,34 @@ describe("App agent theme runtime", () => {
 
     const commandRes = await request(app).get("/_agent-native/application-state/app-theme-command");
     expect(commandRes.body).toMatchObject({ theme: "ocean" });
+  });
+
+  it("POST /_agent-native/app-agent lists available design systems", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "list available design systems" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("signal-console");
+    expect(res.body.text).toContain("Ocean System");
+  });
+
+  it("POST /_agent-native/app-agent applies a design system to the active deck", async () => {
+    const deck = (await request(app).post("/api/presentations").send({ name: "Agent Design" }))
+      .body;
+
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "apply ocean design system to this deck",
+        scope: { type: "deck", id: String(deck.id) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Ocean System");
+
+    const updatedDeck = await request(app).get(`/_agent-native/actions/get-deck?id=${deck.id}`);
+    expect(updatedDeck.body).toMatchObject({ id: deck.id, theme: "ocean" });
   });
 });
 

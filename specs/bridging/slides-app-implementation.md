@@ -225,10 +225,11 @@ include listing slides, listing groups, creating one normal slide, creating a
 multi-slide normal outline, creating a group, changing the deck theme, and
 preparing an HTML export link. It can also summarize the active deck through
 `get-active-deck-context`, list theme metadata through `get-theme-catalog`, and
-queue app-shell theme changes through `set-app-theme`. It can capture and list
-deck snapshots through `create-deck-snapshot` and `list-deck-snapshots`, and
-restore a snapshot through `restore-deck-snapshot` when the prompt includes an
-explicit snapshot id. This
+queue app-shell theme changes through `set-app-theme`. It can list and apply
+built-in design systems through `list-design-systems` and `apply-design-system`.
+It can capture and list deck snapshots through `create-deck-snapshot` and
+`list-deck-snapshots`, and restore a snapshot through `restore-deck-snapshot`
+when the prompt includes an explicit snapshot id. This
 gives the embedded panel a real product-safe tool path without requiring a
 Builder.io login. Repository self-modification is still Code Mode and should go
 through the local authenticated CLI bridge or a trusted hosted frame.

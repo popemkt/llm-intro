@@ -104,7 +104,7 @@ editing, themed presentation playback, and HTML export.
   standard normal slides, multi-slide outlines, slide groups, and deck theme
   changes, HTML export links, and active deck summaries in the active deck from
   simple prompts. It can also list available themes and change the app shell
-  theme, and it can create/list/restore deck snapshots.
+  theme, list and apply design systems, and create/list/restore deck snapshots.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

@@ -57,6 +57,8 @@ editing, themed presentation playback, and HTML export.
   borders, and accents.
 - Agents can list the supported theme catalog and can apply the app shell theme
   in the open browser session through a queued, product-safe command.
+- Agents can list built-in design systems and apply one to a deck theme, the
+  open app shell theme, or both while preserving the existing `ThemeName` model.
 - Framework adoption must not collapse existing `ThemeName` behavior into a
   fixed reference-app palette.
 

@@ -25,7 +25,7 @@ export function createSlideDeckActions(services: {
 }) {
   return {
     ...createAppContextActions(),
-    ...createThemeDesignActions(),
+    ...createThemeDesignActions(services.presentationsService),
     "get-active-deck-context": createActiveDeckContextAction(services),
     ...createDeckActions(services.presentationsService),
     ...createSlideActions(services.slidesService),

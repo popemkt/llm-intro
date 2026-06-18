@@ -92,8 +92,8 @@ for now. The migration should replace one workflow at a time:
 
 - hosted LLM prompt-to-deck generation that streams slides one by one;
 - richer visual slide editing refinements such as formatting controls;
-- design-system storage and apply action, while preserving this app's existing
-  `ThemeName` and slide theme model;
+- further design-system management refinements, while preserving this app's
+  existing `ThemeName` and slide theme model;
 - an Agent-Native frame/panel experience that supports App mode for product
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
@@ -135,6 +135,9 @@ Taken now:
 - Theme catalog and app-shell-theme command exposure through `get-theme-catalog`
   and `set-app-theme`, preserving this app's existing `ThemeName` model while
   giving agents design context.
+- Built-in design-system catalog and apply actions through `list-design-systems`
+  and `apply-design-system`, mapping reference-style design-system choices to
+  the existing `ThemeName` deck/app-shell model.
 - Deck snapshot capture, inspection, and restore through
   `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, and
   `restore-deck-snapshot`; restore is consequential and requires an explicit

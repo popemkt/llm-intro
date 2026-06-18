@@ -114,6 +114,8 @@ framework boundary.
 | Per-deck theme persistence | presentation service, `update-deck` action/REST route |
 | Agent theme catalog | `get-theme-catalog` action returns shared theme metadata |
 | Agent app-shell theme change | `set-app-theme` queues `app-theme-command`; `AppShell` applies it through `applyAppTheme` |
+| Agent design-system catalog | `list-design-systems` action returns built-in design-system mappings over `ThemeName` |
+| Agent design-system apply | `apply-design-system` updates deck theme and/or queues app shell theme through existing theme paths |
 
 ## Export Bridge
 

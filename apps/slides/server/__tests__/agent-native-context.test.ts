@@ -31,6 +31,8 @@ describe("Agent Native app context actions", () => {
     expectPublicAction(res.body.actions, "get-active-deck-context", { readOnly: true });
     expectPublicAction(res.body.actions, "get-theme-catalog", { readOnly: true });
     expectPublicAction(res.body.actions, "set-app-theme", { readOnly: false });
+    expectPublicAction(res.body.actions, "list-design-systems", { readOnly: true });
+    expectPublicAction(res.body.actions, "apply-design-system", { readOnly: false });
     expectPublicAction(res.body.actions, "create-deck-snapshot", { readOnly: false });
     expectPublicAction(res.body.actions, "list-deck-snapshots", { readOnly: true });
     expectPublicAction(res.body.actions, "restore-deck-snapshot", {
@@ -112,6 +114,45 @@ describe("Agent Native theme design actions", () => {
       queued: true,
       command: { theme: "ocean" },
     });
+
+    const commandRes = await request(app).get("/_agent-native/application-state/app-theme-command");
+    expect(commandRes.body).toMatchObject({ theme: "ocean" });
+    expect(commandRes.body._writeId).toEqual(expect.any(String));
+  });
+
+  it("GET /_agent-native/actions/list-design-systems returns built-in theme mappings", async () => {
+    const res = await request(app).get("/_agent-native/actions/list-design-systems");
+
+    expect(res.status).toBe(200);
+    expect(res.body.designSystems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "signal-console",
+          theme: "dark-green",
+          storage: "built-in",
+        }),
+        expect.objectContaining({
+          id: "ocean-system",
+          theme: "ocean",
+        }),
+      ]),
+    );
+  });
+
+  it("POST /_agent-native/actions/apply-design-system applies deck and app themes", async () => {
+    const deck = (await request(app).post("/api/presentations").send({ name: "Design Deck" })).body;
+
+    const res = await request(app)
+      .post("/_agent-native/actions/apply-design-system")
+      .send({ deckId: deck.id, systemId: "ocean-system", target: "both" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.designSystem).toMatchObject({ id: "ocean-system", theme: "ocean" });
+    expect(res.body.deck).toMatchObject({ id: deck.id, theme: "ocean" });
+    expect(res.body.appThemeCommand).toMatchObject({ theme: "ocean" });
+
+    const updatedDeck = await request(app).get(`/_agent-native/actions/get-deck?id=${deck.id}`);
+    expect(updatedDeck.body).toMatchObject({ id: deck.id, theme: "ocean" });
 
     const commandRes = await request(app).get("/_agent-native/application-state/app-theme-command");
     expect(commandRes.body).toMatchObject({ theme: "ocean" });

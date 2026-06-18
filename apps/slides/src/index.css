@@ -41,8 +41,10 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--color-text-dim); }
 }
 
-/* Agent-Native ships an unlayered reset. Reassert the Tailwind utility surface
-   used by this app so imported framework CSS cannot flatten deck layouts. */
+/* TODO(agent-native-shell): replace this containment block when framework UI
+   styles are scoped to Agent-Native surfaces or loaded only with the agent
+   shell. Agent-Native currently ships an unlayered reset, so reassert the
+   Tailwind utility surface used by this app to keep deck layouts intact. */
 .mx-auto { margin-inline: auto; }
 .mt-1 { margin-top: calc(var(--spacing) * 1); }
 .mr-2 { margin-right: calc(var(--spacing) * 2); }

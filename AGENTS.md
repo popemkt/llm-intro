@@ -3,8 +3,11 @@
 This repo is an interactive LLM intro slide-deck app. Keep changes grounded in
 the current app harness:
 
-- read `README.md`, `PLAN.md`, and `docs/harness.md` before design-affecting
+- read `README.md`, `PLAN.md`, and `specs/harness.md` before design-affecting
   edits;
+- update `specs/functional/slides-app.md` when user-visible behavior changes;
+- update `specs/bridging/slides-app-implementation.md` when implementation
+  ownership or framework bridging changes;
 - keep shared API contracts in `libs/api-contract`; `apps/slides/shared/api.ts`
   is only a compatibility re-export;
 - keep app/server source under `apps/slides`;
@@ -13,7 +16,7 @@ the current app harness:
 - update Playwright when a browser flow changes;
 - update Vitest/API tests when persistence, service rules, or shared contracts
   change;
-- apply the code-unit cohesion rule in `docs/code-unit-cohesion.md` when a
+- apply the code-unit cohesion rule in `specs/code-unit-cohesion.md` when a
   change touches source structure or crosses module boundaries;
 - use `pnpm dev`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm test:e2e` as the
   registered entrypoints.
@@ -29,13 +32,13 @@ the current app harness:
   change and choosing validation commands.
 - `.archon/workflows/cohesion-review.yaml` and
   `.claude/commands/cohesion-review.md` run the advisory KEEP/PROMOTE/SPLIT/MERGE
-  cohesion review from `docs/code-unit-cohesion.md`.
+  cohesion review from `specs/code-unit-cohesion.md`.
 - `.claude/agents/entire-search.md` and `.codex/agents/entire-search.toml`
   search historical checkpoints with `entire search --json`.
 
 ## Code Unit Cohesion
 
-Use `docs/code-unit-cohesion.md` as the source of truth. The key boundary rules:
+Use `specs/code-unit-cohesion.md` as the source of truth. The key boundary rules:
 
 - routes parse HTTP and call services;
 - services own business invariants and call repositories;

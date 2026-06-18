@@ -18,9 +18,9 @@ nodes:
     context: fresh
     prompt: |
       Read, do not edit:
-        - docs/code-unit-cohesion.md
+        - specs/code-unit-cohesion.md
         - AGENTS.md
-        - docs/harness.md
+        - specs/harness.md
       Emit JSON:
         { verdicts: string[], unit_families: string[], advisory_only: bool }
     output_format:
@@ -52,7 +52,7 @@ nodes:
         - direct imports;
         - fan-in via ripgrep imports/callers;
         - relevant test files;
-        - unit family from docs/code-unit-cohesion.md.
+        - unit family from specs/code-unit-cohesion.md.
 
       Emit JSON:
         { units: [ { file: string, family: string, imports: string[], fanInHints: string[], tests: string[] } ] }
@@ -67,7 +67,7 @@ nodes:
       Rubric: $read_rubric.output
       Evidence: $ground_units.output
 
-      Apply KEEP/PROMOTE/SPLIT/MERGE from docs/code-unit-cohesion.md.
+      Apply KEEP/PROMOTE/SPLIT/MERGE from specs/code-unit-cohesion.md.
       Every coupling claim must cite file/import/test evidence.
       Output the COHESION REVIEW report and final machine-parseable status:
         COHESION_STATUS: CLEAN

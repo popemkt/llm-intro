@@ -47,9 +47,11 @@ The harness keeps four loops explicit:
 | `demos/*` | Model/tool-calling demonstration harness. `demos/_model.ts` is the provider boundary; `demos/.env.template` declares local env. |
 | `playwright/e2e.spec.ts` | Browser flow harness for seeded deck visibility and user deck create/edit/reorder/theme/delete behavior. |
 | `.github/workflows/ci.yml` | CI runs unit/API tests, production build, and Playwright e2e. |
-| `docs/code-unit-cohesion.md` | Structural rule for keeping source units cohesive and reviewable. |
+| `specs/code-unit-cohesion.md` | Structural rule for keeping source units cohesive and reviewable. |
 | `nx.json` + `pnpm-workspace.yaml` | Draiver-style package workspace and task graph. |
-| `docs/agent-native-migration.md` | Framework adoption map and guardrails. |
+| `specs/functional/slides-app.md` | Functional behavior spec for the slide app. |
+| `specs/bridging/slides-app-implementation.md` | Code-to-behavior bridge for the slide app. |
+| `specs/bridging/agent-native-adoption.md` | Framework adoption map and guardrails. |
 
 ## Registered Commands
 
@@ -88,8 +90,8 @@ Today that primarily preserves `demos/.env`, derived from `demos/.env.template`.
 | Build config, routing, lazy loading, export pipeline | `pnpm build`; add `pnpm test:e2e` when user navigation changes |
 | Code-backed slide content only | `pnpm build`; visually inspect when layout changes are non-trivial |
 | Demos/model provider | run the touched `pnpm tsx demos/<file>.ts` script when credentials are available |
-| Harness files | `pnpm lint` for rule/config edits; `pnpm test` for package/script edits; `git diff --check` for docs/config-only edits |
-| Source-structure changes | Apply `docs/code-unit-cohesion.md`; use `/cohesion-review` when boundaries or responsibilities move |
+| Harness files | `pnpm lint` for rule/config edits; `pnpm test` for package/script edits; `git diff --check` for specs/config-only edits |
+| Source-structure changes | Apply `specs/code-unit-cohesion.md`; use `/cohesion-review` when boundaries or responsibilities move |
 
 ## Agent Checkpoint Harness
 
@@ -104,14 +106,14 @@ Draiver's Entire integration is carried over with repo-local hook files:
 ## Archon Workflow
 
 The Draiver workflow graph is adapted here as `.archon/workflows/change-check.yaml`.
-It is advisory: it reads the harness docs, scopes the diff, and recommends the
+It is advisory: it reads the harness specs, scopes the diff, and recommends the
 smallest validation command set. It does not edit files and does not replace the
 registered commands above.
 
 The Draiver cohesion reviewer is adapted here as
 `.archon/workflows/cohesion-review.yaml` and
 `.claude/commands/cohesion-review.md`. It is also advisory. It applies the
-KEEP/PROMOTE/SPLIT/MERGE rubric in `docs/code-unit-cohesion.md` and grounds
+KEEP/PROMOTE/SPLIT/MERGE rubric in `specs/code-unit-cohesion.md` and grounds
 claims in imports, fan-in hints, and relevant tests.
 
 ## Imported From Draiver

@@ -3,7 +3,7 @@
 # importing Draiver-specific Nx, NestJS, or swimlane assumptions.
 
 name: change-check
-description: Read the llm-intro harness docs, inspect the diff, and recommend validation commands.
+description: Read the llm-intro harness specs, inspect the diff, and recommend validation commands.
 
 provider: codex
 interactive: true
@@ -23,7 +23,7 @@ nodes:
       Read these files. Do not edit:
         - README.md
         - PLAN.md
-        - docs/harness.md
+        - specs/harness.md
       Emit JSON:
         { rules_in_scope: string[], validation_surface: string[] }
     output_format:
@@ -41,7 +41,7 @@ nodes:
       Inspect changed files with `git diff --name-only <base>...HEAD`
       (fallback: `git diff --name-only <base>`).
       Classify the change as one or more of:
-        app-ui, app-api, persistence, slide-content, demos, docs, harness.
+        app-ui, app-api, persistence, slide-content, demos, specs, harness.
       Emit JSON: { base: string, files: string[], areas: string[] }
     output_format:
       type: object

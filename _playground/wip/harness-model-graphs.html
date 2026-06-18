@@ -454,7 +454,7 @@ svg { width: 100%; height: auto; display: block; }
         <div class="body">
           <p class="role">The new translator. Does both hand-labor jobs — but unproven.</p>
           <ul class="traits">
-            <li><b>stateless</b> — starts blank every run<span class="lever">→ give it memory: docs, checkpoint history, and harness records as external state</span></li>
+            <li><b>stateless</b> — starts blank every run<span class="lever">→ give it memory: specs, checkpoint history, and harness records as external state</span></li>
             <li><b>forward-only, no built-in verdict</b> — can't feel when it's wrong<span class="lever">→ build programmatic sensors: tests, drift checks, lint sense right/wrong for it</span></li>
             <li><b>fully programmable</b> — total control of its inputs, tools, loop<span class="lever">→ sandboxes, fixed entrypoints, MCP — make it reliably do what no employee would</span></li>
             <li><b>stochastic</b> — same input, different output<span class="lever">→ keep the judge; wrap the unproven hops in disciplines</span></li>
@@ -819,7 +819,7 @@ svg { width: 100%; height: auto; display: block; }
       <rect class="stabilizer-card" x="58" y="504" width="230" height="62" rx="10" fill="rgba(167,139,250,0.045)" stroke="#a78bfa" stroke-opacity="0.45"/>
       <text x="74" y="526" fill="#a78bfa" font-size="10.5" font-weight="700">Durable record</text>
       <text x="74" y="542" fill="#cbd5e1" font-size="8.4">Reference and memory must persist:</text>
-      <text x="74" y="555" fill="#64748b" font-size="8.1">docs, evidence, verdict, history.</text>
+      <text x="74" y="555" fill="#64748b" font-size="8.1">specs, evidence, verdict, history.</text>
     </g>
 
     <g class="stabilizer" tabindex="0">
@@ -979,7 +979,7 @@ svg { width: 100%; height: auto; display: block; }
           <text x="512" y="202" text-anchor="middle" fill="#5e7a9c" font-size="7.5">"how is it running?" =</text>
           <text x="512" y="212" text-anchor="middle" fill="#5e7a9c" font-size="7.5">read the launch command</text>
           <line x1="368" y1="178" x2="430" y2="178" stroke="#60a5fa" stroke-opacity="0.7" stroke-width="1.5" marker-end="url(#ep-fwd)"/>
-          <text x="12" y="332" fill="#64748b" font-size="8" font-style="italic">registry: docs/harness.md · no ad-hoc local-only commands in shared docs</text>
+          <text x="12" y="332" fill="#64748b" font-size="8" font-style="italic">registry: specs/harness.md · no ad-hoc local-only commands in shared specs</text>
         </svg>
         <div class="prail">
           <h4 style="color:#60a5fa">→ predictable world — the launch conditions, pinned</h4>
@@ -988,7 +988,7 @@ svg { width: 100%; height: auto; display: block; }
             <li><b>Minimal &amp; complete</b> — <code>pnpm dev</code> starts the usable app; Playwright starts its own isolated browser/API/database stack.</li>
             <li><b>Proxy is explicit</b> — Vite proxies <code>/api</code> to Express; tests set a per-run DB path and API port.</li>
             <li><b>Count stays small</b> — app, API-only, build, unit/API tests, browser tests, demo scripts, and harness setup.</li>
-            <li><b>Not listed = doesn't exist</b> — <code>docs/harness.md</code> is the command registry; shared automation uses those commands.</li>
+            <li><b>Not listed = doesn't exist</b> — <code>specs/harness.md</code> is the command registry; shared automation uses those commands.</li>
           </ul>
           <p class="ex">e.g. <code>pnpm dev</code> · <code>pnpm test</code> · <code>pnpm build</code> · <code>pnpm test:e2e</code></p>
         </div>
@@ -1009,7 +1009,7 @@ svg { width: 100%; height: auto; display: block; }
             <rect x="170" y="96" width="260" height="26" rx="7" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.3"/><text x="300" y="113" text-anchor="middle" fill="#fbbf24">3 · classify change area</text>
             <rect x="170" y="132" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="149" text-anchor="middle" fill="#e2e8f0">4 · recommend validation</text>
             <rect x="170" y="168" width="260" height="26" rx="7" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.3"/><text x="300" y="185" text-anchor="middle" fill="#fbbf24">5 · human runs commands</text>
-            <rect x="170" y="204" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="221" text-anchor="middle" fill="#e2e8f0">6 · reconcile docs/tests</text>
+            <rect x="170" y="204" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="221" text-anchor="middle" fill="#e2e8f0">6 · reconcile specs/tests</text>
             <rect x="170" y="240" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="257" text-anchor="middle" fill="#e2e8f0">7 · final status</text>
             <rect x="170" y="276" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="293" text-anchor="middle" fill="#e2e8f0">8 · optional commit</text>
           </g>
@@ -1030,7 +1030,7 @@ svg { width: 100%; height: auto; display: block; }
           <p class="lead">A crossing is reliable only if the <i>process</i> is. We encode the rules as a runnable graph (Archon), so the discipline can't be skipped under deadline.</p>
           <ul>
             <li><b>Harness before edits</b> — agents read the repo's command and layering contract first.</li>
-            <li><b>Diff classification</b> — changes are routed as UI, API, persistence, slide-content, demos, docs, or harness.</li>
+            <li><b>Diff classification</b> — changes are routed as UI, API, persistence, slide-content, demos, specs, or harness.</li>
             <li><b>Validation map</b> — the workflow chooses from <code>pnpm test</code>, <code>pnpm build</code>, <code>pnpm test:e2e</code>, and demo scripts.</li>
             <li><b>Advisory only</b> — the workflow recommends; registered commands remain the proof.</li>
           </ul>
@@ -1049,7 +1049,7 @@ svg { width: 100%; height: auto; display: block; }
           <g font-size="9.5" font-weight="600">
             <rect x="14" y="26" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="45" fill="#cbd5e1">README.md <tspan fill="#64748b" font-weight="400">· app map</tspan></text>
             <rect x="14" y="76" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="95" fill="#cbd5e1">PLAN.md <tspan fill="#64748b" font-weight="400">· technical notes</tspan></text>
-            <rect x="14" y="126" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="145" fill="#cbd5e1">docs/harness.md <tspan fill="#64748b" font-weight="400">· harness spec</tspan></text>
+            <rect x="14" y="126" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="145" fill="#cbd5e1">specs/harness.md <tspan fill="#64748b" font-weight="400">· harness spec</tspan></text>
             <rect x="14" y="176" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="195" fill="#cbd5e1">shared/api.ts <tspan fill="#64748b" font-weight="400">· contract</tspan></text>
             <rect x="14" y="226" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="245" fill="#cbd5e1">SQLite DB <tspan fill="#64748b" font-weight="400">· deck data</tspan></text>
           </g>
@@ -1070,7 +1070,7 @@ svg { width: 100%; height: auto; display: block; }
           <h4 style="color:#a78bfa">→ durable record — meaning pinned in writing</h4>
           <p class="lead">Drift is the enemy. Every concept has one written home, shaped so the human judge and the agent can both read it.</p>
           <ul>
-            <li><b>Docs are the source</b> — <code>README.md</code>, <code>PLAN.md</code>, and <code>docs/harness.md</code> define the app and harness.</li>
+            <li><b>Specs are the source</b> — <code>README.md</code>, <code>PLAN.md</code>, and <code>specs/harness.md</code> define the app and harness.</li>
             <li><b>Shared contract</b> — <code>shared/api.ts</code> is the client/server shape boundary.</li>
             <li><b>Data in one sink</b> — SQLite stores presentations, groups, slides, themes, and ordering.</li>
             <li><b>Agent memory</b> — Entire checkpoints capture session history when the CLI is installed.</li>
@@ -1486,7 +1486,7 @@ svg { width: 100%; height: auto; display: block; }
     <g class="g" data-s="8">
       <text x="880" y="384" fill="#b89046" font-size="8" font-style="italic">e.g. exhaustive interviewing, recommend + veto</text>
       <text x="780" y="423" fill="#b56575" font-size="8" font-style="italic">e.g. story-tests, drift checks, spec-first workflow</text>
-      <text x="882" y="291" fill="#64748b" font-size="8" font-style="italic">e.g. README, PLAN, docs/harness</text>
+      <text x="882" y="291" fill="#64748b" font-size="8" font-style="italic">e.g. README, PLAN, specs/harness</text>
       <text x="236" y="279" fill="#64748b" font-size="8" font-style="italic">e.g. real commands, tests, browser harness</text>
       <text x="640" y="655" text-anchor="middle" fill="#64748b" font-size="8" font-style="italic">e.g. fixed entrypoints, pinned env, config validated at boot</text>
       <text x="226" y="493" fill="#64748b" font-size="8" font-style="italic">e.g. complexity caps, story-named tests, small PRs</text>
@@ -1765,7 +1765,7 @@ svg { width: 100%; height: auto; display: block; }
     <rect x="86" y="300" width="226" height="76" rx="12" fill="rgba(167,139,250,0.07)" stroke="#a78bfa" stroke-opacity="0.6" stroke-width="1.5"/>
     <rect x="92" y="306" width="214" height="64" rx="9" fill="none" stroke="#a78bfa" stroke-opacity="0.25"/>
     <text x="199" y="332" text-anchor="middle" fill="#a78bfa" font-size="13.5" font-weight="600">DURABLE RECORD</text>
-    <text x="199" y="350" text-anchor="middle" fill="#8b85a8" font-size="9.5">docs · decisions · history</text>
+    <text x="199" y="350" text-anchor="middle" fill="#8b85a8" font-size="9.5">specs · decisions · history</text>
     <text x="199" y="364" text-anchor="middle" fill="#64748b" font-size="9">the reference chain, made durable</text>
 
     <!-- WORLD -->
@@ -1796,7 +1796,7 @@ svg { width: 100%; height: auto; display: block; }
     <line x1="318" y1="306" x2="790" y2="110" stroke="#a78bfa" stroke-width="1.7" marker-end="url(#i-violet)"/>
     <circle cx="500" cy="231" r="11" fill="#0d1117" stroke="#a78bfa"/>
     <text x="500" y="235" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">2</text>
-    <text x="568" y="210" fill="#8b85a8" font-size="10.5">reads the record: docs, tests, decisions</text>
+    <text x="568" y="210" fill="#8b85a8" font-size="10.5">reads the record: specs, tests, decisions</text>
 
     <!-- 2b: world -> agent (grounding) -->
     <line x1="836" y1="292" x2="818" y2="114" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#i-emerald)"/>

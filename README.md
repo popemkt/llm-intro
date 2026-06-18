@@ -18,8 +18,10 @@ The app has two presentation modes:
 
 ## Architecture
 
-The dev/test/agent harness is specified in [`docs/harness.md`](docs/harness.md).
-The Agent-Native adoption path is tracked in [`docs/agent-native-migration.md`](docs/agent-native-migration.md).
+Functional behavior is specified in [`specs/functional/slides-app.md`](specs/functional/slides-app.md).
+The code-to-behavior bridge is tracked in [`specs/bridging/slides-app-implementation.md`](specs/bridging/slides-app-implementation.md).
+The dev/test/agent harness is specified in [`specs/harness.md`](specs/harness.md).
+The Agent-Native adoption path is tracked in [`specs/bridging/agent-native-adoption.md`](specs/bridging/agent-native-adoption.md).
 
 ### Shared contract
 

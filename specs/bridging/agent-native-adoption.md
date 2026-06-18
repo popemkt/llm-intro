@@ -1,10 +1,10 @@
-# Agent-Native Migration
+# Agent-Native Adoption Bridge
 
 This repo is adopting the Agent-Native framework without replacing the product
 with the reference Slides app. Existing deck, theme, export, overview, editor,
 and code-slide behavior stays intact unless a slice explicitly migrates it.
 
-Reference docs:
+Reference documentation:
 
 - https://www.agent-native.com/docs/template-slides
 - https://www.agent-native.com/docs/client
@@ -64,7 +64,7 @@ for now. The migration should replace one workflow at a time:
 - Do not migrate from SQLite repositories to Drizzle until the action boundary
   is already working and covered by tests.
 
-## Next Slice
+## Current Slice
 
 Replace imperative `callAction` usage in render-load paths with
 `useActionQuery` and `useActionMutation`, starting with `HomePage`, then

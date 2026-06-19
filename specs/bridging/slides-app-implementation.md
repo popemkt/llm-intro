@@ -233,8 +233,9 @@ The local App Mode runtime is intentionally narrower than the full hosted
 runtime. It accepts a deck scope from the shell, maps simple prompts to existing
 app actions, and returns plain chat text. Current supported prompt families
 include listing slides, listing groups, creating one normal slide, creating a
-multi-slide normal outline, creating a group, changing the deck theme, and
-preparing HTML export links and typed JSON export summaries. It can also summarize the active deck through
+multi-slide normal outline, creating a group, changing the deck theme,
+preparing HTML export links, typed JSON export summaries, and readable Markdown
+export summaries. It can also summarize the active deck through
 `get-active-deck-context`, list theme metadata through `get-theme-catalog`, and
 queue app-shell theme changes through `set-app-theme`. It can list and apply
 built-in design systems through `list-design-systems` and `apply-design-system`.

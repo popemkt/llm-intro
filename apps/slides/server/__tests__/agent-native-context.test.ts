@@ -43,6 +43,7 @@ describe("Agent Native app context actions", () => {
     expectPublicAction(res.body.actions, "create-deck-from-prompt", { readOnly: false });
     expectPublicAction(res.body.actions, "export-deck-json", { readOnly: true });
     expectPublicAction(res.body.actions, "import-deck-json", { readOnly: false });
+    expectPublicAction(res.body.actions, "export-deck-markdown", { readOnly: true });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -441,6 +442,44 @@ describe("Agent Native deck export action", () => {
     ]);
     expect(imported.body.skippedCodeSlides).toEqual([]);
   });
+
+  it("exports a deck as readable Markdown", async () => {
+    const deck = (
+      await request(app).post("/api/presentations").send({ name: "Markdown Deck", theme: "ocean" })
+    ).body;
+    await request(app)
+      .post("/_agent-native/actions/create-slide")
+      .send({
+        pid: deck.id,
+        title: "Markdown Slide",
+        notes: "Say this out loud.",
+        blocks: [
+          { id: "body", type: "text", markdown: "## Main point", x: 10, y: 20 },
+          { id: "logo", type: "image", url: "https://example.com/logo.png", alt: "Logo" },
+          { id: "embed", type: "iframe", url: "https://example.com/demo" },
+          { id: "label", type: "shape", shape: "pill", color: "#123456", label: "Status" },
+        ],
+      });
+
+    const res = await request(app).get(`/_agent-native/actions/export-deck-markdown?id=${deck.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: deck.id,
+      name: "Markdown Deck",
+      format: "markdown",
+      slideCount: 1,
+    });
+    expect(res.body.markdown).toContain("# Markdown Deck");
+    expect(res.body.markdown).toContain("Theme: `ocean`");
+    expect(res.body.markdown).toContain("## 1. Markdown Slide");
+    expect(res.body.markdown).toContain("## Main point");
+    expect(res.body.markdown).toContain("![Logo](https://example.com/logo.png)");
+    expect(res.body.markdown).toContain("[Embedded frame](https://example.com/demo)");
+    expect(res.body.markdown).toContain("> Status");
+    expect(res.body.markdown).toContain("### Speaker Notes");
+    expect(res.body.markdown).toContain("Say this out loud.");
+  });
 });
 
 describe("App agent route context runtime", () => {
@@ -587,6 +626,19 @@ describe("App agent export runtime", () => {
     expect(res.body.text).toContain("Typed JSON export");
     expect(res.body.text).toContain("1 slide");
     expect(res.body.text).toContain("export-deck-json");
+  });
+
+  it("POST /_agent-native/app-agent summarizes a Markdown export", async () => {
+    await request(app).post(`/api/presentations/${pid}/slides`).send({ title: "Markdown Slide" });
+
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "export this deck as Markdown", scope: { type: "deck", id: String(pid) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Markdown export");
+    expect(res.body.text).toContain("1 slide");
+    expect(res.body.text).toContain("export-deck-markdown");
   });
 });
 

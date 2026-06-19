@@ -321,6 +321,15 @@ function responseTextForJsonExport(result: unknown) {
   }, ${groups} group${groups === 1 ? "" : "s"}. Use export-deck-json for the full payload.`;
 }
 
+function responseTextForMarkdownExport(result: unknown) {
+  if (!result || typeof result !== "object") return "The Markdown export is ready.";
+  const name = "name" in result ? getText(result.name) : "";
+  const slideCount = "slideCount" in result ? Number(result.slideCount) : 0;
+  return `Markdown export${name ? ` for "${name}"` : ""}: ${slideCount} slide${
+    slideCount === 1 ? "" : "s"
+  }. Use export-deck-markdown for the full payload.`;
+}
+
 function formatSnapshotList(result: unknown) {
   if (!Array.isArray(result)) return "I could not read the snapshot list.";
   if (result.length === 0) return "This deck has no snapshots yet.";
@@ -444,6 +453,11 @@ async function handleDeckReadPrompt(
   if (/\b(export|download)\b.*\bjson\b/.test(normalized)) {
     const result = await runAction(actions["export-deck-json"], { id: deckId });
     return responseTextForJsonExport(result);
+  }
+
+  if (/\b(export|download)\b.*\bmarkdown\b/.test(normalized)) {
+    const result = await runAction(actions["export-deck-markdown"], { id: deckId });
+    return responseTextForMarkdownExport(result);
   }
 
   if (/\b(export|download)\b/.test(normalized)) {

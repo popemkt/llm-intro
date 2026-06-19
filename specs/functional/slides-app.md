@@ -137,6 +137,10 @@ editing, themed presentation playback, and HTML export.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
+- Users and agents can export a deck as readable Markdown through
+  `export-deck-markdown`. The export includes deck metadata, slide titles,
+  text blocks, image/embed references, shape labels, code-slide identifiers, and
+  speaker notes.
 - Presenter mode displays the active slide's speaker notes above the controls
   when notes are present. Fullscreen mode remains audience-only.
 - Presenter mode displays an elapsed timer and compact next-slide preview while
@@ -156,6 +160,8 @@ editing, themed presentation playback, and HTML export.
 - Hosted LLM-backed prompt-to-deck streaming. The current local stream is
   deterministic and action-backed until hosted model credentials are adopted.
 - Additional visual editor refinements after the core formatting controls.
+- Additional non-JSON import/export formats beyond HTML, typed JSON, and
+  readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime, and
   local-development terminal bridge; hosted production chat remains a separate

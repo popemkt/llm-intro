@@ -1,7 +1,7 @@
 import type { Block, LayoutInput } from "@llm-intro/api-contract";
 import { AppError } from "../errors.js";
 import type { createPresentationsRepository } from "../repositories/presentations.js";
-import type { createSlidesRepository } from "../repositories/slides.js";
+import type { createSlidesRepository, SlideCreateInput } from "../repositories/slides.js";
 
 type PresentationsRepository = ReturnType<typeof createPresentationsRepository>;
 type SlidesRepository = ReturnType<typeof createSlidesRepository>;
@@ -22,7 +22,7 @@ export function createSlidesService(
       return slidesRepo.listByPresentationId(presentationId);
     },
 
-    create(presentationId: number, input: { title: string; blocks: Block[]; notes?: string }) {
+    create(presentationId: number, input: SlideCreateInput) {
       getPresentation(presentationId);
       return slidesRepo.create(presentationId, input);
     },
@@ -30,17 +30,22 @@ export function createSlidesService(
     update(
       presentationId: number,
       slideId: number,
-      patch: { title?: string; blocks?: Block[]; notes?: string },
+      patch: { title?: string; blocks?: Block[]; html?: string; notes?: string },
     ) {
       getPresentation(presentationId);
       const slide = slidesRepo.getById(presentationId, slideId);
       if (!slide) throw new AppError(404, "slide not found");
-      if (slide.kind === "code" && patch.blocks)
+      if (slide.kind === "code" && (patch.blocks || patch.html !== undefined))
         throw new AppError(403, "code slide content is read-only");
+      if (slide.kind === "db" && patch.html !== undefined)
+        throw new AppError(400, "database-backed slides do not support html content");
+      if (slide.kind === "html" && patch.blocks)
+        throw new AppError(400, "html slides do not support block content");
 
       return slidesRepo.update(presentationId, slideId, {
         title: patch.title ?? slide.title,
         blocks: patch.blocks ?? slide.blocks,
+        html: patch.html ?? slide.html,
         notes: patch.notes ?? slide.notes,
       });
     },

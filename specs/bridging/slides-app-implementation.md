@@ -55,6 +55,7 @@ framework boundary.
 | List slides | `list-slides` action, slide service | Vitest API tests |
 | Create slide | `create-slide` action, `PresentationPage` handlers | Vitest/API plus browser flow |
 | Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields | Vitest/API |
+| Create HTML slide | `create-html-slide` action persists `kind: "html"` slides with authored HTML source | Vitest/API plus renderer tests |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
@@ -65,7 +66,8 @@ framework boundary.
 | Rename slide | `update-slide` action | Browser flow or focused smoke |
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |
 | Reorder slides/groups | `update-deck-layout` action, slide service validation | Vitest/API plus Playwright |
-| Code slide rendering | `apps/slides/src/slides/registry.ts`, `DbSlideRenderer` fallback rules | build, visual inspection when changed |
+| Code slide rendering | `apps/slides/src/slides/registry.ts` and `SlideShell` | build, visual inspection when changed |
+| HTML slide rendering | `HtmlSlideRenderer` renders `kind: "html"` slides in a sandboxed full-canvas iframe, reused by presentation, fullscreen, overview, and export viewer paths | Vitest renderer tests, build, browser smoke |
 
 ## Groups
 
@@ -126,15 +128,21 @@ then have render/export paths resolve deck assets directly.
 
 | Contract field area | Code implementation |
 |---|---|
-| Shared typed block fields | `libs/api-contract/src/index.ts` |
-| Server validation and action persistence | `apps/slides/server/validation.ts`, `create-manual-slide`, `create-slide`, `update-slide` |
-| Presentation/export rendering | `apps/slides/src/components/DbSlideRenderer.tsx` and export viewer reuse of DB slide rendering |
+| Shared slide/block fields | `libs/api-contract/src/index.ts` |
+| Server validation and action persistence | `apps/slides/server/validation.ts`, `create-manual-slide`, `create-html-slide`, `create-slide`, `update-slide` |
+| Presentation/export rendering | `apps/slides/src/components/DbSlideRenderer.tsx`, `apps/slides/src/components/HtmlSlideRenderer.tsx`, and export viewer reuse |
 | Editor preview and controls | `apps/slides/src/pages/SlideEditorPage.tsx` |
 
 Manual slide blocks are still persisted as DB-backed `kind: "db"` slides. The
 product language now treats them as manual slides because their data model is a
 PowerPoint-style editable canvas. A later schema slice can rename or alias the
 storage kind without changing the user-facing concept.
+
+HTML slides are persisted as first-class `kind: "html"` slides with an `html`
+source field. The first implementation supports action creation, update,
+presentation/fullscreen/overview/export rendering, snapshots, and typed JSON
+round-trips; browser source editing for HTML slides is still a later editor
+slice.
 
 ## Presentation And Editor UI
 

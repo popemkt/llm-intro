@@ -37,6 +37,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { callAction } from "@agent-native/core/client";
 import type { UnifiedSlide, ApiSlideGroup, LayoutInput, ThemeName } from "@/types";
 import { DbSlideRenderer } from "./DbSlideRenderer";
+import { HtmlSlideRenderer } from "./HtmlSlideRenderer";
 import { Breadcrumb, type BreadcrumbSegment } from "./Breadcrumb";
 
 interface OverviewGridProps {
@@ -196,6 +197,8 @@ function ThumbnailCell({
           >
             {slide.kind === "code" ? (
               <slide.component isActive={false} />
+            ) : slide.kind === "html" ? (
+              <HtmlSlideRenderer html={slide.html} title={slide.title} />
             ) : (
               <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
             )}

@@ -40,4 +40,12 @@ export type UnifiedSlide =
       notes: string;
       blocks: Block[];
       theme: ThemeName;
+    }
+  | {
+      kind: "html";
+      id: number;
+      groupId: number | null;
+      title: string;
+      notes: string;
+      html: string;
     };

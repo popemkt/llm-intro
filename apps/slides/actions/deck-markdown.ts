@@ -49,6 +49,8 @@ function slideToMarkdown(index: number, slide: ReturnType<SlidesService["list"]>
 
   if (slide.kind === "code") {
     lines.push("", `Code slide: \`${slide.code_id ?? "unknown"}\``);
+  } else if (slide.kind === "html") {
+    lines.push("", "HTML slide:", "", "```html", slide.html.trim(), "```");
   } else {
     const blockMarkdown = sortedBlocks(slide.blocks).map(blockToMarkdown).filter(Boolean);
     if (blockMarkdown.length > 0) lines.push("", blockMarkdown.join("\n\n"));

@@ -109,6 +109,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Create manual slide",
         }),
         expect.objectContaining({
+          id: "create-html-slide",
+          name: "Create HTML slide",
+        }),
+        expect.objectContaining({
           id: "create-normal-slides",
           name: "Create normal slides",
         }),
@@ -584,6 +588,39 @@ describe("Slides API", () => {
     expect(res.body.notes).toBe("Opening note");
     expect(res.body.kind).toBe("db");
     expect(Array.isArray(res.body.blocks)).toBe(true);
+  });
+
+  it("POST /_agent-native/actions/create-html-slide creates an HTML slide", async () => {
+    const res = await request(app).post("/_agent-native/actions/create-html-slide").send({
+      pid,
+      title: "HTML Demo",
+      html: '<main style="width:100%;height:100%">Hello HTML</main>',
+      notes: "HTML note",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      title: "HTML Demo",
+      kind: "html",
+      html: '<main style="width:100%;height:100%">Hello HTML</main>',
+      notes: "HTML note",
+      blocks: [],
+    });
+  });
+
+  it("PUT /_agent-native/actions/update-slide updates HTML source on HTML slides", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-html-slide")
+        .send({ pid, title: "HTML Demo", html: "<main>Before</main>" })
+    ).body;
+
+    const res = await request(app)
+      .put("/_agent-native/actions/update-slide")
+      .send({ pid, sid: slide.id, html: "<main>After</main>" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.html).toBe("<main>After</main>");
   });
 
   it("PATCH /:sid updates a slide", async () => {

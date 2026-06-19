@@ -34,7 +34,7 @@ export const api = {
     update: (
       pid: number,
       sid: number,
-      patch: { title?: string; blocks?: unknown[]; notes?: string },
+      patch: { title?: string; blocks?: unknown[]; html?: string; notes?: string },
     ) => callAction<ApiSlide>("update-slide", { pid, sid, ...patch }, { method: "PUT" }),
     delete: async (pid: number, sid: number) => {
       await callAction<null>("delete-slide", { pid, sid }, { method: "DELETE" });

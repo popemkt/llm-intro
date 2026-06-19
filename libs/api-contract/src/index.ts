@@ -74,10 +74,11 @@ export interface ApiSlide {
   presentation_id: number;
   position: number;
   group_id: number | null;
-  kind: "code" | "db";
+  kind: "code" | "db" | "html";
   code_id: string | null;
   title: string;
   blocks: Block[];
+  html: string;
   notes: string;
   created_at: string;
   updated_at: string;

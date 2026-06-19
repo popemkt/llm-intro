@@ -1,15 +1,27 @@
 import type Database from "better-sqlite3";
 import type { ApiSlide, Block, LayoutInput } from "@llm-intro/api-contract";
 
+export type SlideCreateInput =
+  | { kind?: "db"; title: string; blocks: Block[]; notes?: string }
+  | { kind: "html"; title: string; html: string; notes?: string };
+
+export type SlideUpdateInput = {
+  title: string;
+  blocks: Block[];
+  html: string;
+  notes: string;
+};
+
 type SlideRow = {
   id: number;
   presentation_id: number;
   position: number;
   group_id: number | null;
-  kind: "code" | "db";
+  kind: "code" | "db" | "html";
   code_id: string | null;
   title: string;
   blocks: string;
+  html: string;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -76,10 +88,10 @@ export function createSlidesRepository(db: Database.Database) {
     "SELECT MAX(position) as max_position FROM slides WHERE presentation_id=? AND group_id IS NULL",
   );
   const insertStmt = db.prepare(
-    "INSERT INTO slides (presentation_id, position, kind, title, blocks, notes) VALUES (?, ?, 'db', ?, ?, ?)",
+    "INSERT INTO slides (presentation_id, position, kind, title, blocks, html, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
   );
   const updateStmt = db.prepare(
-    "UPDATE slides SET title=?, blocks=?, notes=?, updated_at=datetime('now') WHERE id=?",
+    "UPDATE slides SET title=?, blocks=?, html=?, notes=?, updated_at=datetime('now') WHERE id=?",
   );
   const deleteStmt = db.prepare("DELETE FROM slides WHERE id=? AND presentation_id=?");
   const setPositionAndGroupStmt = db.prepare(
@@ -101,28 +113,26 @@ export function createSlidesRepository(db: Database.Database) {
       return row ? mapSlide(row) : null;
     },
 
-    create(
-      presentationId: number,
-      input: { title: string; blocks: Block[]; notes?: string },
-    ): ApiSlide {
+    create(presentationId: number, input: SlideCreateInput): ApiSlide {
       const row = maxUngroupedPositionStmt.get(presentationId) as { max_position: number | null };
       const position = (row.max_position ?? -1) + 1;
+      const kind = input.kind ?? "db";
+      const blocks = input.kind === "html" ? [] : input.blocks;
+      const html = input.kind === "html" ? input.html : "";
       const { lastInsertRowid } = insertStmt.run(
         presentationId,
         position,
+        kind,
         input.title,
-        JSON.stringify(input.blocks),
+        JSON.stringify(blocks),
+        html,
         input.notes ?? "",
       );
       return this.getById(presentationId, Number(lastInsertRowid))!;
     },
 
-    update(
-      presentationId: number,
-      slideId: number,
-      input: { title: string; blocks: Block[]; notes: string },
-    ): ApiSlide {
-      updateStmt.run(input.title, JSON.stringify(input.blocks), input.notes, slideId);
+    update(presentationId: number, slideId: number, input: SlideUpdateInput): ApiSlide {
+      updateStmt.run(input.title, JSON.stringify(input.blocks), input.html, input.notes, slideId);
       return this.getById(presentationId, slideId)!;
     },
 

@@ -26,6 +26,16 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
       component,
     };
   }
+  if (slide.kind === "html") {
+    return {
+      kind: "html",
+      id: slide.id,
+      groupId,
+      title: slide.title,
+      notes: slide.notes,
+      html: slide.html,
+    };
+  }
   return {
     kind: "db",
     id: slide.id,

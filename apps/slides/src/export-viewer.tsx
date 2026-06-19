@@ -51,6 +51,16 @@ function resolve(
       component: registry[apiSlide.code_id],
     };
   }
+  if (apiSlide.kind === "html") {
+    return {
+      kind: "html",
+      id: apiSlide.id,
+      groupId,
+      title: apiSlide.title,
+      notes: apiSlide.notes,
+      html: apiSlide.html,
+    };
+  }
 
   return {
     kind: "db",

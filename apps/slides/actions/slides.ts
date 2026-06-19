@@ -1,6 +1,11 @@
 import { defineAction } from "@agent-native/core";
 import type { createSlidesService } from "../server/services/slides.js";
-import { parseLayout, parseSlideCreate, parseSlidePatch } from "../server/validation.js";
+import {
+  parseHtmlSlideCreate,
+  parseLayout,
+  parseSlideCreate,
+  parseSlidePatch,
+} from "../server/validation.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -83,14 +88,38 @@ function createManualSlideAction(slidesService: SlidesService) {
   });
 }
 
+function createHtmlSlideAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Create an HTML slide from authored HTML, CSS, and optional JavaScript.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      title: z.string().optional(),
+      html: z.string(),
+      notes: z.string().optional(),
+    }),
+    http: {
+      method: "POST",
+      path: "create-html-slide",
+    },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Create HTML slide",
+      description: "Create a full-canvas HTML/CSS/JS slide.",
+    },
+    run: ({ pid, ...input }) => slidesService.create(pid, parseHtmlSlideCreate(input)),
+  });
+}
+
 function createUpdateSlideAction(slidesService: SlidesService) {
   return defineAction({
-    description: "Update slide title, speaker notes, or blocks.",
+    description: "Update slide title, speaker notes, blocks, or HTML source.",
     schema: z.object({
       pid: z.coerce.number().int().positive(),
       sid: z.coerce.number().int().positive(),
       title: z.string().optional(),
       blocks: z.array(blockInput).optional(),
+      html: z.string().optional(),
       notes: z.string().optional(),
     }),
     http: {
@@ -101,7 +130,7 @@ function createUpdateSlideAction(slidesService: SlidesService) {
     publicAgent: {
       ...publicWriteAction,
       title: "Update slide",
-      description: "Update slide title, speaker notes, or blocks.",
+      description: "Update slide title, speaker notes, blocks, or HTML source.",
     },
     run: ({ pid, sid, ...patch }) => slidesService.update(pid, sid, parseSlidePatch(patch)),
   });
@@ -163,6 +192,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "list-slides": createListSlidesAction(slidesService),
     "create-slide": createRawSlideAction(slidesService),
     "create-manual-slide": createManualSlideAction(slidesService),
+    "create-html-slide": createHtmlSlideAction(slidesService),
     "create-normal-slide": createNormalSlideAction(slidesService),
     "create-normal-slides": createNormalSlidesAction(slidesService),
     "update-slide": createUpdateSlideAction(slidesService),

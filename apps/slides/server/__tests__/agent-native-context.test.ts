@@ -487,12 +487,17 @@ describe("Agent Native deck export action", () => {
         notes: "Presenter note",
         blocks: [{ id: "portable", type: "text", markdown: "# Portable" }],
       });
+    const htmlSlideRes = await request(app).post("/_agent-native/actions/create-html-slide").send({
+      pid: deck.id,
+      title: "Portable HTML",
+      html: '<main style="width:100%;height:100%">Portable HTML</main>',
+    });
     await request(app)
       .put("/_agent-native/actions/update-deck-layout")
       .send({
         pid: deck.id,
         ungrouped: [],
-        groups: [{ id: groupRes.body.id, slideIds: [slideRes.body.id] }],
+        groups: [{ id: groupRes.body.id, slideIds: [slideRes.body.id, htmlSlideRes.body.id] }],
       });
 
     const exported = await request(app).get(
@@ -504,7 +509,10 @@ describe("Agent Native deck export action", () => {
       version: 1,
       deck: { name: "Portable Deck", theme: "ocean" },
       groups: [expect.objectContaining({ title: "Portable Group", collapsed: true })],
-      slides: [expect.objectContaining({ title: "Portable Slide", notes: "Presenter note" })],
+      slides: [
+        expect.objectContaining({ title: "Portable Slide", notes: "Presenter note" }),
+        expect.objectContaining({ title: "Portable HTML", kind: "html" }),
+      ],
     });
 
     const imported = await request(app)
@@ -522,6 +530,12 @@ describe("Agent Native deck export action", () => {
         notes: "Presenter note",
         group_id: imported.body.groups[0].id,
         blocks: [expect.objectContaining({ markdown: "# Portable" })],
+      }),
+      expect.objectContaining({
+        title: "Portable HTML",
+        kind: "html",
+        group_id: imported.body.groups[0].id,
+        html: '<main style="width:100%;height:100%">Portable HTML</main>',
       }),
     ]);
     expect(imported.body.skippedCodeSlides).toEqual([]);
@@ -552,6 +566,11 @@ describe("Agent Native deck Markdown actions", () => {
           { id: "label", type: "shape", shape: "pill", color: "#123456", label: "Status" },
         ],
       });
+    await request(app).post("/_agent-native/actions/create-html-slide").send({
+      pid: deck.id,
+      title: "HTML Markdown Slide",
+      html: "<main>HTML in markdown export</main>",
+    });
 
     const res = await request(app).get(`/_agent-native/actions/export-deck-markdown?id=${deck.id}`);
 
@@ -560,7 +579,7 @@ describe("Agent Native deck Markdown actions", () => {
       id: deck.id,
       name: "Markdown Deck",
       format: "markdown",
-      slideCount: 1,
+      slideCount: 2,
     });
     expect(res.body.markdown).toContain("# Markdown Deck");
     expect(res.body.markdown).toContain("Theme: `ocean`");
@@ -569,6 +588,8 @@ describe("Agent Native deck Markdown actions", () => {
     expect(res.body.markdown).toContain("![Logo](https://example.com/logo.png)");
     expect(res.body.markdown).toContain("[Embedded frame](https://example.com/demo)");
     expect(res.body.markdown).toContain("> Status");
+    expect(res.body.markdown).toContain("## 2. HTML Markdown Slide");
+    expect(res.body.markdown).toContain("```html\n<main>HTML in markdown export</main>\n```");
     expect(res.body.markdown).toContain("### Speaker Notes");
     expect(res.body.markdown).toContain("Say this out loud.");
   });

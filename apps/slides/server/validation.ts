@@ -245,8 +245,19 @@ export function parsePresentationPatch(input: unknown) {
 export function parseSlideCreate(input: unknown) {
   const body = asRecord(input);
   return {
+    kind: "db" as const,
     title: parseOptionalTrimmedString(body.title, "title") ?? "New slide",
     blocks: parseBlocks(body.blocks) ?? [],
+    notes: parseOptionalString(body.notes, "notes") ?? "",
+  };
+}
+
+export function parseHtmlSlideCreate(input: unknown) {
+  const body = asRecord(input);
+  return {
+    kind: "html" as const,
+    title: parseOptionalTrimmedString(body.title, "title") ?? "New HTML slide",
+    html: parseNonEmptyString(body.html, "html"),
     notes: parseOptionalString(body.notes, "notes") ?? "",
   };
 }
@@ -256,10 +267,16 @@ export function parseSlidePatch(input: unknown) {
   const patch = {
     title: parseOptionalTrimmedString(body.title, "title"),
     blocks: parseBlocks(body.blocks),
+    html: parseOptionalString(body.html, "html"),
     notes: parseOptionalString(body.notes, "notes"),
   };
 
-  if (patch.title === undefined && patch.blocks === undefined && patch.notes === undefined) {
+  if (
+    patch.title === undefined &&
+    patch.blocks === undefined &&
+    patch.html === undefined &&
+    patch.notes === undefined
+  ) {
     throw new AppError(400, "at least one field is required");
   }
 

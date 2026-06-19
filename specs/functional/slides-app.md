@@ -18,11 +18,12 @@ editing, themed presentation playback, and HTML export.
 ## Slides
 
 - A deck contains ordered slides.
-- Slides can be code-backed or manual database-backed today.
-- HTML slides are a planned third slide kind for authored HTML/CSS/JS slides
-  that should not require a custom React module.
+- Slides can be code-backed, HTML-authored, or manual database-backed.
 - Code-backed slides render registered React modules and can be renamed or
   reordered, but their content cannot be edited in the browser slide editor.
+- HTML slides store authored HTML/CSS/JS source as deck slide content and
+  render in a sandboxed full-canvas iframe without requiring a custom React
+  module.
 - Manual database-backed slides contain editable block data.
 - Users can create, rename, reorder, edit, and delete manual slides.
 - Reorder operations preserve every slide exactly once.
@@ -83,9 +84,10 @@ editing, themed presentation playback, and HTML export.
 - Agents can prepare an HTML export for the active deck through a product-safe
   action that returns the Agent-Native download URL.
 - Agents can export a deck as portable typed JSON and import that JSON into a
-  new deck. Portable JSON preserves DB-backed slides, blocks, notes, groups,
-  layout, and theme; code-backed slides are exported as metadata and skipped on
-  import because their source modules are not portable user content.
+  new deck. Portable JSON preserves DB-backed slides, HTML slides, blocks, HTML
+  source, notes, groups, layout, and theme; code-backed slides are exported as
+  metadata and skipped on import because their source modules are not portable
+  user content.
 - Local App Mode can summarize typed JSON exports and direct automation clients
   to `export-deck-json` for the full payload.
 
@@ -186,6 +188,8 @@ editing, themed presentation playback, and HTML export.
 - Agents can create fully manual, PowerPoint-style editable slides through
   `create-manual-slide` by providing typed text, image, iframe, and shape
   blocks with geometry and appearance fields.
+- Agents can create full-canvas HTML slides through `create-html-slide` by
+  providing authored HTML/CSS/JS source.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.

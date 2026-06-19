@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import type { UnifiedSlide } from "@/types";
 import { SlideShell } from "./SlideShell";
 import { DbSlideRenderer } from "./DbSlideRenderer";
+import { HtmlSlideRenderer } from "./HtmlSlideRenderer";
 import { SlideTransitionStage } from "./SlideTransitionStage";
 
 interface Props {
@@ -14,9 +15,16 @@ interface Props {
 }
 
 function RenderSlide({ slide, isActive }: { slide: UnifiedSlide; isActive: boolean }) {
-  return slide.kind === "code" ? (
+  if (slide.kind === "code") {
+    return (
+      <SlideShell>
+        <slide.component isActive={isActive} />
+      </SlideShell>
+    );
+  }
+  return slide.kind === "html" ? (
     <SlideShell>
-      <slide.component isActive={isActive} />
+      <HtmlSlideRenderer html={slide.html} title={slide.title} />
     </SlideShell>
   ) : (
     <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />

@@ -526,16 +526,43 @@ describe("Agent Native chat shell probes", () => {
 describe("Agent Native resource and app-state probes", () => {
   const { app } = createTestContext({ seedSystemPresentation: false });
 
-  it("GET workspace resource probes return empty shell defaults", async () => {
+  it("GET workspace resource probes expose local deck resources", async () => {
+    const deck = (await request(app).post("/api/presentations").send({ name: "Resource Deck" }))
+      .body;
+
     await expect(
       request(app).get("/_agent-native/resources/tree?scope=workspace"),
     ).resolves.toMatchObject({
       status: 200,
-      body: expect.objectContaining({ resources: [], tree: [] }),
+      body: {
+        resources: [
+          expect.objectContaining({
+            id: `deck:${deck.id}`,
+            uri: `slides://deck/${deck.id}`,
+            type: "deck",
+            name: "Resource Deck",
+            metadata: expect.objectContaining({
+              deckId: deck.id,
+              actions: expect.objectContaining({
+                read: `/_agent-native/actions/get-deck?id=${deck.id}`,
+                slides: `/_agent-native/actions/list-slides?pid=${deck.id}`,
+              }),
+            }),
+          }),
+        ],
+        tree: [
+          expect.objectContaining({
+            id: "slides",
+            children: expect.arrayContaining([`deck:${deck.id}`]),
+          }),
+        ],
+      },
     });
     await expect(request(app).get("/_agent-native/resources")).resolves.toMatchObject({
       status: 200,
-      body: { resources: [] },
+      body: {
+        resources: [expect.objectContaining({ id: `deck:${deck.id}`, type: "deck" })],
+      },
     });
     await expect(request(app).get("/_agent-native/mcp/servers")).resolves.toMatchObject({
       status: 200,

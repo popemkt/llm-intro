@@ -39,7 +39,7 @@ export function createFrameworkCoreRouter(
   registerFrameworkHealthRoutes(router);
   registerFrameworkStatusRoutes(router, options);
   registerFrameworkChatRoutes(router, options);
-  registerFrameworkResourceRoutes(router);
+  registerFrameworkResourceRoutes(router, options);
 
   return router;
 }
@@ -275,6 +275,23 @@ function wantsEventStream(req: Request) {
   return req.get("accept")?.includes("text/event-stream") ?? false;
 }
 
+async function runFrameworkAction(
+  actions: SlideDeckActions | undefined,
+  name: keyof SlideDeckActions,
+  args: unknown,
+) {
+  const action = actions?.[name] as
+    | {
+        run?: (
+          args: unknown,
+          context: { caller: "tool"; orgId: null },
+        ) => unknown | Promise<unknown>;
+      }
+    | undefined;
+  if (typeof action?.run !== "function") return null;
+  return action.run(args, { caller: "tool", orgId: null });
+}
+
 function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideDeckActions }) {
   const threads = new Map<string, LocalAgentChatThread>();
 
@@ -375,13 +392,70 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
   });
 }
 
-function registerFrameworkResourceRoutes(router: Router) {
-  router.get("/resources/tree", (_req, res) => {
-    res.json({ items: [], resources: [], tree: [] });
+function createDeckResource(deck: unknown) {
+  if (!deck || typeof deck !== "object" || !("id" in deck)) return null;
+  const id = Number(deck.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const name = "name" in deck && typeof deck.name === "string" ? deck.name : `Deck ${id}`;
+  const theme = "theme" in deck && typeof deck.theme === "string" ? deck.theme : undefined;
+
+  return {
+    id: `deck:${id}`,
+    uri: `slides://deck/${id}`,
+    type: "deck",
+    name,
+    title: name,
+    metadata: {
+      deckId: id,
+      theme: theme ?? null,
+      actions: {
+        read: `/_agent-native/actions/get-deck?id=${id}`,
+        slides: `/_agent-native/actions/list-slides?pid=${id}`,
+        groups: `/_agent-native/actions/list-groups?pid=${id}`,
+        open: {
+          action: "navigate-app",
+          input: { view: "deck", deckId: id },
+        },
+      },
+    },
+  };
+}
+
+async function listDeckResources(actions: SlideDeckActions | undefined) {
+  const decks = await runFrameworkAction(actions, "list-decks", {});
+  if (!Array.isArray(decks)) return [];
+  return decks.map(createDeckResource).filter((resource) => resource !== null);
+}
+
+function resourceTree(resources: Awaited<ReturnType<typeof listDeckResources>>) {
+  return [
+    {
+      id: "slides",
+      type: "collection",
+      name: "Slides",
+      title: "Slides",
+      children: resources.map((resource) => resource.id),
+    },
+  ];
+}
+
+function registerFrameworkResourceRoutes(router: Router, options: { actions?: SlideDeckActions }) {
+  router.get("/resources/tree", async (_req, res, next) => {
+    try {
+      const resources = await listDeckResources(options.actions);
+      res.json({ items: resources, resources, tree: resourceTree(resources) });
+    } catch (err) {
+      next(err);
+    }
   });
 
-  router.get("/resources", (_req, res) => {
-    res.json({ resources: [] });
+  router.get("/resources", async (_req, res, next) => {
+    try {
+      const resources = await listDeckResources(options.actions);
+      res.json({ resources });
+    } catch (err) {
+      next(err);
+    }
   });
 
   router.get("/mcp/servers", (_req, res) => {

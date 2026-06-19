@@ -25,7 +25,7 @@ framework boundary.
 | Route state and navigation | Local React Router bridge writes `__url__`/`navigation` and consumes `navigate` commands | `apps/slides/src/components/AppShell.tsx`, `apps/slides/actions/app-context.ts` |
 | Browser selection context | Shell writes selected browser text to `pending-selection-context` for app-context reads | `apps/slides/src/components/AppShell.tsx` |
 | Active deck context | Route-aware read action returns deck metadata, slides, and groups | `apps/slides/actions/active-deck-context.ts` |
-| Framework core probes | No-op or local defaults for Agent-Native panel/status/resource probes | `apps/slides/server/routes/framework-core.ts` |
+| Framework core probes | Local defaults plus deck resource, mode, provider, terminal, and status probes | `apps/slides/server/routes/framework-core.ts` |
 | Local Code Mode terminal | Local PTY WebSocket bridge for known authenticated CLIs | `apps/slides/server/agent-terminal.ts`, `apps/slides/server/index.ts` |
 | Local App Mode runtime | Deck-scoped HTTP chat runtime backed by the action registry | `apps/slides/server/routes/app-agent-runtime.ts`, `apps/slides/src/agent/appAgentRuntime.ts` |
 | App Mode manifest | Shared local capability manifest for server probes and shell suggestions | `apps/slides/shared/app-agent-manifest.ts` |
@@ -187,6 +187,10 @@ shell access remains gated by the server-side terminal policy.
 `GET /_agent-native/app-agent/capabilities` exposes a compact view of the same
 capabilities for framework shells. The frontend imports the same shared
 manifest for starter suggestions so the UI and protocol surface stay aligned.
+`GET /_agent-native/resources` and `GET /_agent-native/resources/tree` expose
+local decks as `slides://deck/:id` resources with product-safe action URLs for
+reading deck data, listing slides/groups, and opening the deck through
+`navigate-app`; they do not expose filesystem paths.
 
 ### App Mode And Code Mode
 

@@ -129,6 +129,9 @@ editing, themed presentation playback, and HTML export.
 - Local App Mode exposes a manifest and compact capabilities endpoint so shells
   can discover prompt families, starter suggestions, local-only tool boundaries,
   and action protocol URLs without relying on hard-coded UI copy.
+- Framework resource probes expose local deck resources and product-safe action
+  URLs, not filesystem paths, so shells can render app context inside the App
+  Mode permission boundary.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

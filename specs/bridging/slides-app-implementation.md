@@ -168,13 +168,16 @@ router-context reason, route-state sync is implemented locally while preserving
 the framework application-state keys: the shell writes `__url__` and
 `navigation`, and consumes one-shot `navigate` commands.
 `POST /_agent-native/agent-chat` is mounted as a local compatibility adapter
-over the same App Mode prompt handler. It supports JSON responses and a
-one-shot event-stream response, but hosted chat persistence, approvals, memory,
-and hosted model streaming remain separate adoption slices. The shell displays
-App Mode as local actions with no hosted model requirement, and
-`GET /_agent-native/agent-chat/mode` exposes the same `appMode` metadata for
-automation. Production shell access remains gated by the server-side terminal
-policy.
+over the same App Mode prompt handler. It supports JSON responses, a one-shot
+event-stream response, and process-local threads through
+`GET /_agent-native/agent-chat/threads` and
+`GET /_agent-native/agent-chat/threads/:threadId`. Those threads are in-memory
+runtime compatibility state, not hosted memory or durable chat persistence.
+Hosted chat persistence, approvals, memory, and hosted model streaming remain
+separate adoption slices. The shell displays App Mode as local actions with no
+hosted model requirement, and `GET /_agent-native/agent-chat/mode` exposes the
+same `appMode` metadata for automation. Production shell access remains gated
+by the server-side terminal policy.
 
 ### App Mode And Code Mode
 
@@ -227,7 +230,8 @@ action hooks, so reads and writes stay on one validated service path. The MCP
 and A2A surfaces are protocol-compatible discovery/invocation adapters; they
 are not yet a full authenticated hosted agent runtime with chat state,
 approvals, memory, or hosted model streaming. The local `agent-chat` adapter is
-product-safe and action-backed; it does not persist hosted threads.
+product-safe and action-backed; it stores only process-local compatibility
+threads.
 
 Presenter mode includes a local external audience display. The presenter view
 opens `/p/:id/display`, writes the active slide index to browser `localStorage`,

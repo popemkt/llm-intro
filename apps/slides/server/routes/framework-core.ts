@@ -3,6 +3,24 @@ import type { AgentTerminalBridge } from "../agent-terminal.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
 
+type LocalAgentChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: number;
+};
+
+type LocalAgentChatThread = {
+  id: string;
+  title: string;
+  preview: string;
+  messages: LocalAgentChatMessage[];
+  messageCount: number;
+  createdAt: number;
+  updatedAt: number;
+  scope: AppAgentRequest["scope"];
+};
+
 function localCodeModeEnabled() {
   return process.env.NODE_ENV !== "production" && !process.env.FRAME_PORT;
 }
@@ -127,11 +145,79 @@ function getScopeFromAgentChatBody(body: unknown): AppAgentRequest["scope"] {
   return { type, id, label };
 }
 
+function getThreadIdFromAgentChatBody(body: unknown) {
+  if (!body || typeof body !== "object") return null;
+  if ("threadId" in body && typeof body.threadId === "string") return body.threadId;
+  if ("thread_id" in body && typeof body.thread_id === "string") return body.thread_id;
+  if ("thread" in body && body.thread && typeof body.thread === "object") {
+    const thread = body.thread;
+    if ("id" in thread && typeof thread.id === "string") return thread.id;
+  }
+  return null;
+}
+
+function createLocalMessageId(role: LocalAgentChatMessage["role"]) {
+  return `local-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createLocalThreadId() {
+  return `local-agent-thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function titleFromPrompt(prompt: string) {
+  const title = prompt.replace(/\s+/g, " ").trim().slice(0, 80);
+  return title || "Local chat";
+}
+
+function upsertLocalThread(
+  threads: Map<string, LocalAgentChatThread>,
+  input: {
+    prompt: string;
+    text: string;
+    scope: AppAgentRequest["scope"];
+    threadId?: string | null;
+  },
+) {
+  const now = Date.now();
+  const id = input.threadId || createLocalThreadId();
+  const existing = threads.get(id);
+  const thread: LocalAgentChatThread =
+    existing ??
+    ({
+      id,
+      title: titleFromPrompt(input.prompt),
+      preview: "",
+      messages: [],
+      messageCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      scope: input.scope,
+    } satisfies LocalAgentChatThread);
+
+  thread.messages.push(
+    { id: createLocalMessageId("user"), role: "user", text: input.prompt, createdAt: now },
+    {
+      id: createLocalMessageId("assistant"),
+      role: "assistant",
+      text: input.text,
+      createdAt: Date.now(),
+    },
+  );
+  thread.preview = input.text.slice(0, 160);
+  thread.messageCount = thread.messages.length;
+  thread.updatedAt = Date.now();
+  thread.scope = input.scope;
+  threads.set(id, thread);
+  return thread;
+}
+
 function wantsEventStream(req: Request) {
   return req.get("accept")?.includes("text/event-stream") ?? false;
 }
 
 function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideDeckActions }) {
+  const threads = new Map<string, LocalAgentChatThread>();
+
   router.get("/auth/session", (_req, res) => {
     res.json({ error: "not_authenticated" });
   });
@@ -159,20 +245,20 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
   });
 
   router.get("/agent-chat/threads", (_req, res) => {
-    res.json({ threads: [] });
+    res.json({
+      threads: Array.from(threads.values())
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .map(({ messages: _messages, ...thread }) => thread),
+    });
   });
 
   router.get("/agent-chat/threads/:threadId", (req, res) => {
-    res.json({
-      id: req.params.threadId,
-      title: "",
-      preview: "",
-      messages: [],
-      messageCount: 0,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      scope: null,
-    });
+    const thread = threads.get(req.params.threadId);
+    if (!thread) {
+      res.status(404).json({ error: "local chat thread not found" });
+      return;
+    }
+    res.json(thread);
   });
 
   router.get("/agent-chat/runs/list", (_req, res) => {
@@ -190,9 +276,17 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
     }
 
     try {
+      const prompt = getPromptFromAgentChatBody(req.body);
+      const scope = getScopeFromAgentChatBody(req.body);
       const text = await handleAppAgentPrompt(options.actions, {
-        prompt: getPromptFromAgentChatBody(req.body),
-        scope: getScopeFromAgentChatBody(req.body),
+        prompt,
+        scope,
+      });
+      const thread = upsertLocalThread(threads, {
+        prompt,
+        text,
+        scope,
+        threadId: getThreadIdFromAgentChatBody(req.body),
       });
 
       if (wantsEventStream(req)) {
@@ -201,17 +295,19 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
           "Cache-Control": "no-cache, no-transform",
           Connection: "keep-alive",
         });
-        res.write(`data: ${JSON.stringify({ type: "message", text })}\n\n`);
-        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "message", threadId: thread.id, text })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "done", threadId: thread.id })}\n\n`);
         res.end();
         return;
       }
 
       res.json({
-        id: `local-agent-chat-${Date.now()}`,
+        id: thread.id,
+        threadId: thread.id,
         runtime: "local-app-agent",
         hosted: false,
         streaming: false,
+        thread,
         text,
       });
     } catch (err) {

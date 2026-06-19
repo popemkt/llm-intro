@@ -202,6 +202,6 @@ wholesale replacement: `AppShell`, minimal application-state routing, and
 `create-normal-slide` are adopted while raw-HTML slides, design systems,
 comments, collaboration, and hosted production chat remain separate slices. The
 local App Mode runtime is now action-backed for deck prompts, and
-`/_agent-native/agent-chat` has a local compatibility adapter, but this is not
-yet the full hosted Agent-Native chat runtime with hosted model streaming,
-memory, approvals, or team collaboration.
+`/_agent-native/agent-chat` has a local compatibility adapter with process-local
+thread probes, but this is not yet the full hosted Agent-Native chat runtime
+with hosted model streaming, durable memory, approvals, or team collaboration.

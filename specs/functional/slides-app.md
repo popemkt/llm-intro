@@ -115,6 +115,9 @@ editing, themed presentation playback, and HTML export.
   hosted model provider. The shell should show this as runtime status so users
   do not confuse product-safe App Mode with hosted Code Mode or provider-backed
   chat.
+- The local `agent-chat` compatibility adapter keeps process-local chat threads
+  so the framework thread probes can list and inspect recent local App Mode
+  exchanges. This is not hosted memory and does not survive a server restart.
 - Agents can read local model harness status through `get-local-model-status`.
   When configured, prompt deck creation can use the same local harness through
   the existing action, MCP-shaped, and A2A-discovered action surfaces. Code Mode
@@ -180,5 +183,5 @@ editing, themed presentation playback, and HTML export.
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,
   application-state route, action/MCP/A2A endpoints, local App Mode runtime,
-  local `agent-chat` compatibility, and local-development terminal bridge;
-  hosted production chat remains a separate adoption slice.
+  process-local `agent-chat` compatibility, and local-development terminal
+  bridge; hosted production chat remains a separate adoption slice.

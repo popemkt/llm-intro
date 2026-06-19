@@ -7,6 +7,7 @@ export const APP_AGENT_SUGGESTIONS = [
   "Add a bullets slide after the current topic",
   "Turn this outline into normal slides",
   "Export this deck as HTML",
+  "Check local harness status",
 ] as const;
 
 export const APP_AGENT_PROMPT_FAMILIES = [
@@ -28,6 +29,7 @@ export const APP_AGENT_PROMPT_FAMILIES = [
   "markdown-import",
   "snapshot-create-list-restore",
   "local-model-status",
+  "local-harness-status",
 ] as const;
 
 export const APP_AGENT_MANIFEST = {

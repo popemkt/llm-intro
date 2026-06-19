@@ -32,8 +32,9 @@ describe("Agent Native app-agent manifest", () => {
           "active-deck-context",
           "prompt-deck-creation",
           "snapshot-create-list-restore",
+          "local-harness-status",
         ]),
-        suggestions: expect.arrayContaining(["Summarize this deck"]),
+        suggestions: expect.arrayContaining(["Summarize this deck", "Check local harness status"]),
       },
     });
   });
@@ -47,7 +48,11 @@ describe("Agent Native app-agent manifest", () => {
         hosted: false,
         requiresHostedModel: false,
         chat: expect.objectContaining({ streaming: false }),
-        promptFamilies: expect.arrayContaining(["markdown-import", "slide-editing"]),
+        promptFamilies: expect.arrayContaining([
+          "markdown-import",
+          "slide-editing",
+          "local-harness-status",
+        ]),
         suggestions: expect.arrayContaining(["Export this deck as HTML"]),
       },
     });

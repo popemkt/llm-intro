@@ -65,7 +65,8 @@ Reference documentation:
   setting `LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, or
   `LOCAL_HARNESS_MCP_URL` (or the `AGENT_NATIVE_LOCAL_HARNESS_*` aliases). The
   protocol probe reports these as external local harness transports; configured
-  MCP harnesses also appear in `/_agent-native/mcp/servers`.
+  MCP harnesses also appear in `/_agent-native/mcp/servers`, and App Mode
+  exposes the same discovery through `get-local-harness-status`.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY

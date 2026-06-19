@@ -332,7 +332,11 @@ describe("Agent Native chat shell probes", () => {
           requiresHostedModel: false,
           toolBoundary: "product-actions",
           capabilitiesUrl: "/_agent-native/app-agent/capabilities",
-          promptFamilies: expect.arrayContaining(["normal-slide-creation", "local-model-status"]),
+          promptFamilies: expect.arrayContaining([
+            "normal-slide-creation",
+            "local-model-status",
+            "local-harness-status",
+          ]),
           suggestions: expect.arrayContaining(["Summarize this deck"]),
         },
         codeMode: {

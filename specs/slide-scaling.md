@@ -4,7 +4,7 @@ Problem: code-backed slides shift between overview, presentation, and fullscreen
 
 ## Approach A — fixed logical canvas + `transform: scale()`
 
-Render every slide (code + db) into a 1000×562.5 box. The viewport wrapper computes `scale = containerWidth / 1000` and applies `transform: scale(s)` to the 1000×562.5 inner div.
+Render every slide (code + db) into a 1000×562.5 box. The viewport wrapper computes `scale = min(containerWidth / 1000, containerHeight / 562.5)`, centers the scaled canvas, and applies `transform: scale(s)` to the 1000×562.5 inner div.
 
 ```tsx
 <div ref={outer} style={{ position: 'relative', paddingBottom: '56.25%' }}>
@@ -18,7 +18,7 @@ Render every slide (code + db) into a 1000×562.5 box. The viewport wrapper comp
 </div>
 ```
 
-- **Drop-in.** Existing slides are already authored at ~1000-wide (OverviewGrid already scales them at 1000×562.5). Presentation/fullscreen would just need the same wrapper.
+- **Drop-in.** Existing slides are already authored at ~1000-wide (OverviewGrid already scales them at 1000×562.5). Presentation/fullscreen use the same wrapper.
 - Author slides in plain `px`. Third-party components (lucide, motion, etc.) work unchanged.
 - Everything inside the canvas is invariant to viewport size — layout, fonts, gaps, animations all scale uniformly.
 - Minor caveat: fractional scale factors can blur raster content. Modern browsers handle this well; SVG and vector text stay crisp.
@@ -45,4 +45,4 @@ Author every dimension inside a slide in container-relative units. `1cqw = 1% of
 
 ## Recommendation
 
-Start with **Approach A**. It's drop-in (wrap existing slides, done), industry-standard, and solves the immediate problem without touching slide code. If we later want crisper text at large sizes or run into transform-scale quirks (hover hitboxes, focus rings on fractional scales), revisit Approach B for specific slides.
+Start with **Approach A**. It's drop-in (wrap existing slides, done), industry-standard, and solves the immediate problem without touching slide code. The current `SlideShell` uses the Open Slide-style fit-and-center behavior while preserving our 1000×562.5 logical coordinate system. If we later want crisper text at large sizes or run into transform-scale quirks (hover hitboxes, focus rings on fractional scales), revisit Approach B for specific slides.

@@ -53,6 +53,10 @@ Run `pnpm lint` when changing source boundaries, Nx package tags, or lint rules.
 
 ## Slide Authoring
 
-Use `.claude/skills/slide-authoring.md` for code-backed slides. The invariant is
-a fixed 1000 x 562.5 logical canvas rendered through `SlideShell`; avoid viewport
-units inside slides.
+Use `.agents/skills/slide-authoring/SKILL.md` and
+`.claude/skills/slide-authoring.md` for slide work. The invariant is a fixed
+1000 x 562.5 logical canvas rendered through `SlideShell`; avoid viewport units
+inside slides. Use `.agents/skills/create-slide/SKILL.md` for deck creation,
+`.agents/skills/apply-slide-feedback/SKILL.md` for inspector/review feedback,
+and `.agents/skills/assets-management/SKILL.md` for deck assets and SVGL-style
+logo import workflows.

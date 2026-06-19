@@ -53,5 +53,6 @@ apps/slides/server/data/*.db
 apps/slides/server/data/*.db-shm
 apps/slides/server/data/*.db-wal
 .worktrees/
+.references/
 .claude/settings.local.json
 .codex/config.toml

@@ -1,7 +1,9 @@
 ---
 name: slide-authoring
-description: Use when creating, editing, or debugging code-backed slides in src/slides/. Enforces the 1000×562.5 logical canvas, safe unit choices, the registry pattern, and SlideProps contract so slides render identically across overview, presentation, and fullscreen modes.
+description: Use when creating, editing, or reviewing slides in this repo. Covers code-backed slides, normal DB slides, the fixed canvas contract, interaction rules, motion, assets, and themeability.
 ---
+
+Read `.agents/skills/slide-authoring/SKILL.md` first. The notes below preserve the original local code-slide checklist.
 
 # Slide authoring (code-backed slides)
 

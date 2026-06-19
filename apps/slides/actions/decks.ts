@@ -28,7 +28,7 @@ function createDeckExportAction(presentationsService: PresentationsService) {
     publicAgent: {
       ...publicReadAction,
       title: "Get deck export",
-      description: "Return the existing HTML export download URL for a presentation deck.",
+      description: "Return the Agent-Native HTML export download URL for a presentation deck.",
     },
     run: ({ id }) => {
       const deck = presentationsService.get(id);
@@ -37,7 +37,7 @@ function createDeckExportAction(presentationsService: PresentationsService) {
         name: deck.name,
         format: "html",
         method: "POST",
-        url: `/api/presentations/${deck.id}/export`,
+        url: `/_agent-native/export/presentations/${deck.id}`,
       };
     },
   });

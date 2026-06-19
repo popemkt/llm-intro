@@ -127,19 +127,18 @@ framework boundary.
 
 | Functional behavior | Code implementation |
 |---|---|
-| Export deck as HTML | `apps/slides/server/routes/export.ts` |
-| Agent export action | `get-deck-export` action returns the POST `/api/presentations/:id/export` file route |
+| Export deck as HTML | `apps/slides/server/routes/export.ts`, mounted at `/_agent-native/export/presentations/:pid` and legacy `/api/presentations/:pid/export` |
+| Agent export action | `get-deck-export` action returns the POST `/_agent-native/export/presentations/:pid` file route |
 | Export deck as typed JSON | `export-deck-json` action returns versioned deck, group, and slide data |
 | Import deck from typed JSON | `import-deck-json` action creates a new deck from portable DB-backed slide data and reapplies group layout |
 | Export viewer bootstrap | `apps/slides/src/export-viewer.tsx` |
 | Static data provider | `apps/slides/src/data/static-provider.ts` |
 
-The export route remains on `/api` because it returns a downloadable HTML file.
-`get-deck-export` exposes that capability to agents by returning the existing
-download URL and method. The action itself is read-only; the returned file route
-still uses POST because export mode and selected slide ids travel in the request
-body. Move the file response only when the Agent-Native action layer has an
-intentional file response pattern in this repo.
+The preferred export route is namespaced under `/_agent-native/export` because
+it is the downloadable file response paired with the Agent-Native
+`get-deck-export` discovery action. The legacy `/api` route remains mounted for
+compatibility. The action itself is read-only; the returned file route still
+uses POST because export mode and selected slide ids travel in the request body.
 
 ## Agent Shell Bridge
 

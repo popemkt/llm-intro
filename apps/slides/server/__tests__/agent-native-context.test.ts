@@ -395,7 +395,7 @@ describe("Agent Native deck export action", () => {
     db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
   });
 
-  it("GET /_agent-native/actions/get-deck-export returns the existing HTML export URL", async () => {
+  it("GET /_agent-native/actions/get-deck-export returns the Agent-Native HTML export URL", async () => {
     const deck = (await request(app).post("/api/presentations").send({ name: "Exportable" })).body;
 
     const res = await request(app).get(`/_agent-native/actions/get-deck-export?id=${deck.id}`);
@@ -406,7 +406,7 @@ describe("Agent Native deck export action", () => {
       name: "Exportable",
       format: "html",
       method: "POST",
-      url: `/api/presentations/${deck.id}/export`,
+      url: `/_agent-native/export/presentations/${deck.id}`,
     });
   });
 
@@ -728,7 +728,7 @@ describe("App agent export runtime", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("HTML export");
-    expect(res.body.text).toContain(`/api/presentations/${pid}/export`);
+    expect(res.body.text).toContain(`/_agent-native/export/presentations/${pid}`);
   });
 
   it("POST /_agent-native/app-agent summarizes a typed JSON export", async () => {

@@ -50,14 +50,13 @@ export function createApp(services: {
   );
   app.use("/_agent-native/application-state", createApplicationStateRouter());
   app.use("/_agent-native/actions", createAgentNativeActionsRouter(services.actions));
-  app.post(
-    "/api/presentations/:pid/export",
-    createExportHandler(
-      services.presentationsService,
-      services.slidesService,
-      services.groupsService,
-    ),
+  const exportHandler = createExportHandler(
+    services.presentationsService,
+    services.slidesService,
+    services.groupsService,
   );
+  app.post("/_agent-native/export/presentations/:pid", exportHandler);
+  app.post("/api/presentations/:pid/export", exportHandler);
   app.use("/api/presentations", createPresentationsRouter(services.presentationsService));
   app.use("/api/presentations/:pid/slides", createSlidesRouter(services.slidesService));
   app.use("/api/presentations/:pid/groups", createGroupsRouter(services.groupsService));

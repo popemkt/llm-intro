@@ -67,10 +67,10 @@ editing, themed presentation playback, and HTML export.
 - Decks can be exported as standalone HTML.
 - Export preserves deck metadata, slide order, groups, themes, and renderable
   slide content.
-- Export keeps the existing REST download route until the file/download flow is
-  intentionally migrated.
+- Export uses an Agent-Native namespaced file route while keeping the legacy
+  REST download route for compatibility.
 - Agents can prepare an HTML export for the active deck through a product-safe
-  action that returns the existing download URL.
+  action that returns the Agent-Native download URL.
 - Agents can export a deck as portable typed JSON and import that JSON into a
   new deck. Portable JSON preserves DB-backed slides, blocks, notes, groups,
   layout, and theme; code-backed slides are exported as metadata and skipped on

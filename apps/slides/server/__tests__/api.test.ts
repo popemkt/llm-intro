@@ -623,4 +623,22 @@ describe("System presentation bootstrap", () => {
     expect(res.text).toContain("LLM & Agent Basics");
     expect(res.text).toMatch(/slideCount:\d+/);
   });
+
+  it("exports HTML through the Agent-Native file route", { timeout: 60000 }, async () => {
+    const { app } = createTestContext();
+
+    const presentations = (await request(app).get("/api/presentations")).body as Array<{
+      id: number;
+    }>;
+    const pid = presentations[0].id;
+
+    const res = await request(app)
+      .post(`/_agent-native/export/presentations/${pid}`)
+      .send({ mode: "deck" });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/^text\/html/);
+    expect(res.text).toContain("export-deck-overview");
+    expect(res.text).toContain("LLM & Agent Basics");
+  });
 });

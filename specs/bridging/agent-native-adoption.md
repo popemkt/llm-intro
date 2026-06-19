@@ -105,7 +105,7 @@ file download/export behavior.
 | read theme catalog | `get-theme-catalog` read action over shared `ThemeName` metadata |
 | change app shell theme | `set-app-theme` mutating action that queues a browser-local app theme command |
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
-| export HTML | `get-deck-export` read action returns the existing `/api` download URL |
+| export HTML | `get-deck-export` read action returns the Agent-Native export download URL |
 | export/import typed JSON | `export-deck-json` and `import-deck-json` actions over typed deck, group, and DB slide data |
 | export/import Markdown | `export-deck-markdown` and `import-deck-markdown` actions over readable deck Markdown |
 | create/list/read/restore snapshots | `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, `restore-deck-snapshot` actions over captured typed deck state |
@@ -152,9 +152,10 @@ Taken now:
   blank deck creation through `create-deck`, outline deck creation through
   `create-deck-from-outline`, and prompt deck creation through
   `create-deck-from-prompt`.
-- HTML export exposure through `get-deck-export`, keeping the existing file
-  response route while making export discoverable to App Mode and external
-  action clients.
+- HTML export exposure through `get-deck-export` and
+  `/_agent-native/export/presentations/:pid`, keeping the legacy `/api` file
+  response route only for compatibility while making export discoverable to App
+  Mode and external action clients.
 - Typed JSON export/import through `export-deck-json` and `import-deck-json`,
   preserving DB-backed slide blocks, notes, groups, layout, and theme while
   treating code-backed slides as non-portable source-module metadata.

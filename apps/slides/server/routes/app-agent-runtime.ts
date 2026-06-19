@@ -4,7 +4,7 @@ import { AppError } from "../errors.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import type { NormalSlideLayout } from "../../actions/normal-slide-layouts.js";
 
-type AppAgentRequest = {
+export type AppAgentRequest = {
   prompt?: string;
   scope?: {
     type?: string;
@@ -544,7 +544,7 @@ async function handleSnapshotPrompt(
   return null;
 }
 
-async function handlePrompt(actions: SlideDeckActions, body: AppAgentRequest) {
+export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
   const normalized = prompt.toLowerCase();
@@ -637,7 +637,7 @@ export function createAppAgentRuntimeRouter(actions: SlideDeckActions) {
 
   router.post("/", async (req, res, next) => {
     try {
-      res.json({ text: await handlePrompt(actions, req.body as AppAgentRequest) });
+      res.json({ text: await handleAppAgentPrompt(actions, req.body as AppAgentRequest) });
     } catch (err) {
       next(err);
     }

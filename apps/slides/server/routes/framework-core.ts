@@ -1,16 +1,20 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import type { AgentTerminalBridge } from "../agent-terminal.js";
+import type { SlideDeckActions } from "../../actions/index.js";
+import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
 
 function localCodeModeEnabled() {
   return process.env.NODE_ENV !== "production" && !process.env.FRAME_PORT;
 }
 
-export function createFrameworkCoreRouter(options: { terminalBridge?: AgentTerminalBridge } = {}) {
+export function createFrameworkCoreRouter(
+  options: { actions?: SlideDeckActions; terminalBridge?: AgentTerminalBridge } = {},
+) {
   const router = Router();
 
   registerFrameworkHealthRoutes(router);
   registerFrameworkStatusRoutes(router, options);
-  registerFrameworkChatRoutes(router);
+  registerFrameworkChatRoutes(router, options);
   registerFrameworkResourceRoutes(router);
 
   return router;
@@ -97,7 +101,37 @@ function registerFrameworkStatusRoutes(
   });
 }
 
-function registerFrameworkChatRoutes(router: Router) {
+function getPromptFromAgentChatBody(body: unknown) {
+  if (!body || typeof body !== "object") return "";
+  if ("prompt" in body && typeof body.prompt === "string") return body.prompt;
+  if ("message" in body && typeof body.message === "string") return body.message;
+  if (
+    "turn" in body &&
+    body.turn &&
+    typeof body.turn === "object" &&
+    "prompt" in body.turn &&
+    typeof body.turn.prompt === "string"
+  ) {
+    return body.turn.prompt;
+  }
+  return "";
+}
+
+function getScopeFromAgentChatBody(body: unknown): AppAgentRequest["scope"] {
+  if (!body || typeof body !== "object" || !("scope" in body)) return null;
+  const scope = body.scope;
+  if (!scope || typeof scope !== "object") return null;
+  const type = "type" in scope && typeof scope.type === "string" ? scope.type : undefined;
+  const id = "id" in scope && typeof scope.id === "string" ? scope.id : undefined;
+  const label = "label" in scope && typeof scope.label === "string" ? scope.label : undefined;
+  return { type, id, label };
+}
+
+function wantsEventStream(req: Request) {
+  return req.get("accept")?.includes("text/event-stream") ?? false;
+}
+
+function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideDeckActions }) {
   router.get("/auth/session", (_req, res) => {
     res.json({ error: "not_authenticated" });
   });
@@ -133,6 +167,42 @@ function registerFrameworkChatRoutes(router: Router) {
 
   router.get("/agent-chat/runs/active", (_req, res) => {
     res.json({ active: false, status: "idle" });
+  });
+
+  router.post("/agent-chat", async (req, res, next) => {
+    if (!options.actions) {
+      res.status(503).json({ error: "local app agent is not configured" });
+      return;
+    }
+
+    try {
+      const text = await handleAppAgentPrompt(options.actions, {
+        prompt: getPromptFromAgentChatBody(req.body),
+        scope: getScopeFromAgentChatBody(req.body),
+      });
+
+      if (wantsEventStream(req)) {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        });
+        res.write(`data: ${JSON.stringify({ type: "message", text })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+        res.end();
+        return;
+      }
+
+      res.json({
+        id: `local-agent-chat-${Date.now()}`,
+        runtime: "local-app-agent",
+        hosted: false,
+        streaming: false,
+        text,
+      });
+    } catch (err) {
+      next(err);
+    }
   });
 }
 

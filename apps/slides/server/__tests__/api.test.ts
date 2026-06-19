@@ -501,6 +501,44 @@ describe("Agent Native framework core routes", () => {
   });
 });
 
+describe("Agent Native local agent-chat adapter", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
+
+  it("POST /_agent-native/agent-chat delegates to the local app agent", async () => {
+    const deck = (await request(app).post("/api/presentations").send({ name: "Chat Deck" })).body;
+    await request(app).post(`/api/presentations/${deck.id}/slides`).send({ title: "Intro" });
+
+    const res = await request(app)
+      .post("/_agent-native/agent-chat")
+      .send({ prompt: "list slides", scope: { type: "deck", id: String(deck.id) } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      runtime: "local-app-agent",
+      hosted: false,
+      streaming: false,
+    });
+    expect(res.body.text).toContain("Slides in this deck");
+    expect(res.body.text).toContain("Intro");
+  });
+
+  it("POST /_agent-native/agent-chat can emit a local event stream", async () => {
+    const deck = (await request(app).post("/api/presentations").send({ name: "Stream Chat Deck" }))
+      .body;
+
+    const res = await request(app)
+      .post("/_agent-native/agent-chat")
+      .set("Accept", "text/event-stream")
+      .send({ prompt: "summarize this deck", scope: { type: "deck", id: String(deck.id) } });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/event-stream");
+    expect(res.text).toContain('"type":"message"');
+    expect(res.text).toContain('"type":"done"');
+    expect(res.text).toContain("Current deck");
+  });
+});
+
 describe("Slides API", () => {
   const { db, app } = createTestContext({ seedSystemPresentation: false });
   let pid: number;

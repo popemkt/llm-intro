@@ -163,6 +163,6 @@ editing, themed presentation playback, and HTML export.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,
-  application-state route, action/MCP/A2A endpoints, local App Mode runtime, and
-  local-development terminal bridge; hosted production chat remains a separate
-  adoption slice.
+  application-state route, action/MCP/A2A endpoints, local App Mode runtime,
+  local `agent-chat` compatibility, and local-development terminal bridge;
+  hosted production chat remains a separate adoption slice.

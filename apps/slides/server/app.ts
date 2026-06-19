@@ -40,7 +40,10 @@ export function createApp(services: {
   app.use("/_agent-native/prompt-deck-stream", createPromptDeckStreamRouter(services.actions));
   app.use(
     "/_agent-native",
-    createFrameworkCoreRouter({ terminalBridge: services.agentTerminalBridge }),
+    createFrameworkCoreRouter({
+      actions: services.actions,
+      terminalBridge: services.agentTerminalBridge,
+    }),
   );
   app.use("/_agent-native/application-state", createApplicationStateRouter());
   app.use("/_agent-native/actions", createAgentNativeActionsRouter(services.actions));

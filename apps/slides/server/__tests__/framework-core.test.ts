@@ -97,6 +97,51 @@ describe("Agent Native framework mode status routes", () => {
       },
     });
   });
+
+  it("GET mode probes disable Code Mode in production and frame runtimes", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousFramePort = process.env.FRAME_PORT;
+
+    process.env.NODE_ENV = "production";
+    delete process.env.FRAME_PORT;
+
+    try {
+      const productionEngine = await request(app).get("/_agent-native/agent-engine/status");
+      expect(productionEngine.status).toBe(200);
+      expect(productionEngine.body).toMatchObject({
+        modes: {
+          app: expect.objectContaining({ available: true }),
+          code: expect.objectContaining({ available: false }),
+        },
+      });
+
+      const productionLoop = await request(app).get("/_agent-native/agent-loop-settings");
+      expect(productionLoop.status).toBe(200);
+      expect(productionLoop.body.availableModes).toEqual(["app"]);
+
+      process.env.NODE_ENV = "development";
+      process.env.FRAME_PORT = "4567";
+
+      const frameEngine = await request(app).get("/_agent-native/agent-engine/status");
+      expect(frameEngine.status).toBe(200);
+      expect(frameEngine.body.modes.code).toMatchObject({ available: false });
+
+      const frameProtocols = await request(app).get("/_agent-native/local-runtime/protocols");
+      expect(frameProtocols.status).toBe(200);
+      expect(frameProtocols.body.protocols).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "local-terminal-code-mode",
+            available: false,
+            toolBoundary: "trusted-local-cli",
+          }),
+        ]),
+      );
+    } finally {
+      restoreEnv("NODE_ENV", previousNodeEnv);
+      restoreEnv("FRAME_PORT", previousFramePort);
+    }
+  });
 });
 
 describe("Agent Native framework runtime protocol routes", () => {

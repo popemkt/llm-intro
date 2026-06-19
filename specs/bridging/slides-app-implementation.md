@@ -182,6 +182,10 @@ same `appMode` metadata for automation. The framework model probes
 `POST /_agent-native/actions/manage-agent-engine` report the same local
 OpenAI-compatible provider status as `get-local-model-status`; this is provider
 discovery for local prompt drafting, not a hosted engine dependency.
+`GET /_agent-native/agent-engine/status` reports local App Mode and Code Mode
+availability, while `GET /_agent-native/builder/status` keeps hosted Builder
+cloud auth explicitly unconfigured. This prevents local shells from mistaking
+missing Builder auth for missing local runtime.
 `GET /_agent-native/env-status` reports the same configured/fallback state with
 redacted secret metadata. Production shell access remains gated by the
 server-side terminal policy.

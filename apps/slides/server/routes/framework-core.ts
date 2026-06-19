@@ -104,14 +104,33 @@ function registerFrameworkStatusRoutes(
       configured: false,
       connected: false,
       builderAvailable: false,
+      hosted: false,
+      localFrameAvailable: true,
+      authRequired: false,
+      runtime: "local-agent-native",
     });
   });
 
   router.get("/agent-engine/status", (_req, res) => {
+    const codeModeAvailable = localCodeModeEnabled();
     res.json({
-      configured: false,
-      connected: false,
-      available: false,
+      configured: true,
+      connected: true,
+      available: true,
+      hosted: false,
+      requiresHostedModel: false,
+      defaultMode: "app",
+      modes: {
+        app: {
+          ...APP_AGENT_MANIFEST.modes.app,
+          available: true,
+          capabilitiesUrl: "/_agent-native/app-agent/capabilities",
+        },
+        code: {
+          ...APP_AGENT_MANIFEST.modes.code,
+          available: codeModeAvailable,
+        },
+      },
     });
   });
 
@@ -124,7 +143,14 @@ function registerFrameworkStatusRoutes(
   });
 
   router.get("/agent-loop-settings", (_req, res) => {
-    res.json({});
+    res.json({
+      mode: "app",
+      availableModes: ["app", ...(localCodeModeEnabled() ? ["code"] : [])],
+      hosted: false,
+      requiresHostedModel: false,
+      persistence: "process-local",
+      approvals: "not-configured",
+    });
   });
 
   router.get("/agent-model-defaults", (_req, res) => {

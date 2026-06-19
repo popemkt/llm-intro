@@ -420,11 +420,36 @@ describe("Agent Native framework core routes", () => {
     });
     await expect(request(app).get("/_agent-native/builder/status")).resolves.toMatchObject({
       status: 200,
-      body: expect.objectContaining({ configured: false, connected: false }),
+      body: expect.objectContaining({
+        configured: false,
+        connected: false,
+        builderAvailable: false,
+        hosted: false,
+        localFrameAvailable: true,
+        authRequired: false,
+      }),
     });
     await expect(request(app).get("/_agent-native/agent-engine/status")).resolves.toMatchObject({
       status: 200,
-      body: expect.objectContaining({ configured: false, connected: false }),
+      body: {
+        configured: true,
+        connected: true,
+        available: true,
+        hosted: false,
+        requiresHostedModel: false,
+        defaultMode: "app",
+        modes: {
+          app: expect.objectContaining({
+            runtime: "local-app-agent",
+            available: true,
+            hosted: false,
+          }),
+          code: expect.objectContaining({
+            runtime: "local-terminal",
+            hosted: false,
+          }),
+        },
+      },
     });
     await expect(request(app).get("/_agent-native/available-clis")).resolves.toMatchObject({
       status: 200,
@@ -436,6 +461,16 @@ describe("Agent Native framework core routes", () => {
     await expect(request(app).get("/_agent-native/agent-terminal-info")).resolves.toMatchObject({
       status: 200,
       body: { available: false },
+    });
+    await expect(request(app).get("/_agent-native/agent-loop-settings")).resolves.toMatchObject({
+      status: 200,
+      body: {
+        mode: "app",
+        availableModes: expect.arrayContaining(["app"]),
+        hosted: false,
+        requiresHostedModel: false,
+        persistence: "process-local",
+      },
     });
     await expect(request(app).get("/_agent-native/agent-model-defaults")).resolves.toMatchObject({
       status: 200,

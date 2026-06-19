@@ -17,6 +17,8 @@ type BlockPosition = {
   h?: number;
   rotation?: number;
   opacity?: number;
+  groupId?: string;
+  groupName?: string;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -107,6 +109,15 @@ function parseObjectFit(value: unknown) {
   return value as "contain" | "cover" | "fill";
 }
 
+function parseOptionalBlockGroupString(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new AppError(400, `${field} cannot be empty`);
+  if (trimmed.length > 80) throw new AppError(400, `${field} must be 80 characters or less`);
+  return trimmed;
+}
+
 function parseBlockIdentity(value: JsonRecord) {
   if (typeof value.id !== "string" || !value.id) throw new AppError(400, "block id is required");
   if (typeof value.type !== "string") throw new AppError(400, "block type is required");
@@ -121,6 +132,8 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     h: parsePosition(value.h, "block.h"),
     rotation: parseBoundedNumber(value.rotation, "block.rotation", { min: -360, max: 360 }),
     opacity: parseBoundedNumber(value.opacity, "block.opacity", { min: 0, max: 1 }),
+    groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),
+    groupName: parseOptionalBlockGroupString(value.groupName, "block.groupName"),
   };
 }
 

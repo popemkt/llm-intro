@@ -231,6 +231,8 @@ describe("Manual slide actions", () => {
             h: 24,
             rotation: -2,
             opacity: 0.85,
+            groupId: "hero-group",
+            groupName: "Hero",
             fontSize: 42,
             color: "#ffffff",
             background: "#123456",
@@ -248,6 +250,8 @@ describe("Manual slide actions", () => {
             y: 10,
             w: 12,
             h: 12,
+            groupId: "hero-group",
+            groupName: "Hero",
           },
           {
             id: "badge",
@@ -279,11 +283,15 @@ describe("Manual slide actions", () => {
           align: "center",
           rotation: -2,
           opacity: 0.85,
+          groupId: "hero-group",
+          groupName: "Hero",
         }),
         expect.objectContaining({
           id: "logo",
           objectFit: "cover",
           borderRadius: 18,
+          groupId: "hero-group",
+          groupName: "Hero",
         }),
         expect.objectContaining({
           id: "badge",

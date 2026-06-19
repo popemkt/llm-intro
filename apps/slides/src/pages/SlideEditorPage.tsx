@@ -20,6 +20,7 @@ import {
   Copy,
   Edit3,
   Globe,
+  Group,
   Image as ImageIcon,
   Pill,
   Settings,
@@ -31,6 +32,7 @@ import {
   Quote,
   StretchHorizontal,
   StretchVertical,
+  Ungroup,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
@@ -779,14 +781,28 @@ export function SlideEditorPage() {
   }, []);
 
   const selectOnlyBlock = useCallback((id: string) => {
+    const block = blocksRef.current.find((entry) => entry.id === id);
+    const groupId = block?.groupId;
+    const ids = groupId
+      ? blocksRef.current.filter((entry) => entry.groupId === groupId).map((entry) => entry.id)
+      : [id];
     setSelectedId(id);
-    setSelectedIds([id]);
+    setSelectedIds(ids);
   }, []);
 
   const toggleBlockSelection = useCallback((id: string) => {
     setEditingTextId(null);
+    const block = blocksRef.current.find((entry) => entry.id === id);
+    const idsToToggle = block?.groupId
+      ? blocksRef.current
+          .filter((entry) => entry.groupId === block.groupId)
+          .map((entry) => entry.id)
+      : [id];
     setSelectedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id];
+      const removing = idsToToggle.every((entry) => prev.includes(entry));
+      const next = removing
+        ? prev.filter((entry) => !idsToToggle.includes(entry))
+        : [...prev, ...idsToToggle.filter((entry) => !prev.includes(entry))];
       setSelectedId(next[next.length - 1] ?? null);
       return next;
     });
@@ -800,12 +816,17 @@ export function SlideEditorPage() {
       setActiveGuides([]);
       return;
     }
+    const groupedIds = block.groupId
+      ? blocksRef.current
+          .filter((entry) => entry.groupId === block.groupId)
+          .map((entry) => entry.id)
+      : [block.id];
     const selectedSet =
       mode === "move" &&
       selectedIdsRef.current.includes(block.id) &&
       selectedIdsRef.current.length > 1
         ? selectedIdsRef.current
-        : [block.id];
+        : groupedIds;
     setSelectedId(block.id);
     setSelectedIds(selectedSet);
     const originals = blocksRef.current
@@ -849,10 +870,18 @@ export function SlideEditorPage() {
   }, []);
 
   const deleteBlock = useCallback((id: string) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
-    setSelectedId((s) => (s === id ? null : s));
-    setSelectedIds((ids) => ids.filter((entry) => entry !== id));
-    setEditingTextId((s) => (s === id ? null : s));
+    const block = blocksRef.current.find((entry) => entry.id === id);
+    const idsToDelete = new Set(
+      block?.groupId
+        ? blocksRef.current
+            .filter((entry) => entry.groupId === block.groupId)
+            .map((entry) => entry.id)
+        : [id],
+    );
+    setBlocks((prev) => prev.filter((b) => !idsToDelete.has(b.id)));
+    setSelectedId((s) => (s && idsToDelete.has(s) ? null : s));
+    setSelectedIds((ids) => ids.filter((entry) => !idsToDelete.has(entry)));
+    setEditingTextId((s) => (s && idsToDelete.has(s) ? null : s));
   }, []);
 
   const deleteSelectedBlocks = useCallback(
@@ -881,19 +910,50 @@ export function SlideEditorPage() {
     setBlocks((prev) => arrangeSelectedBlocks(prev, ids, action));
   }, []);
 
+  const groupSelectedBlocks = useCallback((ids: string[]) => {
+    if (ids.length < 2) return;
+    const nextGroupId = `group-${nanoid(8)}`;
+    setBlocks((prev) =>
+      prev.map((block) =>
+        ids.includes(block.id)
+          ? ({ ...block, groupId: nextGroupId, groupName: "Group" } as Block)
+          : block,
+      ),
+    );
+  }, []);
+
+  const ungroupSelectedBlocks = useCallback((ids: string[]) => {
+    const selected = new Set(ids);
+    setBlocks((prev) =>
+      prev.map((block) =>
+        selected.has(block.id)
+          ? ({ ...block, groupId: undefined, groupName: undefined } as Block)
+          : block,
+      ),
+    );
+  }, []);
+
   const duplicateBlocks = useCallback((ids: string[]) => {
     const selected = new Set(ids);
+    const groupIdCopies = new Map<string, string>();
     const copies = blocksRef.current
       .filter((block) => selected.has(block.id))
-      .map((source) => ({
-        sourceId: source.id,
-        copy: {
-          ...source,
-          id: nanoid(),
-          x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
-          y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
-        } as Block,
-      }));
+      .map((source) => {
+        const nextGroupId = source.groupId
+          ? (groupIdCopies.get(source.groupId) ?? `group-${nanoid(8)}`)
+          : undefined;
+        if (source.groupId && nextGroupId) groupIdCopies.set(source.groupId, nextGroupId);
+        return {
+          sourceId: source.id,
+          copy: {
+            ...source,
+            id: nanoid(),
+            groupId: nextGroupId,
+            x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
+            y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
+          } as Block,
+        };
+      });
     if (copies.length === 0) return;
     const copiesBySource = new Map(copies.map((entry) => [entry.sourceId, entry.copy]));
     setBlocks((prev) => {
@@ -1690,6 +1750,8 @@ export function SlideEditorPage() {
                     onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
                     onDelete={() => deleteSelectedBlocks(selectedIds)}
                     onDuplicate={() => duplicateBlocks(selectedIds)}
+                    onGroup={() => groupSelectedBlocks(selectedIds)}
+                    onUngroup={() => ungroupSelectedBlocks(selectedIds)}
                   />
                 ) : (
                   <div
@@ -1798,6 +1860,7 @@ export function SlideEditorPage() {
                         }}
                       >
                         {b.type}
+                        {b.groupId ? " · grp" : ""}
                       </span>
                       <span
                         style={{
@@ -2210,11 +2273,15 @@ function MultiSelectionPanel({
   onArrange,
   onDelete,
   onDuplicate,
+  onGroup,
+  onUngroup,
 }: {
   count: number;
   onArrange: (action: MultiBlockArrangeAction) => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onGroup: () => void;
+  onUngroup: () => void;
 }) {
   return (
     <div
@@ -2250,6 +2317,14 @@ function MultiSelectionPanel({
           style={{ ...arrangeButton, color: "#ff8a8a" }}
         >
           <Trash2 size={13} />
+        </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <button type="button" title="Group" onClick={onGroup} style={arrangeButton}>
+          <Group size={13} />
+        </button>
+        <button type="button" title="Ungroup" onClick={onUngroup} style={arrangeButton}>
+          <Ungroup size={13} />
         </button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>

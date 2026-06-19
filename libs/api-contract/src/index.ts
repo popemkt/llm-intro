@@ -25,6 +25,8 @@ type BlockPos = {
   h?: number;
   rotation?: number;
   opacity?: number;
+  groupId?: string;
+  groupName?: string;
 };
 
 export type TextBlock = {

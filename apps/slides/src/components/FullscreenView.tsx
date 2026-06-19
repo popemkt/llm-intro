@@ -27,7 +27,7 @@ function RenderSlide({ slide, isActive }: { slide: UnifiedSlide; isActive: boole
       <HtmlSlideRenderer html={slide.html} title={slide.title} />
     </SlideShell>
   ) : (
-    <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
+    <DbSlideRenderer background={slide.background} blocks={slide.blocks} theme={slide.theme} />
   );
 }
 

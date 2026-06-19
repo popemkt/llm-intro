@@ -133,6 +133,13 @@ export interface ApiSlideTransition {
   params?: Record<string, unknown>;
 }
 
+export interface ApiSlideBackground {
+  fill?: string;
+  imageUrl?: string;
+  imageFit?: "cover" | "contain" | "fill";
+  imagePosition?: string;
+}
+
 export interface ApiPresentation {
   id: number;
   name: string;
@@ -153,6 +160,7 @@ export interface ApiSlide {
   html: string;
   notes: string;
   transition: ApiSlideTransition | null;
+  background: ApiSlideBackground | null;
   created_at: string;
   updated_at: string;
 }

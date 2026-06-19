@@ -43,6 +43,7 @@ import { useActionMutation, useActionQuery } from "@agent-native/core/client";
 import type {
   ApiPresentation,
   ApiSlide,
+  ApiSlideBackground,
   ApiSlideTransition,
   Block,
   ShapeBlock,
@@ -384,6 +385,27 @@ const disabledArrangeButton: React.CSSProperties = {
   opacity: 0.45,
 };
 
+function cssUrl(value: string) {
+  return `url("${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}")`;
+}
+
+function slideBackgroundStyle(background: ApiSlideBackground | null): React.CSSProperties {
+  if (!background) return {};
+  const imageUrl = background.imageUrl ? cssUrl(background.imageUrl) : undefined;
+  const layeredGradient =
+    background.imageUrl && background.fill?.includes("gradient(")
+      ? `${imageUrl}, ${background.fill}`
+      : undefined;
+  return {
+    background: layeredGradient ? undefined : (background.fill ?? "var(--theme-bg)"),
+    backgroundImage: layeredGradient ?? imageUrl,
+    backgroundPosition: background.imagePosition,
+    backgroundRepeat: background.imageUrl ? "no-repeat" : undefined,
+    backgroundSize:
+      background.imageFit === "fill" ? "100% 100%" : (background.imageFit ?? undefined),
+  };
+}
+
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type EditableSlideKind = "db" | "html";
 type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
@@ -633,6 +655,7 @@ export function SlideEditorPage() {
   const [html, setHtml] = useState("");
   const [notes, setNotes] = useState("");
   const [transition, setTransition] = useState<ApiSlideTransition | null>(null);
+  const [background, setBackground] = useState<ApiSlideBackground | null>(null);
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -666,6 +689,7 @@ export function SlideEditorPage() {
       html?: string;
       notes?: string;
       transition?: ApiSlideTransition | null;
+      background?: ApiSlideBackground | null;
     }
   >("update-slide", { method: "PUT" });
 
@@ -673,6 +697,7 @@ export function SlideEditorPage() {
   const blocksRef = useRef(blocks);
   const htmlRef = useRef(html);
   const transitionRef = useRef(transition);
+  const backgroundRef = useRef(background);
   const selectedIdsRef = useRef(selectedIds);
   const slideKindRef = useRef(slideKind);
   const titleRef = useRef(title);
@@ -686,6 +711,9 @@ export function SlideEditorPage() {
   useEffect(() => {
     transitionRef.current = transition;
   }, [transition]);
+  useEffect(() => {
+    backgroundRef.current = background;
+  }, [background]);
   useEffect(() => {
     slideKindRef.current = slideKind;
   }, [slideKind]);
@@ -749,6 +777,7 @@ export function SlideEditorPage() {
     setHtml(slide.html);
     setNotes(slide.notes ?? "");
     setTransition(slide.transition);
+    setBackground(slide.background);
     setTheme(pres.theme);
     hasLoadedRef.current = true;
     setLoading(false);
@@ -893,6 +922,7 @@ export function SlideEditorPage() {
           title: titleRef.current,
           notes: notesRef.current,
           transition: transitionRef.current,
+          background: backgroundRef.current,
           ...content,
         });
         setSaveStatus("saved");
@@ -907,7 +937,7 @@ export function SlideEditorPage() {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, html, title, notes, transition, pid, sid, loading]);
+  }, [background, blocks, html, title, notes, transition, pid, sid, loading]);
 
   const saveAndExit = useCallback(async () => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -922,6 +952,7 @@ export function SlideEditorPage() {
         title: titleRef.current,
         notes: notesRef.current,
         transition: transitionRef.current,
+        background: backgroundRef.current,
         ...content,
       });
       navigate(`/p/${pid}`);
@@ -1464,6 +1495,7 @@ export function SlideEditorPage() {
                   maxWidth: "calc((100vh - 140px) * 16 / 9)",
                   aspectRatio: "16 / 9",
                   background: "var(--theme-bg)",
+                  ...slideBackgroundStyle(background),
                   overflow: "hidden",
                   boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
                 }}
@@ -2058,6 +2090,8 @@ export function SlideEditorPage() {
                   </div>
                 )}
 
+                <SlideBackgroundEditor background={background} onBackground={setBackground} />
+
                 <SlideTransitionEditor transition={transition} onTransition={setTransition} />
 
                 <div>
@@ -2245,6 +2279,99 @@ function updateTransitionPatch(
 ) {
   const base = transition ?? makeCustomTransition(350);
   return { ...base, ...patch };
+}
+
+function SlideBackgroundEditor({
+  background,
+  onBackground,
+}: {
+  background: ApiSlideBackground | null;
+  onBackground: (background: ApiSlideBackground | null) => void;
+}) {
+  const update = (patch: Partial<ApiSlideBackground>) => {
+    const next = background ? { ...background, ...patch } : patch;
+    const clean: ApiSlideBackground = {};
+    if (next.fill?.trim()) clean.fill = next.fill;
+    if (next.imageUrl?.trim()) {
+      clean.imageUrl = next.imageUrl;
+      clean.imageFit = next.imageFit ?? "cover";
+      if (next.imagePosition?.trim()) clean.imagePosition = next.imagePosition;
+    }
+    onBackground(Object.keys(clean).length > 0 ? clean : null);
+  };
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 6,
+        }}
+      >
+        <span
+          style={{
+            color: C.textDim,
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 9,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >
+          Background
+        </span>
+        <button
+          type="button"
+          onClick={() => onBackground(null)}
+          disabled={!background}
+          style={{
+            background: "none",
+            border: "none",
+            color: background ? C.textDim : C.muted,
+            cursor: background ? "pointer" : "not-allowed",
+            fontSize: 11,
+            padding: 2,
+          }}
+        >
+          Clear
+        </button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <input
+          value={background?.fill ?? ""}
+          onChange={(event) => update({ fill: event.target.value })}
+          placeholder="#0d0f0e or linear-gradient(...)"
+          style={inp}
+        />
+        <input
+          value={background?.imageUrl ?? ""}
+          onChange={(event) => update({ imageUrl: event.target.value })}
+          placeholder="Image URL or data URL"
+          style={inp}
+        />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <select
+            value={background?.imageFit ?? "cover"}
+            onChange={(event) =>
+              update({ imageFit: event.target.value as ApiSlideBackground["imageFit"] })
+            }
+            style={inp}
+          >
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+            <option value="fill">Fill</option>
+          </select>
+          <input
+            value={background?.imagePosition ?? ""}
+            onChange={(event) => update({ imagePosition: event.target.value })}
+            placeholder="center"
+            style={inp}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SlideTransitionEditor({

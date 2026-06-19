@@ -1,5 +1,11 @@
 import type Database from "better-sqlite3";
-import type { ApiSlide, ApiSlideTransition, Block, LayoutInput } from "@llm-intro/api-contract";
+import type {
+  ApiSlide,
+  ApiSlideBackground,
+  ApiSlideTransition,
+  Block,
+  LayoutInput,
+} from "@llm-intro/api-contract";
 
 export type SlideCreateInput =
   | {
@@ -8,6 +14,7 @@ export type SlideCreateInput =
       blocks: Block[];
       notes?: string;
       transition?: ApiSlideTransition | null;
+      background?: ApiSlideBackground | null;
     }
   | {
       kind: "html";
@@ -15,6 +22,7 @@ export type SlideCreateInput =
       html: string;
       notes?: string;
       transition?: ApiSlideTransition | null;
+      background?: ApiSlideBackground | null;
     };
 
 export type SlideUpdateInput = {
@@ -23,6 +31,7 @@ export type SlideUpdateInput = {
   html: string;
   notes: string;
   transition: ApiSlideTransition | null;
+  background: ApiSlideBackground | null;
 };
 
 type SlideRow = {
@@ -37,25 +46,27 @@ type SlideRow = {
   html: string;
   notes: string;
   transition_json: string | null;
+  background_json: string | null;
   created_at: string;
   updated_at: string;
 };
 
-function parseTransition(value: string | null): ApiSlideTransition | null {
+function parseJsonField<T>(value: string | null): T | null {
   if (!value) return null;
   try {
-    return JSON.parse(value) as ApiSlideTransition | null;
+    return JSON.parse(value) as T | null;
   } catch {
     return null;
   }
 }
 
 function mapSlide(row: SlideRow): ApiSlide {
-  const { blocks, transition_json, ...rest } = row;
+  const { background_json, blocks, transition_json, ...rest } = row;
   return {
     ...rest,
     blocks: JSON.parse(blocks) as Block[],
-    transition: parseTransition(transition_json),
+    transition: parseJsonField<ApiSlideTransition>(transition_json),
+    background: parseJsonField<ApiSlideBackground>(background_json),
   };
 }
 
@@ -113,11 +124,11 @@ export function createSlidesRepository(db: Database.Database) {
   );
   const insertStmt = db.prepare(`
     INSERT INTO slides
-      (presentation_id, position, kind, title, blocks, html, notes, transition_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (presentation_id, position, kind, title, blocks, html, notes, transition_json, background_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const updateStmt = db.prepare(
-    "UPDATE slides SET title=?, blocks=?, html=?, notes=?, transition_json=?, updated_at=datetime('now') WHERE id=?",
+    "UPDATE slides SET title=?, blocks=?, html=?, notes=?, transition_json=?, background_json=?, updated_at=datetime('now') WHERE id=?",
   );
   const deleteStmt = db.prepare("DELETE FROM slides WHERE id=? AND presentation_id=?");
   const setPositionAndGroupStmt = db.prepare(
@@ -154,6 +165,7 @@ export function createSlidesRepository(db: Database.Database) {
         html,
         input.notes ?? "",
         input.transition ? JSON.stringify(input.transition) : null,
+        input.background ? JSON.stringify(input.background) : null,
       );
       return this.getById(presentationId, Number(lastInsertRowid))!;
     },
@@ -165,6 +177,7 @@ export function createSlidesRepository(db: Database.Database) {
         input.html,
         input.notes,
         input.transition ? JSON.stringify(input.transition) : null,
+        input.background ? JSON.stringify(input.background) : null,
         slideId,
       );
       return this.getById(presentationId, slideId)!;

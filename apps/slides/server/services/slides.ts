@@ -1,4 +1,9 @@
-import type { ApiSlideTransition, Block, LayoutInput } from "@llm-intro/api-contract";
+import type {
+  ApiSlideBackground,
+  ApiSlideTransition,
+  Block,
+  LayoutInput,
+} from "@llm-intro/api-contract";
 import { AppError } from "../errors.js";
 import type { createPresentationsRepository } from "../repositories/presentations.js";
 import type { createSlidesRepository, SlideCreateInput } from "../repositories/slides.js";
@@ -36,6 +41,7 @@ export function createSlidesService(
         html?: string;
         notes?: string;
         transition?: ApiSlideTransition | null;
+        background?: ApiSlideBackground | null;
       },
     ) {
       getPresentation(presentationId);
@@ -54,6 +60,7 @@ export function createSlidesService(
         html: patch.html ?? slide.html,
         notes: patch.notes ?? slide.notes,
         transition: patch.transition === undefined ? slide.transition : patch.transition,
+        background: patch.background === undefined ? slide.background : patch.background,
       });
     },
 

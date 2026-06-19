@@ -16,6 +16,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
         transition: slide.transition,
         blocks: [],
         theme,
+        background: slide.background,
       };
     }
     return {
@@ -48,5 +49,6 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
     transition: slide.transition,
     blocks: slide.blocks,
     theme,
+    background: slide.background,
   };
 }

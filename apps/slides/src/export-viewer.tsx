@@ -73,6 +73,7 @@ function resolve(
     transition: apiSlide.transition,
     blocks: apiSlide.blocks,
     theme: pres.theme,
+    background: apiSlide.background,
   };
 }
 

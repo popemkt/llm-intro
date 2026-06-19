@@ -39,6 +39,26 @@ describe("DbSlideRenderer", () => {
     expect(wrapper.getAttribute("data-theme")).toBe("neon");
   });
 
+  it("applies slide background fields", () => {
+    const { container } = render(
+      <DbSlideRenderer
+        background={{
+          fill: "linear-gradient(135deg, #0d0f0e, #123456)",
+          imageUrl: "data:image/svg+xml,%3Csvg%2F%3E",
+          imageFit: "contain",
+          imagePosition: "center",
+        }}
+        blocks={[]}
+        theme="dark-green"
+      />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.style.background).toContain("linear-gradient");
+    expect(wrapper.style.backgroundImage).toContain("data:image/svg+xml");
+    expect(wrapper.style.backgroundSize).toBe("contain");
+    expect(wrapper.style.backgroundPosition).toContain("center");
+  });
+
   it("renders multiple blocks", () => {
     const blocks: Block[] = [
       { id: "1", type: "text", markdown: "First block" },

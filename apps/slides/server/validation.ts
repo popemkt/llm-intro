@@ -1,5 +1,6 @@
 import {
   THEME_NAMES,
+  type ApiSlideBackground,
   type ApiSlideTransition,
   type Block,
   type SlideTransitionEngine,
@@ -108,6 +109,34 @@ function parseObjectFit(value: unknown) {
     throw new AppError(400, "image block objectFit is invalid");
   }
   return value as "contain" | "cover" | "fill";
+}
+
+function parseSlideBackground(value: unknown): ApiSlideBackground | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const background = asRecord(value);
+  const fill = parseOptionalColor(background.fill, "slide background fill");
+  const imageUrl = parseOptionalString(background.imageUrl, "slide background imageUrl");
+  const imageFit = parseObjectFit(background.imageFit);
+  const imagePosition = parseOptionalString(
+    background.imagePosition,
+    "slide background imagePosition",
+  );
+  if (
+    fill === undefined &&
+    imageUrl === undefined &&
+    imageFit === undefined &&
+    imagePosition === undefined
+  ) {
+    throw new AppError(400, "slide background must include at least one field");
+  }
+  if (imageFit !== undefined && !imageUrl) {
+    throw new AppError(400, "slide background imageFit requires imageUrl");
+  }
+  if (imagePosition !== undefined && !imageUrl) {
+    throw new AppError(400, "slide background imagePosition requires imageUrl");
+  }
+  return { fill, imageUrl, imageFit, imagePosition };
 }
 
 function parseLineDash(value: unknown) {
@@ -517,6 +546,7 @@ export function parseSlideCreate(input: unknown) {
     blocks: parseBlocks(body.blocks) ?? [],
     notes: parseOptionalString(body.notes, "notes") ?? "",
     transition: parseTransition(body.transition),
+    background: parseSlideBackground(body.background) ?? null,
   };
 }
 
@@ -528,6 +558,7 @@ export function parseHtmlSlideCreate(input: unknown) {
     html: parseNonEmptyString(body.html, "html"),
     notes: parseOptionalString(body.notes, "notes") ?? "",
     transition: parseTransition(body.transition),
+    background: parseSlideBackground(body.background) ?? null,
   };
 }
 
@@ -539,6 +570,7 @@ export function parseSlidePatch(input: unknown) {
     html: parseOptionalString(body.html, "html"),
     notes: parseOptionalString(body.notes, "notes"),
     transition: parseTransition(body.transition),
+    background: parseSlideBackground(body.background),
   };
 
   if (
@@ -546,7 +578,8 @@ export function parseSlidePatch(input: unknown) {
     patch.blocks === undefined &&
     patch.html === undefined &&
     patch.notes === undefined &&
-    patch.transition === undefined
+    patch.transition === undefined &&
+    patch.background === undefined
   ) {
     throw new AppError(400, "at least one field is required");
   }

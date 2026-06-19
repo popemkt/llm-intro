@@ -175,6 +175,11 @@ function migrate(db: Database.Database) {
     migrateSlideTransitions(db);
     db.pragma("user_version = 11");
   }
+
+  if (version < 12) {
+    migrateSlideBackgrounds(db);
+    db.pragma("user_version = 12");
+  }
 }
 
 function migrateDeckSnapshots(db: Database.Database) {
@@ -235,6 +240,14 @@ function migrateHtmlSlides(db: Database.Database) {
 function migrateSlideTransitions(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE slides ADD COLUMN transition_json TEXT`);
+  } catch {
+    // Column already exists.
+  }
+}
+
+function migrateSlideBackgrounds(db: Database.Database) {
+  try {
+    db.exec(`ALTER TABLE slides ADD COLUMN background_json TEXT`);
   } catch {
     // Column already exists.
   }

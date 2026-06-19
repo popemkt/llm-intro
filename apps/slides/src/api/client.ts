@@ -2,6 +2,7 @@ import { callAction } from "@agent-native/core/client";
 import type {
   ApiPresentation,
   ApiSlide,
+  ApiSlideBackground,
   ApiSlideGroup,
   ApiSlideTransition,
   LayoutInput,
@@ -47,6 +48,7 @@ export const api = {
         html?: string;
         notes?: string;
         transition?: ApiSlideTransition | null;
+        background?: ApiSlideBackground | null;
       },
     ) => callAction<ApiSlide>("update-slide", { pid, sid, ...patch }, { method: "PUT" }),
     delete: async (pid: number, sid: number) => {

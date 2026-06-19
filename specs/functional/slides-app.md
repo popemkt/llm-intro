@@ -264,6 +264,10 @@ editing, themed presentation playback, and HTML export.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
+- Users and agents can set an optional per-slide background. Backgrounds can
+  define a theme-overriding fill and optional image URL with fit/position
+  metadata, and render consistently in editor, overview, presentation,
+  fullscreen, snapshots, and export paths.
 - Users and agents can set per-slide transition metadata. The editor exposes
   slide, fade, scale, none, and default presets with timing controls; actions
   accept the same transition field for manual, HTML, and code-backed slide

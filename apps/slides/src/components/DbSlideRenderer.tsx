@@ -1,14 +1,36 @@
 import ReactMarkdown from "react-markdown";
-import type { Block, ThemeName } from "@/types";
+import type { ApiSlideBackground, Block, ThemeName } from "@/types";
 import { getReadableTextColor } from "@/lib/color";
 import { ChartBlockView } from "./ChartBlockView";
 
 interface Props {
+  background?: ApiSlideBackground | null;
   blocks: Block[];
   theme: ThemeName;
 }
 
-export function DbSlideRenderer({ blocks, theme }: Props) {
+function cssUrl(value: string) {
+  return `url("${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}")`;
+}
+
+function backgroundStyle(background?: ApiSlideBackground | null): React.CSSProperties {
+  if (!background) return {};
+  const imageUrl = background.imageUrl ? cssUrl(background.imageUrl) : undefined;
+  const layeredGradient =
+    background.imageUrl && background.fill?.includes("gradient(")
+      ? `${imageUrl}, ${background.fill}`
+      : undefined;
+  return {
+    background: layeredGradient ? undefined : (background.fill ?? "var(--theme-bg)"),
+    backgroundImage: layeredGradient ?? imageUrl,
+    backgroundPosition: background.imagePosition,
+    backgroundRepeat: background.imageUrl ? "no-repeat" : undefined,
+    backgroundSize:
+      background.imageFit === "fill" ? "100% 100%" : (background.imageFit ?? undefined),
+  };
+}
+
+export function DbSlideRenderer({ background, blocks, theme }: Props) {
   // Canvas mode: any block has percentage-based x/y positioning
   const isCanvas = blocks.some((b) => b.x !== undefined);
 
@@ -19,6 +41,7 @@ export function DbSlideRenderer({ blocks, theme }: Props) {
         width: "100%",
         height: "100%",
         background: "var(--theme-bg)",
+        ...backgroundStyle(background),
         color: "var(--theme-text)",
         fontFamily: "Inter, system-ui, sans-serif",
         boxSizing: "border-box",

@@ -934,6 +934,35 @@ describe("Slides API", () => {
     });
   });
 
+  it("persists slide background metadata through create and update actions", async () => {
+    const created = await request(app)
+      .post("/_agent-native/actions/create-manual-slide")
+      .send({
+        pid,
+        title: "Background Demo",
+        blocks: [],
+        background: {
+          fill: "linear-gradient(135deg, #0d0f0e, #123456)",
+          imageUrl: "data:image/svg+xml,%3Csvg%2F%3E",
+          imageFit: "contain",
+          imagePosition: "center",
+        },
+      });
+
+    expect(created.status).toBe(200);
+    expect(created.body.background).toMatchObject({
+      fill: "linear-gradient(135deg, #0d0f0e, #123456)",
+      imageFit: "contain",
+    });
+
+    const cleared = await request(app)
+      .put("/_agent-native/actions/update-slide")
+      .send({ pid, sid: created.body.id, background: null });
+
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.background).toBeNull();
+  });
+
   it("PUT /_agent-native/actions/update-slide updates HTML source on HTML slides", async () => {
     const slide = (
       await request(app)

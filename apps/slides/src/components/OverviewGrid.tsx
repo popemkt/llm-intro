@@ -200,7 +200,11 @@ function ThumbnailCell({
             ) : slide.kind === "html" ? (
               <HtmlSlideRenderer html={slide.html} title={slide.title} />
             ) : (
-              <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
+              <DbSlideRenderer
+                background={slide.background}
+                blocks={slide.blocks}
+                theme={slide.theme}
+              />
             )}
           </div>
         </div>

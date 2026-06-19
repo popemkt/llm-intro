@@ -32,6 +32,14 @@ type ManualLayerDirection = "forward" | "backward" | "front" | "back";
 
 const blockInput = z.record(z.string(), z.unknown());
 const transitionInput = z.record(z.string(), z.unknown()).nullable();
+const backgroundInput = z
+  .object({
+    fill: z.string().optional(),
+    imageUrl: z.string().optional(),
+    imageFit: z.enum(["cover", "contain", "fill"]).optional(),
+    imagePosition: z.string().optional(),
+  })
+  .nullable();
 const manualArrangeActions = [
   "align-left",
   "align-center",
@@ -303,6 +311,7 @@ function createRawSlideAction(slidesService: SlidesService) {
       blocks: z.array(blockInput).optional(),
       notes: z.string().optional(),
       transition: transitionInput.optional(),
+      background: backgroundInput.optional(),
     }),
     http: {
       method: "POST",
@@ -327,6 +336,7 @@ function createManualSlideAction(slidesService: SlidesService) {
       blocks: z.array(blockInput).default([]),
       notes: z.string().optional(),
       transition: transitionInput.optional(),
+      background: backgroundInput.optional(),
     }),
     http: {
       method: "POST",
@@ -352,6 +362,7 @@ function createHtmlSlideAction(slidesService: SlidesService) {
       html: z.string(),
       notes: z.string().optional(),
       transition: transitionInput.optional(),
+      background: backgroundInput.optional(),
     }),
     http: {
       method: "POST",
@@ -369,7 +380,8 @@ function createHtmlSlideAction(slidesService: SlidesService) {
 
 function createUpdateSlideAction(slidesService: SlidesService) {
   return defineAction({
-    description: "Update slide title, speaker notes, blocks, HTML source, or transition.",
+    description:
+      "Update slide title, speaker notes, blocks, HTML source, transition, or background.",
     schema: z.object({
       pid: z.coerce.number().int().positive(),
       sid: z.coerce.number().int().positive(),
@@ -378,6 +390,7 @@ function createUpdateSlideAction(slidesService: SlidesService) {
       html: z.string().optional(),
       notes: z.string().optional(),
       transition: transitionInput.optional(),
+      background: backgroundInput.optional(),
     }),
     http: {
       method: "PUT",
@@ -387,7 +400,8 @@ function createUpdateSlideAction(slidesService: SlidesService) {
     publicAgent: {
       ...publicWriteAction,
       title: "Update slide",
-      description: "Update slide title, speaker notes, blocks, HTML source, or transition.",
+      description:
+        "Update slide title, speaker notes, blocks, HTML source, transition, or background.",
     },
     run: ({ pid, sid, ...patch }) => slidesService.update(pid, sid, parseSlidePatch(patch)),
   });

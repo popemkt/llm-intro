@@ -11,6 +11,14 @@ const publicWriteAction = {
   requiresAuth: false,
   isConsequential: true,
 };
+const backgroundSchema = z
+  .object({
+    fill: z.string().optional(),
+    imageUrl: z.string().optional(),
+    imageFit: z.enum(["cover", "contain", "fill"]).optional(),
+    imagePosition: z.string().optional(),
+  })
+  .nullable();
 
 export const metricSchema = z.object({
   value: z.string(),
@@ -29,6 +37,7 @@ export const normalSlideFieldsSchema = z.object({
   attribution: z.string().optional(),
   metrics: z.array(metricSchema).optional(),
   visualDescription: z.string().optional(),
+  background: backgroundSchema.optional(),
 });
 
 export function slideTitle(layout: string, title?: string) {
@@ -53,10 +62,11 @@ export function createNormalSlideAction(slidesService: SlidesService) {
       description:
         "Create a standard, themeable slide layout: title, section, bullets, two-column, quote, metrics, or closing.",
     },
-    run: ({ pid, layout, ...input }) =>
+    run: ({ pid, layout, background, ...input }) =>
       slidesService.create(pid, {
         title: slideTitle(layout, input.title),
         blocks: buildNormalSlideBlocks({ layout, ...input }),
+        background,
       }),
   });
 }
@@ -81,10 +91,11 @@ export function createNormalSlidesAction(slidesService: SlidesService) {
         "Create a sequence of standard, themeable slides from an outline while preserving the typed slide model.",
     },
     run: ({ pid, slides }) =>
-      slides.map(({ layout, ...input }) =>
+      slides.map(({ layout, background, ...input }) =>
         slidesService.create(pid, {
           title: slideTitle(layout, input.title),
           blocks: buildNormalSlideBlocks({ layout, ...input }),
+          background,
         }),
       ),
   });

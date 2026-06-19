@@ -141,7 +141,21 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
   });
 
   router.get("/agent-chat/mode", (_req, res) => {
-    res.json({ devMode: localCodeModeEnabled(), canToggle: false });
+    res.json({
+      devMode: localCodeModeEnabled(),
+      canToggle: false,
+      appMode: {
+        runtime: "local-app-agent",
+        hosted: false,
+        requiresHostedModel: false,
+        toolBoundary: "product-actions",
+      },
+      codeMode: {
+        runtime: "local-terminal",
+        hosted: false,
+        available: localCodeModeEnabled(),
+      },
+    });
   });
 
   router.get("/agent-chat/threads", (_req, res) => {

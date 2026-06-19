@@ -341,16 +341,22 @@ function SlidesAgentSurface({
       </div>
 
       {mode === "app" ? (
-        <AssistantChat
-          runtime={runtime}
-          emptyStateText="Ask about this deck"
-          suggestions={suggestions}
-          dynamicSuggestions={false}
-          providerStatusChecksEnabled={false}
-          plusMenuMode="hidden"
-          showHeader={false}
-          className="slides-agent-surface__chat"
-        />
+        <div className="slides-agent-surface__app">
+          <div className="slides-agent-surface__app-status" aria-label="App mode status">
+            <span>Local actions</span>
+            <span>No hosted model</span>
+          </div>
+          <AssistantChat
+            runtime={runtime}
+            emptyStateText="Ask about this deck"
+            suggestions={suggestions}
+            dynamicSuggestions={false}
+            providerStatusChecksEnabled={false}
+            plusMenuMode="hidden"
+            showHeader={false}
+            className="slides-agent-surface__chat"
+          />
+        </div>
       ) : (
         <div className="slides-agent-surface__terminal">
           <div className="slides-agent-surface__terminal-status">

@@ -111,6 +111,10 @@ editing, themed presentation playback, and HTML export.
   changes, HTML export links, and active deck summaries in the active deck from
   simple prompts. It can also list available themes and change the app shell
   theme, list and apply design systems, and create/list/restore deck snapshots.
+- Local App Mode is action-backed and does not require Builder.io auth or a
+  hosted model provider. The shell should show this as runtime status so users
+  do not confuse product-safe App Mode with hosted Code Mode or provider-backed
+  chat.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

@@ -431,6 +431,10 @@ describe("Agent Native framework core routes", () => {
       body: { available: false },
     });
   });
+});
+
+describe("Agent Native chat shell probes", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
 
   it("GET chat shell probes return empty runtime defaults", async () => {
     await expect(request(app).get("/_agent-native/auth/session")).resolves.toMatchObject({
@@ -443,7 +447,21 @@ describe("Agent Native framework core routes", () => {
     });
     await expect(request(app).get("/_agent-native/agent-chat/mode")).resolves.toMatchObject({
       status: 200,
-      body: { devMode: true, canToggle: false },
+      body: {
+        devMode: true,
+        canToggle: false,
+        appMode: {
+          runtime: "local-app-agent",
+          hosted: false,
+          requiresHostedModel: false,
+          toolBoundary: "product-actions",
+        },
+        codeMode: {
+          runtime: "local-terminal",
+          hosted: false,
+          available: true,
+        },
+      },
     });
     await expect(request(app).get("/_agent-native/agent-chat/threads")).resolves.toMatchObject({
       status: 200,
@@ -462,6 +480,10 @@ describe("Agent Native framework core routes", () => {
       body: { active: false, status: "idle" },
     });
   });
+});
+
+describe("Agent Native resource and app-state probes", () => {
+  const { app } = createTestContext({ seedSystemPresentation: false });
 
   it("GET workspace resource probes return empty shell defaults", async () => {
     await expect(

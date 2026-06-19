@@ -169,8 +169,11 @@ the framework application-state keys: the shell writes `__url__` and
 `POST /_agent-native/agent-chat` is mounted as a local compatibility adapter
 over the same App Mode prompt handler. It supports JSON responses and a
 one-shot event-stream response, but hosted chat persistence, approvals, memory,
-and hosted model streaming remain separate adoption slices. Production shell
-access remains gated by the server-side terminal policy.
+and hosted model streaming remain separate adoption slices. The shell displays
+App Mode as local actions with no hosted model requirement, and
+`GET /_agent-native/agent-chat/mode` exposes the same `appMode` metadata for
+automation. Production shell access remains gated by the server-side terminal
+policy.
 
 ### App Mode And Code Mode
 

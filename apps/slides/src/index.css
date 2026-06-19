@@ -254,10 +254,40 @@
     color: hsl(var(--foreground));
   }
 
+  .slides-agent-surface__app,
   .slides-agent-surface__chat,
   .slides-agent-surface__terminal {
     min-height: 0;
     flex: 1;
+  }
+
+  .slides-agent-surface__app {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slides-agent-surface__app-status {
+    display: flex;
+    min-height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid hsl(var(--border));
+    padding: 0 10px;
+    color: hsl(var(--muted-foreground));
+    font-size: 11px;
+  }
+
+  .slides-agent-surface__app-status span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .slides-agent-surface__app-status span:first-child {
+    font-weight: 600;
+    color: hsl(var(--foreground));
   }
 
   .slides-agent-surface__terminal {

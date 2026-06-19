@@ -118,6 +118,30 @@ function parseLineDash(value: unknown) {
   return value as "solid" | "dash" | "dot";
 }
 
+function parseTableRows(value: unknown) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new AppError(400, "table block rows must be a non-empty array");
+  }
+  if (value.length > 30) throw new AppError(400, "table block rows must have 30 rows or less");
+  return value.map((row, rowIndex) => {
+    if (!Array.isArray(row) || row.length === 0) {
+      throw new AppError(400, `table block row ${rowIndex + 1} must be a non-empty array`);
+    }
+    if (row.length > 12) {
+      throw new AppError(400, `table block row ${rowIndex + 1} must have 12 cells or less`);
+    }
+    return row.map((cell, cellIndex) => {
+      if (typeof cell !== "string") {
+        throw new AppError(
+          400,
+          `table block cell ${rowIndex + 1}.${cellIndex + 1} must be a string`,
+        );
+      }
+      return cell;
+    });
+  });
+}
+
 function parseOptionalBlockGroupString(value: unknown, field: string) {
   if (value === undefined) return undefined;
   if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
@@ -255,6 +279,33 @@ function validateLineBlock(id: string, value: JsonRecord, position: BlockPositio
   };
 }
 
+function validateTableBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  return {
+    id,
+    type: "table",
+    rows: parseTableRows(value.rows),
+    headerRows: parseBoundedNumber(value.headerRows, "table block headerRows", {
+      min: 0,
+      max: 5,
+    }),
+    fontSize: parseBoundedNumber(value.fontSize, "table block fontSize", { min: 8, max: 80 }),
+    color: parseOptionalColor(value.color, "table block color"),
+    background: parseOptionalColor(value.background, "table block background"),
+    headerBackground: parseOptionalColor(value.headerBackground, "table block headerBackground"),
+    borderColor: parseOptionalColor(value.borderColor, "table block borderColor"),
+    borderWidth: parseBoundedNumber(value.borderWidth, "table block borderWidth", {
+      min: 0,
+      max: 12,
+    }),
+    cellPadding: parseBoundedNumber(value.cellPadding, "table block cellPadding", {
+      min: 0,
+      max: 40,
+    }),
+    align: parseTextAlign(value.align),
+    ...position,
+  };
+}
+
 function validateBlock(block: unknown): Block {
   const value = asRecord(block);
   const { id, type } = parseBlockIdentity(value);
@@ -271,6 +322,8 @@ function validateBlock(block: unknown): Block {
       return validateShapeBlock(id, value, position);
     case "line":
       return validateLineBlock(id, value, position);
+    case "table":
+      return validateTableBlock(id, value, position);
     default:
       throw new AppError(400, `unsupported block type: ${String(type)}`);
   }

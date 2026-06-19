@@ -93,6 +93,24 @@ describe("DbSlideRenderer", () => {
         w: 50,
         h: 10,
       },
+      {
+        id: "4",
+        type: "table",
+        rows: [
+          ["Mode", "Use"],
+          ["Manual", "Structured"],
+        ],
+        headerRows: 1,
+        fontSize: 14,
+        headerBackground: "#123456",
+        borderColor: "#ffffff",
+        borderWidth: 1,
+        align: "center",
+        x: 10,
+        y: 72,
+        w: 60,
+        h: 18,
+      },
     ];
     const { container } = render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
 
@@ -114,5 +132,11 @@ describe("DbSlideRenderer", () => {
     expect(line.getAttribute("stroke-width")).toBe("5");
     expect(line.getAttribute("stroke-dasharray")).toBe("10 8");
     expect(line.getAttribute("marker-end")).toContain("line-arrow-3");
+
+    expect(screen.getByText("Mode")).toBeInTheDocument();
+    expect(screen.getByText("Structured")).toBeInTheDocument();
+    const tableHeader = screen.getByText("Mode").closest("th") as HTMLElement;
+    expect(tableHeader.style.background).toBe("rgb(18, 52, 86)");
+    expect(tableHeader.style.textAlign).toBe("center");
   });
 });

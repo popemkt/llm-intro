@@ -74,8 +74,22 @@ export type LineBlock = {
   startArrow?: boolean;
   endArrow?: boolean;
 } & BlockPos;
+export type TableBlock = {
+  id: string;
+  type: "table";
+  rows: string[][];
+  headerRows?: number;
+  fontSize?: number;
+  color?: string;
+  background?: string;
+  headerBackground?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  cellPadding?: number;
+  align?: "left" | "center" | "right";
+} & BlockPos;
 
-export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock | LineBlock;
+export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock | LineBlock | TableBlock;
 
 export type SlideTransitionEngine = "waapi" | "css" | "motion" | "three" | "custom";
 export type SlideTransitionPreset = "slide" | "fade" | "scale" | "none";

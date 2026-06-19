@@ -284,6 +284,28 @@ describe("Manual slide actions", () => {
             w: 48,
             h: 10,
           },
+          {
+            id: "matrix",
+            type: "table",
+            rows: [
+              ["Mode", "Use"],
+              ["Manual", "Structured"],
+              ["HTML", "Freeform"],
+            ],
+            headerRows: 1,
+            fontSize: 14,
+            color: "#ffffff",
+            background: "#101412",
+            headerBackground: "#123456",
+            borderColor: "#ffffff",
+            borderWidth: 1,
+            cellPadding: 8,
+            align: "center",
+            x: 10,
+            y: 84,
+            w: 76,
+            h: 12,
+          },
         ],
       });
 
@@ -324,6 +346,19 @@ describe("Manual slide actions", () => {
           strokeWidth: 5,
           dash: "dash",
           endArrow: true,
+        }),
+        expect.objectContaining({
+          id: "matrix",
+          type: "table",
+          rows: [
+            ["Mode", "Use"],
+            ["Manual", "Structured"],
+            ["HTML", "Freeform"],
+          ],
+          headerRows: 1,
+          headerBackground: "#123456",
+          borderColor: "#ffffff",
+          align: "center",
         }),
       ],
     });

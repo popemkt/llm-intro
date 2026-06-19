@@ -11,6 +11,7 @@ import {
   Route,
   Square,
   SplitSquareHorizontal,
+  Table2,
   Type,
 } from "lucide-react";
 import type { Block } from "@/types";
@@ -32,6 +33,7 @@ const primitiveBlocks = [
   { type: "iframe" as const, icon: <Globe size={12} />, label: "Embed" },
   { type: "shape" as const, icon: <Square size={12} />, label: "Shape" },
   { type: "line" as const, icon: <Minus size={12} />, label: "Line" },
+  { type: "table" as const, icon: <Table2 size={12} />, label: "Table" },
 ];
 
 type PrimitiveBlockType = (typeof primitiveBlocks)[number]["type"];

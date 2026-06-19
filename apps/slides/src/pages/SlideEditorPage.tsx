@@ -261,6 +261,7 @@ const BLOCK_DEFAULTS: Record<Block["type"], { x: number; y: number; w: number; h
   iframe: { x: 5, y: 5, w: 90, h: 88 },
   shape: { x: 30, y: 30, w: 40, h: 30 },
   line: { x: 20, y: 45, w: 60, h: 10 },
+  table: { x: 8, y: 14, w: 84, h: 54 },
 };
 
 function makeBlock(type: Block["type"]): Block {
@@ -287,6 +288,23 @@ function makeBlock(type: Block["type"]): Block {
         endX: 100,
         endY: 50,
         endArrow: true,
+        ...pos,
+      };
+    case "table":
+      return {
+        id,
+        type,
+        rows: [
+          ["Header", "Header", "Header"],
+          ["Value", "Value", "Value"],
+          ["Value", "Value", "Value"],
+        ],
+        headerRows: 1,
+        fontSize: 14,
+        cellPadding: 8,
+        borderWidth: 1,
+        borderColor: "var(--theme-border)",
+        headerBackground: "var(--theme-surface)",
         ...pos,
       };
   }
@@ -1825,6 +1843,13 @@ export function SlideEditorPage() {
                         onUpdate={(p) => updateBlock(selectedBlock.id, p)}
                       />
                     )}
+
+                    {selectedBlock.type === "table" && (
+                      <TablePropEditor
+                        block={selectedBlock}
+                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                      />
+                    )}
                   </>
                 ) : selectedIds.length > 1 ? (
                   <MultiSelectionPanel
@@ -1962,7 +1987,9 @@ export function SlideEditorPage() {
                               ? b.url.slice(0, 22) || "(no url)"
                               : b.type === "line"
                                 ? `${b.dash ?? "solid"} ${b.color}`
-                                : `${b.shape} ${b.color}`}
+                                : b.type === "table"
+                                  ? `${b.rows.length}x${Math.max(...b.rows.map((row) => row.length))}`
+                                  : `${b.shape} ${b.color}`}
                       </span>
                       <button
                         onClick={(e) => {
@@ -3062,6 +3089,9 @@ function CanvasBlockContent({ block }: { block: Block }) {
 
     case "line":
       return <CanvasLineBlock block={block} />;
+
+    case "table":
+      return <CanvasTableBlock block={block} />;
   }
 }
 
@@ -3243,6 +3273,66 @@ function CanvasLineBlock({ block }: { block: Extract<Block, { type: "line" }> })
         markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
       />
     </svg>
+  );
+}
+
+function CanvasTableBlock({ block }: { block: Extract<Block, { type: "table" }> }) {
+  const borderWidth = block.borderWidth ?? 1;
+  const border = `${borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`;
+  const headerRows = block.headerRows ?? 1;
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        background: block.background,
+        color: block.color ?? "var(--theme-text)",
+        fontSize: block.fontSize ?? 13,
+        boxSizing: "border-box",
+      }}
+    >
+      <table
+        style={{
+          width: "100%",
+          height: "100%",
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        <tbody>
+          {block.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => {
+                const isHeader = rowIndex < headerRows;
+                const Cell = isHeader ? "th" : "td";
+                return (
+                  <Cell
+                    key={cellIndex}
+                    style={{
+                      border: borderWidth > 0 ? border : undefined,
+                      padding: block.cellPadding ?? 8,
+                      textAlign: block.align ?? "left",
+                      background: isHeader
+                        ? (block.headerBackground ?? "var(--theme-surface)")
+                        : undefined,
+                      fontWeight: isHeader ? 700 : 500,
+                      verticalAlign: "middle",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {cell}
+                  </Cell>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -3515,6 +3605,120 @@ function LinePropEditor({
           onChange={(endY) => onUpdate({ endY })}
         />
       </div>
+    </div>
+  );
+}
+
+// ─── Table property editor ────────────────────────────────────────────────────
+
+function rowsToTsv(rows: string[][]) {
+  return rows.map((row) => row.join("\t")).join("\n");
+}
+
+function tsvToRows(value: string) {
+  const rows = value
+    .split("\n")
+    .map((row) => row.split("\t").map((cell) => cell.trim()))
+    .filter((row) => row.some((cell) => cell.length > 0));
+  return rows.length > 0 ? rows : [[""]];
+}
+
+function TablePropEditor({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "table" }>;
+  onUpdate: (p: Partial<Extract<Block, { type: "table" }>>) => void;
+}) {
+  const alignButton = (align: "left" | "center" | "right", icon: React.ReactNode) => (
+    <button
+      key={align}
+      type="button"
+      aria-label={`Align ${align}`}
+      title={`Align ${align}`}
+      onClick={() => onUpdate({ align })}
+      style={{
+        ...arrangeButton,
+        background: block.align === align ? C.accentSubtle : C.bg,
+        color: block.align === align ? C.accent : C.text,
+      }}
+    >
+      {icon}
+    </button>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <InspectorField label="Rows">
+        <textarea
+          value={rowsToTsv(block.rows)}
+          onChange={(event) => onUpdate({ rows: tsvToRows(event.target.value) })}
+          rows={6}
+          spellCheck={false}
+          style={{
+            ...inp,
+            resize: "vertical",
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 11,
+            lineHeight: 1.5,
+          }}
+        />
+      </InspectorField>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <NumberInput
+          label="Header rows"
+          min={0}
+          max={5}
+          value={block.headerRows}
+          onChange={(headerRows) => onUpdate({ headerRows })}
+        />
+        <NumberInput
+          label="Font size"
+          min={8}
+          max={80}
+          value={block.fontSize}
+          onChange={(fontSize) => onUpdate({ fontSize })}
+        />
+        <NumberInput
+          label="Padding"
+          min={0}
+          max={40}
+          value={block.cellPadding}
+          onChange={(cellPadding) => onUpdate({ cellPadding })}
+        />
+        <NumberInput
+          label="Border"
+          min={0}
+          max={12}
+          value={block.borderWidth}
+          onChange={(borderWidth) => onUpdate({ borderWidth })}
+        />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {alignButton("left", <AlignLeft size={13} />)}
+        {alignButton("center", <AlignCenter size={13} />)}
+        {alignButton("right", <AlignRight size={13} />)}
+      </div>
+      <ColorInput
+        label="Text color"
+        value={block.color}
+        onChange={(color) => onUpdate({ color })}
+      />
+      <ColorInput
+        label="Background"
+        value={block.background}
+        onChange={(background) => onUpdate({ background })}
+      />
+      <ColorInput
+        label="Header background"
+        value={block.headerBackground}
+        onChange={(headerBackground) => onUpdate({ headerBackground })}
+      />
+      <ColorInput
+        label="Border color"
+        value={block.borderColor}
+        onChange={(borderColor) => onUpdate({ borderColor })}
+      />
     </div>
   );
 }

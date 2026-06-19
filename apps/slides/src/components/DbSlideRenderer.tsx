@@ -93,6 +93,9 @@ function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
 
     case "line":
       return <LineBlockView block={block} />;
+
+    case "table":
+      return <TableBlockView block={block} canvas={canvas} />;
   }
 }
 
@@ -279,5 +282,71 @@ function LineBlockView({ block }: { block: Extract<Block, { type: "line" }> }) {
         markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
       />
     </svg>
+  );
+}
+
+function TableBlockView({
+  block,
+  canvas,
+}: {
+  block: Extract<Block, { type: "table" }>;
+  canvas?: boolean;
+}) {
+  const borderWidth = block.borderWidth ?? 1;
+  const border = `${borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`;
+  const headerRows = block.headerRows ?? 1;
+  return (
+    <div
+      style={{
+        width: canvas ? "100%" : undefined,
+        height: canvas ? "100%" : undefined,
+        overflow: "hidden",
+        background: block.background,
+        color: block.color ?? "var(--theme-text)",
+        fontSize: block.fontSize ?? (canvas ? 13 : 15),
+        boxSizing: "border-box",
+      }}
+    >
+      <table
+        style={{
+          width: "100%",
+          height: canvas ? "100%" : undefined,
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        <tbody>
+          {block.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => {
+                const isHeader = rowIndex < headerRows;
+                const Cell = isHeader ? "th" : "td";
+                return (
+                  <Cell
+                    key={cellIndex}
+                    style={{
+                      border: borderWidth > 0 ? border : undefined,
+                      padding: block.cellPadding ?? (canvas ? 8 : 10),
+                      textAlign: block.align ?? "left",
+                      background: isHeader
+                        ? (block.headerBackground ?? "var(--theme-surface)")
+                        : undefined,
+                      fontWeight: isHeader ? 700 : 500,
+                      verticalAlign: "middle",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {cell}
+                  </Cell>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

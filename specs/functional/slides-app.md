@@ -188,8 +188,8 @@ editing, themed presentation playback, and HTML export.
 - Agents can create a sequence of standard DB-backed slides from a structured
   outline through `create-normal-slides`.
 - Agents can create fully manual, PowerPoint-style editable slides through
-  `create-manual-slide` by providing typed text, image, iframe, shape, and line
-  blocks with geometry and appearance fields.
+  `create-manual-slide` by providing typed text, image, iframe, shape, line,
+  and table blocks with geometry and appearance fields.
 - Agents can refine manual slides without replacing the whole block array via
   `add-manual-block`, `update-manual-block`, `delete-manual-block`,
   `group-manual-blocks`, and `ungroup-manual-blocks`.
@@ -221,12 +221,15 @@ editing, themed presentation playback, and HTML export.
   agent actions keep using the same slide model.
 - Users and agents can create editable manual line blocks for connectors,
   arrows, dashed or dotted rules, and process/timeline diagrams.
+- Users and agents can create editable manual table blocks for comparison
+  matrices, schedules, scorecards, and structured summaries.
 - The manual preset catalog includes title, bullets, quote, metric, two-column,
   comparison, timeline, image-left, process, and section-divider layouts.
 - Users can insert visual editor blocks from the keyboard with slash commands:
   `/title`, `/bullets`, `/quote`, `/metric`, `/text`, `/image`, `/iframe`,
-  `/embed`, `/shape`, `/line`, `/arrow`, `/connector`, and preset aliases such
-  as `/comparison`, `/timeline`, `/image-left`, `/process`, and `/section`.
+  `/embed`, `/shape`, `/line`, `/arrow`, `/connector`, `/table`, and preset
+  aliases such as `/comparison`, `/timeline`, `/image-left`, `/process`, and
+  `/section`.
 - Users can edit text blocks directly on the slide canvas and use the selected
   block menu to edit text, duplicate blocks, move layer order, and delete blocks.
 - Users can multi-select manual slide blocks from the canvas or layer list,

@@ -34,6 +34,7 @@ const primitiveBlocks = [
   { type: "shape" as const, icon: <Square size={12} />, label: "Shape" },
   { type: "line" as const, icon: <Minus size={12} />, label: "Line" },
   { type: "table" as const, icon: <Table2 size={12} />, label: "Table" },
+  { type: "chart" as const, icon: <BarChart3 size={12} />, label: "Chart" },
 ];
 
 type PrimitiveBlockType = (typeof primitiveBlocks)[number]["type"];

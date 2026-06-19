@@ -53,6 +53,7 @@ const blockDefaults: Record<Block["type"], RectPercent> = {
   shape: { x: 30, y: 30, w: 40, h: 30 },
   line: { x: 20, y: 45, w: 60, h: 10 },
   table: { x: 8, y: 14, w: 84, h: 54 },
+  chart: { x: 10, y: 16, w: 80, h: 58 },
 };
 const publicReadAction = { expose: true, readOnly: true, requiresAuth: false };
 const publicWriteAction = {

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  BarChart3,
   X,
   Trash2,
   GripVertical,
@@ -47,6 +48,7 @@ const BLOCK_TYPES: { type: Block["type"]; icon: React.ReactNode; label: string }
   { type: "shape", icon: <Square size={13} />, label: "Shape" },
   { type: "line", icon: <Minus size={13} />, label: "Line" },
   { type: "table", icon: <Table2 size={13} />, label: "Table" },
+  { type: "chart", icon: <BarChart3 size={13} />, label: "Chart" },
   { type: "image", icon: <ImageIcon size={13} />, label: "Image" },
   { type: "iframe", icon: <Globe size={13} />, label: "Embed" },
 ];
@@ -88,6 +90,16 @@ function makeBlock(type: Block["type"]): Block {
         fontSize: 14,
         cellPadding: 8,
         borderWidth: 1,
+      };
+    case "chart":
+      return {
+        id,
+        type,
+        chart: "bar",
+        categories: ["A", "B", "C"],
+        series: [{ name: "Series", values: [10, 24, 16], color: "#25d366" }],
+        showLegend: false,
+        showValues: true,
       };
   }
 }

@@ -88,8 +88,28 @@ export type TableBlock = {
   cellPadding?: number;
   align?: "left" | "center" | "right";
 } & BlockPos;
+export type ChartBlock = {
+  id: string;
+  type: "chart";
+  chart: "bar" | "line" | "pie";
+  categories: string[];
+  series: Array<{ name: string; values: number[]; color?: string }>;
+  title?: string;
+  showLegend?: boolean;
+  showValues?: boolean;
+  axisColor?: string;
+  labelColor?: string;
+  background?: string;
+} & BlockPos;
 
-export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock | LineBlock | TableBlock;
+export type Block =
+  | TextBlock
+  | ImageBlock
+  | IframeBlock
+  | ShapeBlock
+  | LineBlock
+  | TableBlock
+  | ChartBlock;
 
 export type SlideTransitionEngine = "waapi" | "css" | "motion" | "three" | "custom";
 export type SlideTransitionPreset = "slide" | "fade" | "scale" | "none";

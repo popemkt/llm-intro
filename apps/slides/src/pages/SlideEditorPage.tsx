@@ -55,6 +55,7 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
+import { ChartBlockView } from "@/components/ChartBlockView";
 
 type DragMode = "move" | "resize-tl" | "resize-tr" | "resize-bl" | "resize-br";
 
@@ -262,6 +263,7 @@ const BLOCK_DEFAULTS: Record<Block["type"], { x: number; y: number; w: number; h
   shape: { x: 30, y: 30, w: 40, h: 30 },
   line: { x: 20, y: 45, w: 60, h: 10 },
   table: { x: 8, y: 14, w: 84, h: 54 },
+  chart: { x: 10, y: 16, w: 80, h: 58 },
 };
 
 function makeBlock(type: Block["type"]): Block {
@@ -305,6 +307,17 @@ function makeBlock(type: Block["type"]): Block {
         borderWidth: 1,
         borderColor: "var(--theme-border)",
         headerBackground: "var(--theme-surface)",
+        ...pos,
+      };
+    case "chart":
+      return {
+        id,
+        type,
+        chart: "bar",
+        categories: ["A", "B", "C"],
+        series: [{ name: "Series", values: [10, 24, 16], color: "#25d366" }],
+        showLegend: false,
+        showValues: true,
         ...pos,
       };
   }
@@ -1850,6 +1863,13 @@ export function SlideEditorPage() {
                         onUpdate={(p) => updateBlock(selectedBlock.id, p)}
                       />
                     )}
+
+                    {selectedBlock.type === "chart" && (
+                      <ChartPropEditor
+                        block={selectedBlock}
+                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                      />
+                    )}
                   </>
                 ) : selectedIds.length > 1 ? (
                   <MultiSelectionPanel
@@ -1989,7 +2009,9 @@ export function SlideEditorPage() {
                                 ? `${b.dash ?? "solid"} ${b.color}`
                                 : b.type === "table"
                                   ? `${b.rows.length}x${Math.max(...b.rows.map((row) => row.length))}`
-                                  : `${b.shape} ${b.color}`}
+                                  : b.type === "chart"
+                                    ? `${b.chart} ${b.categories.length}`
+                                    : `${b.shape} ${b.color}`}
                       </span>
                       <button
                         onClick={(e) => {
@@ -3092,6 +3114,9 @@ function CanvasBlockContent({ block }: { block: Block }) {
 
     case "table":
       return <CanvasTableBlock block={block} />;
+
+    case "chart":
+      return <ChartBlockView block={block} />;
   }
 }
 
@@ -3718,6 +3743,144 @@ function TablePropEditor({
         label="Border color"
         value={block.borderColor}
         onChange={(borderColor) => onUpdate({ borderColor })}
+      />
+    </div>
+  );
+}
+
+// ─── Chart property editor ────────────────────────────────────────────────────
+
+function chartToTsv(block: Extract<Block, { type: "chart" }>) {
+  const header = ["Category", ...block.series.map((series) => series.name)];
+  const rows = block.categories.map((category, categoryIndex) => [
+    category,
+    ...block.series.map((series) => String(series.values[categoryIndex] ?? 0)),
+  ]);
+  return [header, ...rows].map((row) => row.join("\t")).join("\n");
+}
+
+function tsvToChartData(value: string, previous: Extract<Block, { type: "chart" }>) {
+  const rows = value
+    .split("\n")
+    .map((row) => row.split("\t").map((cell) => cell.trim()))
+    .filter((row) => row.some((cell) => cell.length > 0));
+  if (rows.length < 2) return { categories: previous.categories, series: previous.series };
+  const header = rows[0]!;
+  const seriesNames = header.slice(1).map((name, index) => name || `Series ${index + 1}`);
+  const categories = rows.slice(1).map((row, index) => row[0] || `Item ${index + 1}`);
+  const series = seriesNames.map((name, seriesIndex) => ({
+    name,
+    values: rows.slice(1).map((row) => Number(row[seriesIndex + 1] ?? 0) || 0),
+    color: previous.series[seriesIndex]?.color,
+  }));
+  return { categories, series };
+}
+
+function ChartPropEditor({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "chart" }>;
+  onUpdate: (p: Partial<Extract<Block, { type: "chart" }>>) => void;
+}) {
+  const chartButton = (chart: Extract<Block, { type: "chart" }>["chart"], label: string) => (
+    <button
+      key={chart}
+      type="button"
+      onClick={() => onUpdate({ chart })}
+      style={{
+        ...arrangeButton,
+        background: block.chart === chart ? C.accentSubtle : C.bg,
+        color: block.chart === chart ? C.accent : C.text,
+      }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <InspectorField label="Title">
+        <input
+          value={block.title ?? ""}
+          onChange={(event) => onUpdate({ title: event.target.value || undefined })}
+          placeholder="Chart title"
+          style={inp}
+        />
+      </InspectorField>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {chartButton("bar", "Bar")}
+        {chartButton("line", "Line")}
+        {chartButton("pie", "Pie")}
+      </div>
+      <InspectorField label="Data">
+        <textarea
+          value={chartToTsv(block)}
+          onChange={(event) => onUpdate(tsvToChartData(event.target.value, block))}
+          rows={6}
+          spellCheck={false}
+          style={{
+            ...inp,
+            resize: "vertical",
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 11,
+            lineHeight: 1.5,
+          }}
+        />
+      </InspectorField>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => onUpdate({ showLegend: !block.showLegend })}
+          style={{
+            ...arrangeButton,
+            background: block.showLegend ? C.accentSubtle : C.bg,
+            color: block.showLegend ? C.accent : C.text,
+          }}
+        >
+          Legend
+        </button>
+        <button
+          type="button"
+          onClick={() => onUpdate({ showValues: !block.showValues })}
+          style={{
+            ...arrangeButton,
+            background: block.showValues ? C.accentSubtle : C.bg,
+            color: block.showValues ? C.accent : C.text,
+          }}
+        >
+          Values
+        </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {block.series.slice(0, 4).map((series, index) => (
+          <ColorInput
+            key={index}
+            label={series.name}
+            value={series.color}
+            onChange={(color) =>
+              onUpdate({
+                series: block.series.map((entry, entryIndex) =>
+                  entryIndex === index ? { ...entry, color } : entry,
+                ),
+              })
+            }
+          />
+        ))}
+      </div>
+      <ColorInput
+        label="Label color"
+        value={block.labelColor}
+        onChange={(labelColor) => onUpdate({ labelColor })}
+      />
+      <ColorInput
+        label="Axis color"
+        value={block.axisColor}
+        onChange={(axisColor) => onUpdate({ axisColor })}
+      />
+      <ColorInput
+        label="Background"
+        value={block.background}
+        onChange={(background) => onUpdate({ background })}
       />
     </div>
   );

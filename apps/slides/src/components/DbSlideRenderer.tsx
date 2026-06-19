@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import type { Block, ThemeName } from "@/types";
 import { getReadableTextColor } from "@/lib/color";
+import { ChartBlockView } from "./ChartBlockView";
 
 interface Props {
   blocks: Block[];
@@ -96,6 +97,9 @@ function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
 
     case "table":
       return <TableBlockView block={block} canvas={canvas} />;
+
+    case "chart":
+      return <ChartBlockView block={block} />;
   }
 }
 

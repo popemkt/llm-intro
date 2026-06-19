@@ -142,6 +142,52 @@ function parseTableRows(value: unknown) {
   });
 }
 
+function parseChartKind(value: unknown) {
+  if (!["bar", "line", "pie"].includes(String(value))) {
+    throw new AppError(400, "chart block chart is invalid");
+  }
+  return value as "bar" | "line" | "pie";
+}
+
+function parseStringArray(value: unknown, field: string, max: number) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new AppError(400, `${field} must be a non-empty array`);
+  }
+  if (value.length > max) throw new AppError(400, `${field} must have ${max} items or less`);
+  return value.map((entry, index) => {
+    if (typeof entry !== "string") throw new AppError(400, `${field}.${index} must be a string`);
+    return entry;
+  });
+}
+
+function parseNumberArray(value: unknown, field: string, max: number) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new AppError(400, `${field} must be a non-empty array`);
+  }
+  if (value.length > max) throw new AppError(400, `${field} must have ${max} items or less`);
+  return value.map((entry, index) => {
+    if (typeof entry !== "number" || !Number.isFinite(entry)) {
+      throw new AppError(400, `${field}.${index} must be a finite number`);
+    }
+    return entry;
+  });
+}
+
+function parseChartSeries(value: unknown) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new AppError(400, "chart block series must be a non-empty array");
+  }
+  if (value.length > 6) throw new AppError(400, "chart block series must have 6 items or less");
+  return value.map((entry, index) => {
+    const series = asRecord(entry);
+    return {
+      name: parseNonEmptyString(series.name, `chart block series.${index}.name`),
+      values: parseNumberArray(series.values, `chart block series.${index}.values`, 20),
+      color: parseOptionalColor(series.color, `chart block series.${index}.color`),
+    };
+  });
+}
+
 function parseOptionalBlockGroupString(value: unknown, field: string) {
   if (value === undefined) return undefined;
   if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
@@ -306,6 +352,23 @@ function validateTableBlock(id: string, value: JsonRecord, position: BlockPositi
   };
 }
 
+function validateChartBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  return {
+    id,
+    type: "chart",
+    chart: parseChartKind(value.chart),
+    categories: parseStringArray(value.categories, "chart block categories", 20),
+    series: parseChartSeries(value.series),
+    title: parseOptionalTrimmedString(value.title, "chart block title"),
+    showLegend: parseOptionalBoolean(value.showLegend, "chart block showLegend"),
+    showValues: parseOptionalBoolean(value.showValues, "chart block showValues"),
+    axisColor: parseOptionalColor(value.axisColor, "chart block axisColor"),
+    labelColor: parseOptionalColor(value.labelColor, "chart block labelColor"),
+    background: parseOptionalColor(value.background, "chart block background"),
+    ...position,
+  };
+}
+
 function validateBlock(block: unknown): Block {
   const value = asRecord(block);
   const { id, type } = parseBlockIdentity(value);
@@ -324,6 +387,8 @@ function validateBlock(block: unknown): Block {
       return validateLineBlock(id, value, position);
     case "table":
       return validateTableBlock(id, value, position);
+    case "chart":
+      return validateChartBlock(id, value, position);
     default:
       throw new AppError(400, `unsupported block type: ${String(type)}`);
   }

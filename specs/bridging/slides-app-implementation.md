@@ -54,7 +54,7 @@ framework boundary.
 |---|---|---|
 | List slides | `list-slides` action, slide service | Vitest API tests |
 | Create slide | `create-slide` action, `PresentationPage` handlers | Vitest/API plus browser flow |
-| Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields for text, image, iframe, shape, line, and table blocks | Vitest/API |
+| Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields for text, image, iframe, shape, line, table, and chart blocks | Vitest/API |
 | Fine-grained manual block actions | `add-manual-block`, `update-manual-block`, `delete-manual-block`, `group-manual-blocks`, and `ungroup-manual-blocks` reuse server block validation and `slidesService.update` so agents can safely edit manual slides incrementally | Vitest/API |
 | Manual block layout actions | `arrange-manual-blocks`, `duplicate-manual-blocks`, and `move-manual-block-layer` mirror visual editor alignment, distribution, duplication, and layer ordering behavior for agents | Vitest/API |
 | Manual block locking action | `set-manual-block-lock` updates the shared typed block `locked` field; destructive/layout actions reject locked blocks while update can still unlock them | Vitest/API |
@@ -97,9 +97,9 @@ framework boundary.
 
 | Functional behavior | Code implementation | Validation |
 |---|---|---|
-| Insert primitive blocks | `SlideBlockInsertPanel` adds text, image, embed, shape, line, and table blocks | Browser smoke |
+| Insert primitive blocks | `SlideBlockInsertPanel` adds text, image, embed, shape, line, table, and chart blocks | Browser smoke |
 | Insert content presets | `shared/manual-presets` defines reusable typed block sets; `SlideBlockInsertPanel` renders that catalog for title, bullets, quote, metric, two-column, comparison, timeline, image-left, process, and section-divider layouts. Timeline and process presets use editable line blocks for connectors. | Browser smoke |
-| Slash insert commands | `SlideBlockInsertPanel` maps primitive commands and preset aliases such as `/line`, `/arrow`, `/connector`, `/table`, `/comparison`, `/timeline`, `/image-left`, `/process`, and `/section` to the same typed block creation paths | Browser smoke |
+| Slash insert commands | `SlideBlockInsertPanel` maps primitive commands and preset aliases such as `/line`, `/arrow`, `/connector`, `/table`, `/chart`, `/comparison`, `/timeline`, `/image-left`, `/process`, and `/section` to the same typed block creation paths | Browser smoke |
 | Inline text editing | `InlineTextBlockEditor` edits selected text blocks directly on the canvas and writes markdown back to the typed block | Browser smoke, typecheck |
 | Markdown formatting controls | `MarkdownFormatToolbar` applies headings, bold, italic, quote, and bullet markdown in inline and side-panel text editors | Browser smoke, typecheck |
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
@@ -108,9 +108,10 @@ framework boundary.
 | Block object locking | `BlockPos` carries optional `locked`, server block validation preserves it, `BlockBubbleMenu` and `CommonAppearanceEditor` toggle it, and `SlideEditorPage` prevents locked blocks from drag, resize, delete, nudge, arrange, layer, and numeric geometry edits | Vitest/API, browser smoke, typecheck |
 | Snapping and live guides | `SlideEditorPage` snaps pointer drag/resize operations to slide edges, centerlines, and neighboring block edges/centers; active guide overlays render in the fixed canvas and Alt temporarily disables snapping | Browser smoke, typecheck |
 | Inspector arrange controls | `SlideEditorPage` aligns selected blocks and fits them to slide width/height through the same typed percentage geometry used by drag, resize, and numeric fields | Browser smoke, typecheck |
-| Inspector appearance controls | `SlideEditorPage` edits typed block appearance fields: rotation, opacity, text size/color/background/alignment/padding, image fit/radius, shape border/text color, line stroke/dash/endpoint/arrowhead fields, and table rows/header/styling fields | Vitest/API, renderer tests, typecheck |
+| Inspector appearance controls | `SlideEditorPage` edits typed block appearance fields: rotation, opacity, text size/color/background/alignment/padding, image fit/radius, shape border/text color, line stroke/dash/endpoint/arrowhead fields, table rows/header/styling fields, and chart type/data/legend/value/color fields | Vitest/API, renderer tests, typecheck |
 | Line block controls | `LineBlock` stores stroke color, width, dash style, endpoint coordinates, and arrowheads; `DbSlideRenderer` and `SlideEditorPage` render lines as SVG and `LinePropEditor` edits their fields | Vitest/API, renderer tests, browser smoke, typecheck |
 | Table block controls | `TableBlock` stores rows, header row count, typography, border, alignment, and fill fields; `DbSlideRenderer` and `SlideEditorPage` render tables with native table layout and `TablePropEditor` edits rows as tab-separated text | Vitest/API, renderer tests, browser smoke, typecheck |
+| Chart block controls | `ChartBlock` stores chart type, categories, series values/colors, title, legend/value flags, and colors; `ChartBlockView` renders bar, line, and pie charts as SVG for editor and presentation/export, and `ChartPropEditor` edits data as tab-separated text | Vitest/API, renderer tests, browser smoke, typecheck |
 | Deck asset manager | `DeckAssetPanel` searches SVGL, imports deck-local SVG assets, lists imported assets with content, deletes assets, and inserts SVG assets into the manual slide canvas as image blocks | Vitest/API, browser smoke, typecheck |
 | Edit speaker notes | `slides.notes`, `update-slide`, and `SlideEditorPage` notes field | Vitest/API plus browser smoke |
 | Display speaker notes | `PresentationView` renders active slide notes above controls outside fullscreen | Browser smoke |

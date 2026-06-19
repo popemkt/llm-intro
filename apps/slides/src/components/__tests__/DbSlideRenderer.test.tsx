@@ -111,6 +111,20 @@ describe("DbSlideRenderer", () => {
         w: 60,
         h: 18,
       },
+      {
+        id: "5",
+        type: "chart",
+        chart: "bar",
+        title: "Adoption",
+        categories: ["Manual", "HTML"],
+        series: [{ name: "Usage", values: [42, 24], color: "#25d366" }],
+        showLegend: true,
+        showValues: true,
+        x: 10,
+        y: 12,
+        w: 60,
+        h: 24,
+      },
     ];
     const { container } = render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
 
@@ -138,5 +152,9 @@ describe("DbSlideRenderer", () => {
     const tableHeader = screen.getByText("Mode").closest("th") as HTMLElement;
     expect(tableHeader.style.background).toBe("rgb(18, 52, 86)");
     expect(tableHeader.style.textAlign).toBe("center");
+
+    expect(screen.getByLabelText("Adoption")).toBeInTheDocument();
+    expect(screen.getByText("Usage")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
   });
 });

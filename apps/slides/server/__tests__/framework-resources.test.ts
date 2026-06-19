@@ -55,9 +55,27 @@ describe("Agent Native resource and app-state probes", () => {
         ]),
         tree: expect.arrayContaining([
           expect.objectContaining({
-            id: "slides",
-            children: expect.arrayContaining([`deck:${deck.id}`]),
+            path: "slides",
+            type: "folder",
+            children: expect.arrayContaining([
+              expect.objectContaining({
+                path: `slides/deck-${deck.id}`,
+                type: "folder",
+                children: expect.arrayContaining([
+                  expect.objectContaining({
+                    path: `slides/deck-${deck.id}/group-${group.id}.md`,
+                    resource: expect.objectContaining({ id: `group:${deck.id}:${group.id}` }),
+                  }),
+                  expect.objectContaining({
+                    path: `slides/deck-${deck.id}/slide-${slide.id}.md`,
+                    resource: expect.objectContaining({ id: `slide:${deck.id}:${slide.id}` }),
+                  }),
+                ]),
+              }),
+            ]),
           }),
+        ]),
+        legacyTree: expect.arrayContaining([
           expect.objectContaining({
             id: `deck:${deck.id}`,
             children: expect.arrayContaining([

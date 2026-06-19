@@ -15,15 +15,9 @@ import { applyAppTheme } from "@/lib/appTheme";
 import { THEME_NAMES, type ThemeName } from "@/types";
 import { APP_AGENT_SUGGESTIONS } from "../../shared/app-agent-manifest";
 
-const AssistantChat = lazy(() =>
+const AgentPanel = lazy(() =>
   import("@agent-native/core/client/chat").then((module) => ({
-    default: module.AssistantChat,
-  })),
-);
-
-const AgentTerminal = lazy(() =>
-  import("@agent-native/core/terminal").then((module) => ({
-    default: module.AgentTerminal,
+    default: module.AgentPanel,
   })),
 );
 
@@ -31,18 +25,6 @@ const navItems = [
   { label: "Decks", to: "/", icon: LayoutDashboard },
   { label: "Theme", to: "/settings", icon: Settings },
 ];
-
-type AgentTerminalInfo =
-  | {
-      available: true;
-      wsPort: number;
-      command: string;
-    }
-  | {
-      available: false;
-      command?: string;
-      error?: string;
-    };
 
 type LocalRuntimeProtocol = {
   id: string;
@@ -287,13 +269,7 @@ function useSelectionContextBridge(location: ReturnType<typeof useLocation>) {
   }, [location.pathname, navigationState]);
 }
 
-function SlidesAppModePanel({
-  runtime,
-  suggestions,
-}: {
-  runtime: AgentChatRuntime;
-  suggestions: string[];
-}) {
+function AgentStatusNotice() {
   const [localRuntimeStatus, setLocalRuntimeStatus] = useState<LocalRuntimeStatus | null>(null);
 
   useEffect(() => {
@@ -330,30 +306,14 @@ function SlidesAppModePanel({
     actionProtocol?.available && mcpProtocol?.available ? "Actions + MCP" : "Local actions";
 
   return (
-    <div className="slides-agent-surface__app">
-      <div className="slides-agent-surface__app-status" aria-label="App mode status">
-        <span>{actionLabel}</span>
-        <span title={modelProtocol?.endpoint || modelProtocol?.baseURL || modelProtocol?.reason}>
-          {modelProtocol?.available
-            ? `Model${modelProtocol.model ? `: ${modelProtocol.model}` : ""}`
-            : "Deterministic fallback"}
-        </span>
-        {harnessProtocol && <span title={harnessProtocol.endpoint ?? undefined}>Harness</span>}
-      </div>
-      <Suspense
-        fallback={<div className="slides-agent-surface__terminal-message">Loading agent...</div>}
-      >
-        <AssistantChat
-          runtime={runtime}
-          emptyStateText="Ask about this deck"
-          suggestions={suggestions}
-          dynamicSuggestions={false}
-          providerStatusChecksEnabled={false}
-          plusMenuMode="hidden"
-          showHeader={false}
-          className="slides-agent-surface__chat"
-        />
-      </Suspense>
+    <div className="slides-agent-surface__app-status" aria-label="App mode status">
+      <span>{actionLabel}</span>
+      <span title={modelProtocol?.endpoint || modelProtocol?.baseURL || modelProtocol?.reason}>
+        {modelProtocol?.available
+          ? `Model${modelProtocol.model ? `: ${modelProtocol.model}` : ""}`
+          : "Deterministic fallback"}
+      </span>
+      {harnessProtocol && <span title={harnessProtocol.endpoint ?? undefined}>Harness</span>}
     </div>
   );
 }
@@ -361,106 +321,45 @@ function SlidesAppModePanel({
 function SlidesAgentSurface({
   runtime,
   suggestions,
+  scope,
   onCollapse,
 }: {
   runtime: AgentChatRuntime;
   suggestions: string[];
+  scope: ReturnType<typeof deckScopeFromPath>;
   onCollapse: () => void;
 }) {
-  const [mode, setMode] = useState<"app" | "code">("app");
-  const [terminalInfo, setTerminalInfo] = useState<AgentTerminalInfo | null>(null);
-  const [terminalConnected, setTerminalConnected] = useState(false);
-
-  useEffect(() => {
-    if (mode !== "code") return;
-
-    let active = true;
-    setTerminalInfo(null);
-
-    fetch(agentNativePath("/_agent-native/agent-terminal-info"))
-      .then((response) => response.json() as Promise<AgentTerminalInfo>)
-      .then((info) => {
-        if (active) setTerminalInfo(info);
-      })
-      .catch(() => {
-        if (active) {
-          setTerminalInfo({
-            available: false,
-            error: "Start the local dev server to use Codex or Claude Code from the app shell.",
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-      setTerminalConnected(false);
-    };
-  }, [mode]);
-
-  const terminalWsUrl =
-    terminalInfo?.available === true ? `ws://127.0.0.1:${terminalInfo.wsPort}/ws` : null;
-  const terminalUnavailableMessage =
-    terminalInfo?.available === false
-      ? terminalInfo.error ||
-        "Start the local dev server to use Codex or Claude Code from the app shell."
-      : "Start the local dev server to use Codex or Claude Code from the app shell.";
-
   return (
-    <div className="slides-agent-surface">
-      <div className="slides-agent-surface__header">
-        <div className="slides-agent-surface__modes" aria-label="Agent mode">
-          <button type="button" data-active={mode === "app"} onClick={() => setMode("app")}>
-            App
-          </button>
-          <button type="button" data-active={mode === "code"} onClick={() => setMode("code")}>
-            Code
-          </button>
-        </div>
-        <button
-          type="button"
-          className="slides-agent-surface__collapse"
-          onClick={onCollapse}
-          aria-label="Collapse agent"
-          title="Collapse agent"
-        >
-          <PanelLeftClose size={15} />
-        </button>
-      </div>
-
-      {mode === "app" ? (
-        <SlidesAppModePanel runtime={runtime} suggestions={suggestions} />
-      ) : (
-        <div className="slides-agent-surface__terminal">
-          <div className="slides-agent-surface__terminal-status">
-            <span>{terminalInfo?.available ? terminalInfo.command : "Local CLI"}</span>
-            <span data-connected={terminalConnected ? "true" : "false"}>
-              {terminalConnected ? "Connected" : "Local"}
-            </span>
-          </div>
-          {terminalInfo === null ? (
-            <div className="slides-agent-surface__terminal-message">Starting local CLI...</div>
-          ) : terminalInfo.available && terminalWsUrl ? (
-            <Suspense
-              fallback={
-                <div className="slides-agent-surface__terminal-message">Starting local CLI...</div>
-              }
-            >
-              <AgentTerminal
-                command={terminalInfo.command}
-                wsUrl={terminalWsUrl}
-                hideInFrame={false}
-                className="slides-agent-surface__terminal-frame"
-                onConnectionChange={setTerminalConnected}
-              />
-            </Suspense>
-          ) : (
-            <div className="slides-agent-surface__terminal-message">
-              {terminalUnavailableMessage}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <Suspense
+      fallback={<div className="slides-agent-surface__terminal-message">Loading agent...</div>}
+    >
+      <AgentPanel
+        apiUrl={agentNativePath("/_agent-native/agent-chat")}
+        agentChatSurface="dev-frame"
+        runtime={runtime}
+        emptyStateText="Ask about this deck"
+        suggestions={suggestions}
+        dynamicSuggestions={false}
+        providerStatusChecksEnabled={false}
+        plusMenuMode="hidden"
+        onCollapse={onCollapse}
+        storageKey="slides-agent"
+        restoreActiveThread
+        scope={scope}
+        chatNotice={<AgentStatusNotice />}
+        codeAccess={{
+          enabled: true,
+          unavailableTitle: "Code Mode needs local dev",
+          unavailableDescription:
+            "Run pnpm dev locally to use Codex or Claude Code from the app shell.",
+          unavailableCtaLabel: "Agent Native docs",
+          unavailableCtaHref: "https://www.agent-native.com/docs/frames",
+          unavailableSecondaryCtaLabel: undefined,
+          unavailableSecondaryCtaHref: undefined,
+        }}
+        className="slides-agent-surface"
+      />
+    </Suspense>
   );
 }
 
@@ -569,6 +468,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SlidesAgentSurface
             runtime={appAgentRuntime}
             suggestions={[...APP_AGENT_SUGGESTIONS]}
+            scope={deckScope}
             onCollapse={() => setAgentOpenPersisted(false)}
           />
         </aside>

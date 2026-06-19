@@ -72,6 +72,91 @@ describe("Agent Native local agent-chat adapter", () => {
     );
   });
 
+  it("supports stock Agent Native thread persistence helpers", async () => {
+    const threadId = "local-stock-panel-thread";
+
+    const empty = await request(app).get(`/_agent-native/agent-chat/threads/${threadId}`);
+    expect(empty.status).toBe(200);
+    expect(empty.body).toMatchObject({
+      id: threadId,
+      title: "New chat",
+      messageCount: 0,
+    });
+
+    const save = await request(app)
+      .put(`/_agent-native/agent-chat/threads/${threadId}`)
+      .send({
+        title: "Saved title",
+        preview: "Saved preview",
+        messageCount: 3,
+        threadData: { messages: [{ id: "m1" }] },
+      });
+
+    expect(save.status).toBe(200);
+    expect(save.body).toMatchObject({
+      id: threadId,
+      title: "Saved title",
+      preview: "Saved preview",
+      messageCount: 3,
+      threadData: { messages: [{ id: "m1" }] },
+    });
+
+    const rename = await request(app)
+      .post(`/_agent-native/agent-chat/threads/${threadId}/rename`)
+      .send({ title: "Renamed thread" });
+    expect(rename.status).toBe(200);
+    expect(rename.body).toMatchObject({ title: "Renamed thread" });
+
+    const pin = await request(app)
+      .post(`/_agent-native/agent-chat/threads/${threadId}/pin`)
+      .send({ pinned: true });
+    expect(pin.status).toBe(200);
+    expect(pin.body.pinnedAt).toEqual(expect.any(Number));
+
+    const runs = await request(app).get("/_agent-native/runs?limit=12");
+    expect(runs.status).toBe(200);
+    expect(runs.body).toEqual({ runs: [] });
+  });
+
+  it("supports stock Agent Native context and title helper routes locally", async () => {
+    const manifest = await request(app)
+      .get("/_agent-native/actions/context-manifest-get")
+      .query({ threadId: "local-context-thread" });
+    expect(manifest.status).toBe(200);
+    expect(manifest.body).toMatchObject({
+      threadId: "local-context-thread",
+      totalTokens: 0,
+      rawTokens: 0,
+      reclaimedTokens: 0,
+      tokenCountMethod: "estimate",
+      source: "structured",
+      enforceable: true,
+      segments: [],
+    });
+
+    const title = await request(app)
+      .post("/_agent-native/agent-chat/generate-title")
+      .send({ message: "Create a sharper story for the investor update deck" });
+    expect(title.status).toBe(200);
+    expect(title.body).toEqual({
+      title: "Create a sharper story for the investor update deck",
+    });
+  });
+
+  it("accepts stock Agent Native local resource create calls", async () => {
+    const create = await request(app)
+      .post("/_agent-native/resources")
+      .send({ path: "agent_scratch/test.md", content: "# Test" });
+
+    expect(create.status).toBe(200);
+    expect(create.body.resource).toMatchObject({
+      path: "agent_scratch/test.md",
+      owner: "local-user",
+      content: "# Test",
+      visibility: "personal",
+    });
+  });
+
   it("POST /_agent-native/agent-chat can emit a local event stream", async () => {
     const deck = (await request(app).post("/api/presentations").send({ name: "Stream Chat Deck" }))
       .body;

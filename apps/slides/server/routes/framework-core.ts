@@ -22,6 +22,9 @@ type LocalAgentChatThread = {
   createdAt: number;
   updatedAt: number;
   scope: AppAgentRequest["scope"];
+  threadData?: unknown;
+  archivedAt?: number | null;
+  pinnedAt?: number | null;
 };
 
 type FrameworkStatusRouteOptions = {
@@ -58,6 +61,10 @@ function registerFrameworkHealthRoutes(router: Router) {
 
   router.get("/poll", (_req, res) => {
     res.json({ version: 0, events: [] });
+  });
+
+  router.get("/runs", (_req, res) => {
+    res.json({ runs: [] });
   });
 
   router.get("/events", (req, res) => {
@@ -359,6 +366,52 @@ function titleFromPrompt(prompt: string) {
   return title || "Local chat";
 }
 
+function createEmptyLocalThread(
+  id: string,
+  scope: AppAgentRequest["scope"] = null,
+): LocalAgentChatThread {
+  const now = Date.now();
+  return {
+    id,
+    title: "New chat",
+    preview: "",
+    messages: [],
+    messageCount: 0,
+    createdAt: now,
+    updatedAt: now,
+    scope,
+    archivedAt: null,
+    pinnedAt: null,
+  };
+}
+
+function getOrCreateLocalThread(
+  threads: Map<string, LocalAgentChatThread>,
+  id: string,
+  scope: AppAgentRequest["scope"] = null,
+) {
+  const existing = threads.get(id);
+  if (existing) return existing;
+  const thread = createEmptyLocalThread(id, scope);
+  threads.set(id, thread);
+  return thread;
+}
+
+function createEmptyContextManifest(threadId: string) {
+  return {
+    threadId,
+    computedAt: Date.now(),
+    totalTokens: 0,
+    rawTokens: 0,
+    reclaimedTokens: 0,
+    tokenCountMethod: "estimate",
+    source: "structured",
+    enforceable: true,
+    segments: [],
+    url: `/?contextXray=1&threadId=${encodeURIComponent(threadId)}`,
+  };
+}
+
 function upsertLocalThread(
   threads: Map<string, LocalAgentChatThread>,
   input: {
@@ -370,19 +423,10 @@ function upsertLocalThread(
 ) {
   const now = Date.now();
   const id = input.threadId || createLocalThreadId();
-  const existing = threads.get(id);
-  const thread: LocalAgentChatThread =
-    existing ??
-    ({
-      id,
-      title: titleFromPrompt(input.prompt),
-      preview: "",
-      messages: [],
-      messageCount: 0,
-      createdAt: now,
-      updatedAt: now,
-      scope: input.scope,
-    } satisfies LocalAgentChatThread);
+  const thread = getOrCreateLocalThread(threads, id, input.scope);
+  if (thread.title === "New chat") {
+    thread.title = titleFromPrompt(input.prompt);
+  }
 
   thread.messages.push(
     { id: createLocalMessageId("user"), role: "user", text: input.prompt, createdAt: now },
@@ -427,6 +471,11 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
 
   registerFrameworkIdentityRoutes(router);
 
+  router.get("/actions/context-manifest-get", (req, res) => {
+    const threadId = typeof req.query.threadId === "string" ? req.query.threadId : "local-thread";
+    res.json(createEmptyContextManifest(threadId));
+  });
+
   router.get("/agent-chat/mode", (_req, res) => {
     res.json({
       devMode: localCodeModeEnabled(),
@@ -452,13 +501,100 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
     });
   });
 
-  router.get("/agent-chat/threads/:threadId", (req, res) => {
-    const thread = threads.get(req.params.threadId);
-    if (!thread) {
-      res.status(404).json({ error: "local chat thread not found" });
-      return;
+  router.post("/agent-chat/threads", (req, res) => {
+    const requestedId = getThreadIdFromAgentChatBody(req.body);
+    const id = requestedId || createLocalThreadId();
+    const scope = getScopeFromAgentChatBody(req.body);
+    const thread = getOrCreateLocalThread(threads, id, scope);
+    if (req.body && typeof req.body === "object") {
+      if ("title" in req.body && typeof req.body.title === "string") {
+        thread.title = titleFromPrompt(req.body.title);
+      }
+      if ("scope" in req.body) thread.scope = scope;
     }
+    thread.updatedAt = Date.now();
     res.json(thread);
+  });
+
+  router.get("/agent-chat/threads/:threadId", (req, res) => {
+    const thread = getOrCreateLocalThread(threads, req.params.threadId);
+    res.json(thread);
+  });
+
+  router.put("/agent-chat/threads/:threadId", (req, res) => {
+    const thread = getOrCreateLocalThread(threads, req.params.threadId);
+    if (req.body && typeof req.body === "object") {
+      if ("title" in req.body && typeof req.body.title === "string") {
+        thread.title = titleFromPrompt(req.body.title);
+      }
+      if ("preview" in req.body && typeof req.body.preview === "string") {
+        thread.preview = req.body.preview;
+      }
+      if ("messageCount" in req.body && typeof req.body.messageCount === "number") {
+        thread.messageCount = req.body.messageCount;
+      }
+      if ("threadData" in req.body) {
+        thread.threadData = req.body.threadData;
+      }
+      if ("scope" in req.body) {
+        thread.scope = getScopeFromAgentChatBody(req.body);
+      }
+    }
+    thread.updatedAt = Date.now();
+    res.json(thread);
+  });
+
+  router.delete("/agent-chat/threads/:threadId", (req, res) => {
+    threads.delete(req.params.threadId);
+    res.json({ ok: true });
+  });
+
+  router.post("/agent-chat/threads/:threadId/pin", (req, res) => {
+    const thread = getOrCreateLocalThread(threads, req.params.threadId);
+    const pinned = Boolean(req.body?.pinned);
+    thread.pinnedAt = pinned ? Date.now() : null;
+    thread.updatedAt = Date.now();
+    res.json(thread);
+  });
+
+  router.post("/agent-chat/threads/:threadId/archive", (req, res) => {
+    const thread = getOrCreateLocalThread(threads, req.params.threadId);
+    const archived = "archived" in (req.body ?? {}) ? Boolean(req.body.archived) : true;
+    thread.archivedAt = archived ? Date.now() : null;
+    thread.updatedAt = Date.now();
+    res.json(thread);
+  });
+
+  router.post("/agent-chat/threads/:threadId/rename", (req, res) => {
+    const thread = getOrCreateLocalThread(threads, req.params.threadId);
+    if (typeof req.body?.title === "string") {
+      thread.title = titleFromPrompt(req.body.title);
+    }
+    thread.updatedAt = Date.now();
+    res.json(thread);
+  });
+
+  router.post("/agent-chat/threads/:threadId/queued", (_req, res) => {
+    res.json({ ok: true });
+  });
+
+  router.post("/agent-chat/threads/:threadId/fork", (req, res) => {
+    const source = threads.get(req.params.threadId);
+    const forkId = createLocalThreadId();
+    const fork = {
+      ...(source ?? createEmptyLocalThread(req.params.threadId)),
+      id: forkId,
+      title: `${source?.title ?? "New chat"} (fork)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    } satisfies LocalAgentChatThread;
+    threads.set(forkId, fork);
+    res.json(fork);
+  });
+
+  router.post("/agent-chat/generate-title", (req, res) => {
+    const prompt = getPromptFromAgentChatBody(req.body);
+    res.json({ title: titleFromPrompt(prompt) });
   });
 
   router.get("/agent-chat/runs/list", (_req, res) => {
@@ -690,8 +826,87 @@ function resourceTree(resources: Awaited<ReturnType<typeof listWorkspaceResource
   const deckResources = resources.filter((resource) => resource.type === "deck");
   return [
     {
+      name: "Slides",
+      path: "slides",
+      type: "folder",
+      children: deckResources.map((resource) => ({
+        name: resource.name,
+        path: `slides/deck-${resource.metadata.deckId}`,
+        type: "folder",
+        children: resources
+          .filter((child) => child.parentId === resource.id)
+          .map((child) => resourceTreeNode(child)),
+      })),
+    },
+  ];
+}
+
+function resourceTreeNode(resource: FrameworkResource) {
+  return {
+    name: resource.name,
+    path: resourcePath(resource),
+    type: "file",
+    resource: resourceMeta(resource),
+  };
+}
+
+function resourcePath(resource: FrameworkResource) {
+  if (resource.type === "deck") return `slides/deck-${resource.metadata.deckId}.md`;
+  if (resource.type === "group") {
+    return `slides/deck-${resource.metadata.deckId}/group-${resource.metadata.groupId}.md`;
+  }
+  return `slides/deck-${resource.metadata.deckId}/slide-${resource.metadata.slideId}.md`;
+}
+
+function resourceMeta(resource: FrameworkResource) {
+  const metadata = JSON.stringify({
+    ...resource.metadata,
+    id: resource.id,
+    uri: resource.uri,
+    type: resource.type,
+    parentId: resource.parentId ?? null,
+  });
+  return {
+    id: resource.id,
+    path: resourcePath(resource),
+    owner: "workspace",
+    mimeType: "text/markdown",
+    size: resource.title.length,
+    createdAt: 0,
+    updatedAt: 0,
+    createdBy: "system",
+    visibility: "workspace",
+    threadId: null,
+    runId: null,
+    expiresAt: null,
+    metadata,
+  };
+}
+
+function resourceContent(resource: FrameworkResource) {
+  return [
+    `# ${resource.title}`,
+    "",
+    `- Type: ${resource.type}`,
+    `- URI: ${resource.uri}`,
+    `- ID: ${resource.id}`,
+  ].join("\n");
+}
+
+function resourceDetail(resource: FrameworkResource) {
+  const content = resourceContent(resource);
+  return {
+    ...resourceMeta(resource),
+    content,
+    size: content.length,
+  };
+}
+
+function legacyResourceTree(resources: Awaited<ReturnType<typeof listWorkspaceResources>>) {
+  const deckResources = resources.filter((resource) => resource.type === "deck");
+  return [
+    {
       id: "slides",
-      type: "collection",
       name: "Slides",
       title: "Slides",
       children: deckResources.map((resource) => resource.id),
@@ -745,7 +960,12 @@ function registerFrameworkResourceRoutes(router: Router, options: { actions?: Sl
   router.get("/resources/tree", async (_req, res, next) => {
     try {
       const resources = await listWorkspaceResources(options.actions);
-      res.json({ items: resources, resources, tree: resourceTree(resources) });
+      res.json({
+        items: resources,
+        resources,
+        legacyTree: legacyResourceTree(resources),
+        tree: resourceTree(resources),
+      });
     } catch (err) {
       next(err);
     }
@@ -755,6 +975,43 @@ function registerFrameworkResourceRoutes(router: Router, options: { actions?: Sl
     try {
       const resources = await listWorkspaceResources(options.actions);
       res.json({ resources });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/resources", (req, res) => {
+    const now = Date.now();
+    const path = typeof req.body?.path === "string" ? req.body.path : "agent_scratch/local-note.md";
+    const content = typeof req.body?.content === "string" ? req.body.content : "";
+    res.json({
+      resource: {
+        id: `local-resource:${now}`,
+        path,
+        owner: "local-user",
+        content,
+        mimeType: "text/markdown",
+        size: content.length,
+        createdAt: now,
+        updatedAt: now,
+        visibility: "personal",
+      },
+    });
+  });
+
+  router.post("/resources/upload", (_req, res) => {
+    res.status(501).json({ error: "local resource upload is not implemented" });
+  });
+
+  router.get("/resources/:id", async (req, res, next) => {
+    try {
+      const resources = await listWorkspaceResources(options.actions);
+      const resource = resources.find((item) => item.id === req.params.id);
+      if (!resource) {
+        res.status(404).json({ error: "local resource not found" });
+        return;
+      }
+      res.json(resourceDetail(resource));
     } catch (err) {
       next(err);
     }

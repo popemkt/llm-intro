@@ -291,7 +291,26 @@ function responseTextForPromptDeck(result: unknown) {
   if (!result || typeof result !== "object" || !("deck" in result)) {
     return "Created the deck from the prompt.";
   }
-  return responseTextForCreatedDeck(result);
+  const created = responseTextForCreatedDeck(result);
+  const source = "draftSource" in result ? getText(result.draftSource) : "";
+  if (source === "local-model") return `${created} Drafted with the local model harness.`;
+  return `${created} Drafted with deterministic local rules.`;
+}
+
+function responseTextForLocalModelStatus(result: unknown) {
+  if (!result || typeof result !== "object") {
+    return "I cannot read the local model status yet.";
+  }
+  const available = "available" in result ? Boolean(result.available) : false;
+  const model = "model" in result ? getText(result.model) : "";
+  const baseURL = "baseURL" in result ? getText(result.baseURL) : "";
+  const reason = "reason" in result ? getText(result.reason) : "";
+  if (available) {
+    return `Local model harness is available${model ? ` using ${model}` : ""}${
+      baseURL ? ` at ${baseURL}` : ""
+    }.`;
+  }
+  return `Local model harness is not configured.${reason ? ` ${reason}` : ""}`;
 }
 
 function responseTextForCreatedGroup(result: unknown) {
@@ -557,6 +576,51 @@ async function handleSnapshotPrompt(
   return null;
 }
 
+async function handleLocalModelPrompt(actions: SlideDeckActions, normalized: string) {
+  if (
+    !/\b(local\s+)?models?\b.*\b(status|available|configured|provider|harness)\b/.test(normalized)
+  ) {
+    return null;
+  }
+
+  const result = await runAction(actions["get-local-model-status"], {});
+  return responseTextForLocalModelStatus(result);
+}
+
+async function handleMarkdownImportPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+) {
+  if (!/\b(import|create|make)\b.*\bmarkdown\b/.test(normalized)) return null;
+  const result = await runAction(actions["import-deck-markdown"], { markdown: prompt });
+  return responseTextForMarkdownImport(result);
+}
+
+async function handleDeckCreationPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+) {
+  if (!/\b(create|make|generate)\b.*\bdeck\b/.test(normalized)) return null;
+
+  const slides = outlineSlides(prompt);
+  const name = inferDeckName(prompt);
+  const theme = inferTheme(prompt) ?? "dark-green";
+  if (slides.length === 0) {
+    const result = await runAction(actions["create-deck-from-prompt"], {
+      prompt,
+      name: inferExplicitDeckName(prompt),
+      theme,
+      slideCount: 6,
+    });
+    return responseTextForPromptDeck(result);
+  }
+
+  const result = await runAction(actions["create-deck-from-outline"], { name, theme, slides });
+  return responseTextForCreatedDeck(result);
+}
+
 export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
@@ -570,27 +634,14 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
   const readResponse = await handleDeckReadPrompt(actions, normalized, deckId);
   if (readResponse) return readResponse;
 
-  if (/\b(import|create|make)\b.*\bmarkdown\b/.test(normalized)) {
-    const result = await runAction(actions["import-deck-markdown"], { markdown: prompt });
-    return responseTextForMarkdownImport(result);
-  }
+  const localModelResponse = await handleLocalModelPrompt(actions, normalized);
+  if (localModelResponse) return localModelResponse;
 
-  if (/\b(create|make|generate)\b.*\bdeck\b/.test(normalized)) {
-    const slides = outlineSlides(prompt);
-    const name = inferDeckName(prompt);
-    const theme = inferTheme(prompt) ?? "dark-green";
-    if (slides.length === 0) {
-      const result = await runAction(actions["create-deck-from-prompt"], {
-        prompt,
-        name: inferExplicitDeckName(prompt),
-        theme,
-        slideCount: 6,
-      });
-      return responseTextForPromptDeck(result);
-    }
-    const result = await runAction(actions["create-deck-from-outline"], { name, theme, slides });
-    return responseTextForCreatedDeck(result);
-  }
+  const markdownImportResponse = await handleMarkdownImportPrompt(actions, prompt, normalized);
+  if (markdownImportResponse) return markdownImportResponse;
+
+  const deckCreationResponse = await handleDeckCreationPrompt(actions, prompt, normalized);
+  if (deckCreationResponse) return deckCreationResponse;
 
   if (!deckId) {
     return "Open a deck first, then I can list slides or create normal slides in that deck.";

@@ -13,6 +13,7 @@ import { createActiveDeckContextAction } from "./active-deck-context.js";
 import { createThemeDesignActions } from "./theme-design.js";
 import { createSnapshotActions } from "./snapshots.js";
 import type { createSnapshotsService } from "../server/services/snapshots.js";
+import type { LocalDeckModelProvider } from "../server/local-model-provider.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
@@ -24,6 +25,7 @@ export function createSlideDeckActions(services: {
   slidesService: SlidesService;
   groupsService: GroupsService;
   snapshotsService: SnapshotsService;
+  localModelProvider?: LocalDeckModelProvider;
 }) {
   return {
     ...createAppContextActions(),
@@ -35,7 +37,11 @@ export function createSlideDeckActions(services: {
       services.presentationsService,
       services.slidesService,
     ),
-    ...createDeckPromptActions(services.presentationsService, services.slidesService),
+    ...createDeckPromptActions(
+      services.presentationsService,
+      services.slidesService,
+      services.localModelProvider,
+    ),
     ...createDeckJsonActions(services),
     ...createDeckMarkdownActions(services),
     ...createGroupActions(services.groupsService),

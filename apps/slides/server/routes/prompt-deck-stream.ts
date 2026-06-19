@@ -15,6 +15,8 @@ type DraftSlide = {
 type DraftResult = {
   name: string;
   slides: DraftSlide[];
+  source?: string;
+  model?: string;
 };
 
 type DeckResult = {
@@ -52,7 +54,13 @@ export function createPromptDeckStreamRouter(actions: SlideDeckActions) {
 
       writeEvent(res, { type: "status", message: "Drafting deck" });
       const draft = (await runDraft(body, { caller: "tool", orgId: null })) as DraftResult;
-      writeEvent(res, { type: "draft", name: draft.name, slideCount: draft.slides.length });
+      writeEvent(res, {
+        type: "draft",
+        name: draft.name,
+        slideCount: draft.slides.length,
+        source: draft.source ?? "deterministic",
+        model: draft.model,
+      });
 
       const deck = (await runCreateDeck(
         {

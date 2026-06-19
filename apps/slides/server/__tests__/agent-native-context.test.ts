@@ -39,6 +39,7 @@ describe("Agent Native app context actions", () => {
       readOnly: false,
       isConsequential: true,
     });
+    expectPublicAction(res.body.actions, "get-local-model-status", { readOnly: true });
     expectPublicAction(res.body.actions, "draft-deck-from-prompt", { readOnly: true });
     expectPublicAction(res.body.actions, "create-deck-from-prompt", { readOnly: false });
     expectPublicAction(res.body.actions, "export-deck-json", { readOnly: true });
@@ -336,6 +337,18 @@ describe("Agent Native prompt deck creation", () => {
     expect(res.body.slides[0].blocks).toEqual(
       expect.arrayContaining([expect.objectContaining({ type: "text" })]),
     );
+    expect(res.body.draftSource).toBe("deterministic");
+  });
+
+  it("GET /_agent-native/actions/get-local-model-status exposes local harness availability", async () => {
+    const res = await request(app).get("/_agent-native/actions/get-local-model-status");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      available: false,
+      provider: "openai-compatible",
+      hosted: false,
+    });
   });
 
   it("POST /_agent-native/prompt-deck-stream streams deck and slide creation events", async () => {
@@ -349,11 +362,22 @@ describe("Agent Native prompt deck creation", () => {
     const events = res.text
       .trim()
       .split("\n")
-      .map((line) => JSON.parse(line) as { type: string; deck?: { id: number }; title?: string });
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            type: string;
+            deck?: { id: number };
+            source?: string;
+            title?: string;
+          },
+      );
     expect(events.map((event) => event.type)).toEqual(
       expect.arrayContaining(["status", "draft", "deck", "slide", "done"]),
     );
     expect(events.filter((event) => event.type === "slide")).toHaveLength(6);
+    expect(events.find((event) => event.type === "draft")).toMatchObject({
+      source: "deterministic",
+    });
     const deckEvent = events.find((event) => event.type === "deck");
     expect(deckEvent?.deck?.id).toEqual(expect.any(Number));
 
@@ -585,6 +609,18 @@ describe("App agent active deck context runtime", () => {
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("Runtime Context");
     expect(res.body.text).toContain("1 slide");
+  });
+
+  it("POST /_agent-native/app-agent reports local model status", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "is the local model harness configured?",
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Local model harness is not configured");
   });
 });
 

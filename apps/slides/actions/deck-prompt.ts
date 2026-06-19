@@ -3,6 +3,10 @@ import { THEME_NAMES, type ThemeName } from "@llm-intro/api-contract";
 import { z } from "zod";
 import type { createPresentationsService } from "../server/services/presentations.js";
 import type { createSlidesService } from "../server/services/slides.js";
+import {
+  createDisabledLocalDeckModelProvider,
+  type LocalDeckModelProvider,
+} from "../server/local-model-provider.js";
 import { buildNormalSlideBlocks } from "./normal-slide-layouts.js";
 import type { NormalSlideInput } from "./normal-slide-layouts.js";
 import { slideTitle } from "./normal-slide-action.js";
@@ -114,11 +118,63 @@ function buildPromptDeckSlides(prompt: string, input: { name?: string; slideCoun
   return slides.slice(0, input.slideCount);
 }
 
+function deterministicPromptDeckDraft(
+  prompt: string,
+  input: { name?: string; slideCount: number },
+) {
+  return {
+    name: inferDeckName(prompt, input.name),
+    slides: buildPromptDeckSlides(prompt, input),
+    source: "deterministic" as const,
+  };
+}
+
+async function draftPromptDeck(
+  localModelProvider: LocalDeckModelProvider,
+  prompt: string,
+  input: { name?: string; slideCount: number },
+) {
+  const status = localModelProvider.status();
+  if (!status.available) return deterministicPromptDeckDraft(prompt, input);
+
+  try {
+    const draft = await localModelProvider.draftDeck({ prompt, ...input });
+    return {
+      name: draft.name,
+      slides: draft.slides as NormalSlideInput[],
+      source: "local-model" as const,
+      model: status.model,
+    };
+  } catch (err) {
+    return {
+      ...deterministicPromptDeckDraft(prompt, input),
+      modelError: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 export function createDeckPromptActions(
   presentationsService: PresentationsService,
   slidesService: SlidesService,
+  localModelProvider: LocalDeckModelProvider = createDisabledLocalDeckModelProvider(),
 ) {
   return {
+    "get-local-model-status": defineAction({
+      description:
+        "Report whether the local OpenAI-compatible model harness is available for prompt deck drafting.",
+      schema: z.object({}),
+      http: { method: "GET", path: "get-local-model-status" },
+      requiresAuth: false,
+      readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: "Get local model status",
+        description:
+          "Report whether the local OpenAI-compatible model harness is available for prompt deck drafting.",
+      },
+      run: () => localModelProvider.status(),
+    }),
+
     "draft-deck-from-prompt": defineAction({
       description: "Draft a typed normal-slide outline from a freeform deck prompt.",
       schema: promptDeckSchema,
@@ -130,10 +186,8 @@ export function createDeckPromptActions(
         title: "Draft deck from prompt",
         description: "Draft a typed normal-slide outline from a freeform deck prompt.",
       },
-      run: ({ prompt, name, slideCount }) => ({
-        name: inferDeckName(prompt, name),
-        slides: buildPromptDeckSlides(prompt, { name, slideCount }),
-      }),
+      run: ({ prompt, name, slideCount }) =>
+        draftPromptDeck(localModelProvider, prompt, { name, slideCount }),
     }),
 
     "create-deck-from-prompt": defineAction({
@@ -148,17 +202,17 @@ export function createDeckPromptActions(
         description:
           "Create a new deck from a freeform prompt using standard themeable slide layouts.",
       },
-      run: ({ prompt, name, theme, slideCount }) => {
-        const deckName = inferDeckName(prompt, name);
-        const slides = buildPromptDeckSlides(prompt, { name, slideCount });
+      run: async ({ prompt, name, theme, slideCount }) => {
+        const draft = await draftPromptDeck(localModelProvider, prompt, { name, slideCount });
+        const deckName = draft.name;
         const deck = presentationsService.create({ name: deckName, theme: theme as ThemeName });
-        const createdSlides = slides.map(({ layout, ...slide }) =>
+        const createdSlides = draft.slides.map(({ layout, ...slide }) =>
           slidesService.create(deck.id, {
             title: slideTitle(layout, slide.title),
             blocks: buildNormalSlideBlocks({ layout, ...slide }),
           }),
         );
-        return { deck, slides: createdSlides, draft: slides };
+        return { deck, slides: createdSlides, draft: draft.slides, draftSource: draft.source };
       },
     }),
   };

@@ -11,8 +11,15 @@ import { createGroupsService } from "./services/groups.js";
 import { createSnapshotsService } from "./services/snapshots.js";
 import { createSlideDeckActions } from "../actions/index.js";
 import { createAgentTerminalBridge } from "./agent-terminal.js";
+import {
+  createLocalDeckModelProvider,
+  type LocalDeckModelProvider,
+} from "./local-model-provider.js";
 
-export function buildRuntime(db: Database.Database) {
+export function buildRuntime(
+  db: Database.Database,
+  options: { localModelProvider?: LocalDeckModelProvider } = {},
+) {
   const presentationsRepo = createPresentationsRepository(db);
   const slidesRepo = createSlidesRepository(db);
   const groupsRepo = createGroupsRepository(db);
@@ -31,6 +38,7 @@ export function buildRuntime(db: Database.Database) {
     slidesService,
     groupsService,
     snapshotsService,
+    localModelProvider: options.localModelProvider ?? createLocalDeckModelProvider(),
   });
   const agentTerminalBridge = createAgentTerminalBridge({ appDir: process.cwd() });
 

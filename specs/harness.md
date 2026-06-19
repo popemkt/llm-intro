@@ -44,7 +44,8 @@ The harness keeps four loops explicit:
 | `apps/slides/src/api/client.ts` | Browser API client. Keep request/response shapes aligned with `apps/slides/shared/api.ts`. |
 | `apps/slides/src/pages/*` + `apps/slides/src/components/*` | Route-level UI and reusable deck/presentation/editor components. |
 | `apps/slides/src/slides/*` + `apps/slides/src/slides/registry.ts` | Code-backed slide modules keyed by registry ID. |
-| `demos/*` | Model/tool-calling demonstration harness. `demos/_model.ts` is the provider boundary; `demos/.env.template` declares local env. |
+| `demos/*` | Model/tool-calling demonstration harness. `demos/_model.ts` is the demo provider boundary; `demos/.env.template` declares local env. |
+| `apps/slides/server/local-model-provider.ts` | App-safe local model provider boundary for prompt deck drafting. It may read the same local OpenAI-compatible env values as demos, but app runtime must not import demo scripts. |
 | `playwright/e2e.spec.ts` | Browser flow harness for seeded deck visibility and user deck create/edit/reorder/theme/delete behavior. |
 | `.github/workflows/ci.yml` | CI runs unit/API tests, production build, and Playwright e2e. |
 | `specs/code-unit-cohesion.md` | Structural rule for keeping source units cohesive and reviewable. |
@@ -90,6 +91,7 @@ Today that primarily preserves `demos/.env`, derived from `demos/.env.template`.
 | Build config, routing, lazy loading, export pipeline | `pnpm build`; add `pnpm test:e2e` when user navigation changes |
 | Code-backed slide content only | `pnpm build`; visually inspect when layout changes are non-trivial |
 | Demos/model provider | run the touched `pnpm tsx demos/<file>.ts` script when credentials are available |
+| App local model provider | run focused action/App Mode tests with provider disabled; run a manual prompt-deck smoke when local model credentials are available |
 | Harness files | `pnpm lint` for rule/config edits; `pnpm test` for package/script edits; `git diff --check` for specs/config-only edits |
 | Source-structure changes | Apply `specs/code-unit-cohesion.md`; use `/cohesion-review` when boundaries or responsibilities move |
 

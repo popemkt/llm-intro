@@ -95,6 +95,8 @@ Treat these as review sensors:
 - slide files that use viewport units or window measurements instead of the
   `SlideShell` canvas contract;
 - demo scripts that start depending on app internals.
+- app runtime code that imports `demos/*` instead of using
+  `apps/slides/server/local-model-provider.ts`.
 
 ### L3 - Advisory Cohesion Reviewer
 

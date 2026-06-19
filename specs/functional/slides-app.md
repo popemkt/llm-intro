@@ -115,6 +115,11 @@ editing, themed presentation playback, and HTML export.
   hosted model provider. The shell should show this as runtime status so users
   do not confuse product-safe App Mode with hosted Code Mode or provider-backed
   chat.
+- Agents can read local model harness status through `get-local-model-status`.
+  When configured, prompt deck creation can use the same local harness through
+  the existing action, MCP-shaped, and A2A-discovered action surfaces. Code Mode
+  can still run raw demo scripts and CLIs, but product prompt generation should
+  go through app actions.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.
@@ -125,7 +130,9 @@ editing, themed presentation playback, and HTML export.
   layouts and uses `create-deck-from-outline`.
 - Users can create a new deck from Home with a freeform prompt. Prompt mode uses
   a local streaming prompt deck route to draft the deck, create the deck, and
-  add typed, themeable normal slides incrementally.
+  add typed, themeable normal slides incrementally. The draft step can use a
+  local OpenAI-compatible model harness when configured, and falls back to
+  deterministic local drafting when no local model is available.
 - Users can create common normal slide layouts from the overview add tile
   without opening the manual editor first.
 - Users can insert primitive blocks and common content presets in the visual

@@ -58,6 +58,7 @@ framework boundary.
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
 | Create deck from outline | `create-deck-from-outline` action creates a deck and typed normal slides from an outline | Vitest/API plus App Mode and Home UI smoke |
 | Create deck from prompt | `draft-deck-from-prompt`, `create-deck-from-prompt`, Home prompt mode, and App Mode prompt routing | Vitest/API plus browser smoke |
+| Local model prompt drafting | `get-local-model-status` reports OpenAI-compatible local harness availability; `draft-deck-from-prompt` and `create-deck-from-prompt` use `local-model-provider` when configured and deterministic drafting otherwise | Vitest/API plus provider-off smoke |
 | Stream prompt deck creation | `/_agent-native/prompt-deck-stream` emits draft/deck/slide/done NDJSON events while creating typed normal slides | Vitest/API plus browser smoke |
 | Rename slide | `update-slide` action | Browser flow or focused smoke |
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |
@@ -251,6 +252,14 @@ when the prompt includes an explicit snapshot id. This
 gives the embedded panel a real product-safe tool path without requiring a
 Builder.io login. Repository self-modification is still Code Mode and should go
 through the local authenticated CLI bridge or a trusted hosted frame.
+
+Prompt deck drafting can use a local OpenAI-compatible model provider through
+`apps/slides/server/local-model-provider.ts`. The provider reads `OPENAI_API_KEY`,
+`OPENAI_BASE_URL`, and `OPENAI_MODEL` from the local environment, including the
+existing `demos/.env` harness file as a fallback source. The app runtime does
+not import demo scripts. When the provider is unavailable or generation fails,
+the prompt-deck actions fall back to deterministic local drafting and still
+return typed normal-slide blocks.
 
 ### Adoption Notes
 

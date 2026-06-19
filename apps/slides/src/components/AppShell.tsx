@@ -323,6 +323,9 @@ function SlidesAppModePanel({
   const modelProtocol = localRuntimeStatus?.protocols.find(
     (protocol) => protocol.id === "local-openai-compatible-model",
   );
+  const harnessProtocol = localRuntimeStatus?.protocols.find(
+    (protocol) => protocol.id.startsWith("local-harness-") && protocol.available,
+  );
   const actionLabel =
     actionProtocol?.available && mcpProtocol?.available ? "Actions + MCP" : "Local actions";
 
@@ -335,6 +338,7 @@ function SlidesAppModePanel({
             ? `Model${modelProtocol.model ? `: ${modelProtocol.model}` : ""}`
             : "Deterministic fallback"}
         </span>
+        {harnessProtocol && <span title={harnessProtocol.endpoint ?? undefined}>Harness</span>}
       </div>
       <Suspense
         fallback={<div className="slides-agent-surface__terminal-message">Loading agent...</div>}

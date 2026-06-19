@@ -96,7 +96,7 @@ framework boundary.
 | Inline text editing | `InlineTextBlockEditor` edits selected text blocks directly on the canvas and writes markdown back to the typed block | Browser smoke, typecheck |
 | Markdown formatting controls | `MarkdownFormatToolbar` applies headings, bold, italic, quote, and bullet markdown in inline and side-panel text editors | Browser smoke, typecheck |
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
-| Multi-select editing | `SlideEditorPage` tracks primary and multi-selection state, supports modifier selection from canvas/layers, group drag, duplicate/delete selection, and keyboard nudging | Browser smoke, typecheck |
+| Multi-select editing | `SlideEditorPage` tracks primary and multi-selection state, supports modifier selection from canvas/layers, group drag, duplicate/delete selection, keyboard nudging, selection-bound alignment, and horizontal/vertical distribution | Browser smoke, typecheck |
 | Inspector arrange controls | `SlideEditorPage` aligns selected blocks and fits them to slide width/height through the same typed percentage geometry used by drag, resize, and numeric fields | Browser smoke, typecheck |
 | Inspector appearance controls | `SlideEditorPage` edits typed block appearance fields: rotation, opacity, text size/color/background/alignment/padding, image fit/radius, and shape border/text color | Vitest/API, renderer tests, typecheck |
 | Deck asset manager | `DeckAssetPanel` searches SVGL, imports deck-local SVG assets, lists imported assets with content, deletes assets, and inserts SVG assets into the manual slide canvas as image blocks | Vitest/API, browser smoke, typecheck |

@@ -207,6 +207,8 @@ editing, themed presentation playback, and HTML export.
 - Users can multi-select manual slide blocks from the canvas or layer list,
   drag the selected blocks as a group, duplicate or delete the selection, and
   nudge selected blocks with the keyboard.
+- Users can align multi-selected manual slide blocks to their shared selection
+  bounds and distribute selected blocks horizontally or vertically.
 - Text block editors include markdown formatting controls for headings, bold,
   italic, quotes, and bullet lists while preserving plain markdown storage.
 - The selected block inspector can align blocks left, center, right, top,

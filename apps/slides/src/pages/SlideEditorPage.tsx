@@ -151,6 +151,16 @@ type BlockArrangeAction =
   | "fit-height"
   | "fit-slide";
 
+type MultiBlockArrangeAction =
+  | "align-left"
+  | "align-center"
+  | "align-right"
+  | "align-top"
+  | "align-middle"
+  | "align-bottom"
+  | "distribute-horizontal"
+  | "distribute-vertical";
+
 type MarkdownFormatResult = {
   value: string;
   selectionStart: number;
@@ -192,6 +202,73 @@ function arrangeBlock(block: Block, action: BlockArrangeAction): Block {
     case "fit-slide":
       return { ...block, x: 5, y: 5, w: 90, h: 90 };
   }
+}
+
+function getSelectionBounds(blocks: Block[]) {
+  const rects = blocks.map((block) => ({ id: block.id, ...getBlockRect(block) }));
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.w));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
+  return { left, top, right, bottom, width: right - left, height: bottom - top, rects };
+}
+
+function arrangeSelectedBlocks(
+  blocks: Block[],
+  ids: string[],
+  action: MultiBlockArrangeAction,
+): Block[] {
+  const selected = new Set(ids);
+  const selectedBlocks = blocks.filter((block) => selected.has(block.id));
+  if (selectedBlocks.length < 2) return blocks;
+
+  const bounds = getSelectionBounds(selectedBlocks);
+  const patches = new Map<string, { x?: number; y?: number }>();
+
+  if (action === "distribute-horizontal" || action === "distribute-vertical") {
+    if (selectedBlocks.length < 3) return blocks;
+    const axis = action === "distribute-horizontal" ? "x" : "y";
+    const size = action === "distribute-horizontal" ? "w" : "h";
+    const sorted = [...bounds.rects].sort(
+      (a, b) => a[axis] + a[size] / 2 - (b[axis] + b[size] / 2),
+    );
+    const first = sorted[0]!;
+    const last = sorted[sorted.length - 1]!;
+    const start = first[axis] + first[size] / 2;
+    const end = last[axis] + last[size] / 2;
+    const step = (end - start) / (sorted.length - 1);
+    sorted.forEach((rect, index) => {
+      const center = start + step * index;
+      const next = clamp(center - rect[size] / 2, 0, 100 - rect[size]);
+      patches.set(rect.id, axis === "x" ? { x: next } : { y: next });
+    });
+    return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
+  }
+
+  for (const rect of bounds.rects) {
+    switch (action) {
+      case "align-left":
+        patches.set(rect.id, { x: bounds.left });
+        break;
+      case "align-center":
+        patches.set(rect.id, { x: bounds.left + (bounds.width - rect.w) / 2 });
+        break;
+      case "align-right":
+        patches.set(rect.id, { x: bounds.right - rect.w });
+        break;
+      case "align-top":
+        patches.set(rect.id, { y: bounds.top });
+        break;
+      case "align-middle":
+        patches.set(rect.id, { y: bounds.top + (bounds.height - rect.h) / 2 });
+        break;
+      case "align-bottom":
+        patches.set(rect.id, { y: bounds.bottom - rect.h });
+        break;
+    }
+  }
+
+  return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
 }
 
 export function SlideEditorPage() {
@@ -531,6 +608,10 @@ export function SlideEditorPage() {
     },
     [selectedId],
   );
+
+  const arrangeSelectedGroup = useCallback((action: MultiBlockArrangeAction, ids: string[]) => {
+    setBlocks((prev) => arrangeSelectedBlocks(prev, ids, action));
+  }, []);
 
   const duplicateBlocks = useCallback((ids: string[]) => {
     const selected = new Set(ids);
@@ -1282,6 +1363,7 @@ export function SlideEditorPage() {
             ) : selectedIds.length > 1 ? (
               <MultiSelectionPanel
                 count={selectedIds.length}
+                onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
                 onDelete={() => deleteSelectedBlocks(selectedIds)}
                 onDuplicate={() => duplicateBlocks(selectedIds)}
               />
@@ -1558,12 +1640,60 @@ const inspectorLabel: React.CSSProperties = {
   letterSpacing: "0.06em",
 };
 
+const multiAlignItems = [
+  {
+    action: "align-left" as const,
+    title: "Align left",
+    icon: <AlignHorizontalJustifyStart size={13} />,
+  },
+  {
+    action: "align-center" as const,
+    title: "Align center",
+    icon: <AlignHorizontalJustifyCenter size={13} />,
+  },
+  {
+    action: "align-right" as const,
+    title: "Align right",
+    icon: <AlignHorizontalJustifyEnd size={13} />,
+  },
+  {
+    action: "align-top" as const,
+    title: "Align top",
+    icon: <AlignVerticalJustifyStart size={13} />,
+  },
+  {
+    action: "align-middle" as const,
+    title: "Align middle",
+    icon: <AlignVerticalJustifyCenter size={13} />,
+  },
+  {
+    action: "align-bottom" as const,
+    title: "Align bottom",
+    icon: <AlignVerticalJustifyEnd size={13} />,
+  },
+];
+
+const multiDistributeItems = [
+  {
+    action: "distribute-horizontal" as const,
+    title: "Distribute horizontally",
+    icon: <StretchHorizontal size={13} />,
+  },
+  {
+    action: "distribute-vertical" as const,
+    title: "Distribute vertically",
+    icon: <StretchVertical size={13} />,
+  },
+];
+
 function MultiSelectionPanel({
   count,
+  onArrange,
   onDelete,
   onDuplicate,
 }: {
   count: number;
+  onArrange: (action: MultiBlockArrangeAction) => void;
   onDelete: () => void;
   onDuplicate: () => void;
 }) {
@@ -1591,12 +1721,43 @@ function MultiSelectionPanel({
         {count} selected
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <button type="button" onClick={onDuplicate} style={arrangeButton}>
+        <button type="button" title="Duplicate" onClick={onDuplicate} style={arrangeButton}>
           <Copy size={13} />
         </button>
-        <button type="button" onClick={onDelete} style={{ ...arrangeButton, color: "#ff8a8a" }}>
+        <button
+          type="button"
+          title="Delete"
+          onClick={onDelete}
+          style={{ ...arrangeButton, color: "#ff8a8a" }}
+        >
           <Trash2 size={13} />
         </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {multiAlignItems.map((item) => (
+          <button
+            key={item.action}
+            type="button"
+            title={item.title}
+            onClick={() => onArrange(item.action)}
+            style={arrangeButton}
+          >
+            {item.icon}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {multiDistributeItems.map((item) => (
+          <button
+            key={item.action}
+            type="button"
+            title={item.title}
+            onClick={() => onArrange(item.action)}
+            style={arrangeButton}
+          >
+            {item.icon}
+          </button>
+        ))}
       </div>
     </div>
   );

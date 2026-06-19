@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AgentTerminal, AssistantChat, agentNativePath } from "@agent-native/core/client";
+import { agentNativePath } from "@agent-native/core/client/api-path";
 import type { AgentChatRuntime } from "@agent-native/core/client/chat";
 import {
   LayoutDashboard,
@@ -14,6 +14,18 @@ import { createSlidesAppAgentRuntime } from "@/agent/appAgentRuntime";
 import { applyAppTheme } from "@/lib/appTheme";
 import { THEME_NAMES, type ThemeName } from "@/types";
 import { APP_AGENT_SUGGESTIONS } from "../../shared/app-agent-manifest";
+
+const AssistantChat = lazy(() =>
+  import("@agent-native/core/client/chat").then((module) => ({
+    default: module.AssistantChat,
+  })),
+);
+
+const AgentTerminal = lazy(() =>
+  import("@agent-native/core/terminal").then((module) => ({
+    default: module.AgentTerminal,
+  })),
+);
 
 const navItems = [
   { label: "Decks", to: "/", icon: LayoutDashboard },
@@ -324,16 +336,20 @@ function SlidesAppModePanel({
             : "Deterministic fallback"}
         </span>
       </div>
-      <AssistantChat
-        runtime={runtime}
-        emptyStateText="Ask about this deck"
-        suggestions={suggestions}
-        dynamicSuggestions={false}
-        providerStatusChecksEnabled={false}
-        plusMenuMode="hidden"
-        showHeader={false}
-        className="slides-agent-surface__chat"
-      />
+      <Suspense
+        fallback={<div className="slides-agent-surface__terminal-message">Loading agent...</div>}
+      >
+        <AssistantChat
+          runtime={runtime}
+          emptyStateText="Ask about this deck"
+          suggestions={suggestions}
+          dynamicSuggestions={false}
+          providerStatusChecksEnabled={false}
+          plusMenuMode="hidden"
+          showHeader={false}
+          className="slides-agent-surface__chat"
+        />
+      </Suspense>
     </div>
   );
 }
@@ -420,13 +436,19 @@ function SlidesAgentSurface({
           {terminalInfo === null ? (
             <div className="slides-agent-surface__terminal-message">Starting local CLI...</div>
           ) : terminalInfo.available && terminalWsUrl ? (
-            <AgentTerminal
-              command={terminalInfo.command}
-              wsUrl={terminalWsUrl}
-              hideInFrame={false}
-              className="slides-agent-surface__terminal-frame"
-              onConnectionChange={setTerminalConnected}
-            />
+            <Suspense
+              fallback={
+                <div className="slides-agent-surface__terminal-message">Starting local CLI...</div>
+              }
+            >
+              <AgentTerminal
+                command={terminalInfo.command}
+                wsUrl={terminalWsUrl}
+                hideInFrame={false}
+                className="slides-agent-surface__terminal-frame"
+                onConnectionChange={setTerminalConnected}
+              />
+            </Suspense>
           ) : (
             <div className="slides-agent-surface__terminal-message">
               {terminalUnavailableMessage}

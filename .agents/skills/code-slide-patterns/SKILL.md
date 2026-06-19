@@ -27,6 +27,20 @@ Use this after `slide-authoring` whenever a slide is implemented as React code u
 - `09-appendix`: clickable flowchart appendix.
 - `10-word-dimensions`: tabbed interactive mini-app for embeddings, similarity, and word arithmetic.
 
+## Progressive Explanation
+
+For multistep or complex ideas, split the teaching arc across multiple slides rather than packing every step into one dense artifact.
+
+Preferred sequence:
+
+- orient with a plain-language frame or title;
+- introduce the core mechanism with a minimal diagram;
+- make the mechanism interactive or concrete with a mini-app, simulator, chart, or walkthrough;
+- reveal edge cases, limits, or adjacent concepts;
+- end with a recap, implication, or next action.
+
+This is how the current LLM slides work: concepts like regression, context, tool use, browser control, workspace setup, and word dimensions are treated as a sequence of teachable moments, not a single summary page.
+
 ## Visual Language
 
 - Default visual system is dark, precise, and technical: `T.bg`, `T.surface`, `T.border`, `T.text`, `T.textDim`, `T.accent`, `T.highlight`.

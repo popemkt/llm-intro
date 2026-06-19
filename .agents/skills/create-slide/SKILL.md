@@ -37,6 +37,8 @@ Mixed decks are allowed.
 
 ## 3. Plan The Deck
 
+For multistep or complex concepts, prefer a progressive explanation across multiple slides instead of one overloaded slide. Use the existing LLM intro deck as the pattern: first build intuition, then isolate the mechanism, then add interactivity or examples, then close with implications.
+
 Draft page roles before implementation:
 
 - cover;

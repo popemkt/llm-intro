@@ -407,7 +407,21 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
   });
 }
 
-function createDeckResource(deck: unknown) {
+type FrameworkResource = {
+  id: string;
+  uri: string;
+  type: "deck" | "slide" | "group";
+  name: string;
+  title: string;
+  parentId?: string;
+  metadata: Record<string, unknown>;
+};
+
+function isFrameworkResource(resource: FrameworkResource | null): resource is FrameworkResource {
+  return resource !== null;
+}
+
+function createDeckResource(deck: unknown): FrameworkResource | null {
   if (!deck || typeof deck !== "object" || !("id" in deck)) return null;
   const id = Number(deck.id);
   if (!Number.isInteger(id) || id <= 0) return null;
@@ -436,21 +450,105 @@ function createDeckResource(deck: unknown) {
   };
 }
 
-async function listDeckResources(actions: SlideDeckActions | undefined) {
-  const decks = await runFrameworkAction(actions, "list-decks", {});
-  if (!Array.isArray(decks)) return [];
-  return decks.map(createDeckResource).filter((resource) => resource !== null);
+function createSlideResource(deckId: number, slide: unknown): FrameworkResource | null {
+  if (!slide || typeof slide !== "object" || !("id" in slide)) return null;
+  const id = Number(slide.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const title = "title" in slide && typeof slide.title === "string" ? slide.title : `Slide ${id}`;
+  const kind = "kind" in slide && typeof slide.kind === "string" ? slide.kind : "db";
+
+  return {
+    id: `slide:${deckId}:${id}`,
+    uri: `slides://deck/${deckId}/slide/${id}`,
+    type: "slide",
+    name: title,
+    title,
+    parentId: `deck:${deckId}`,
+    metadata: {
+      deckId,
+      slideId: id,
+      kind,
+      actions: {
+        open: {
+          action: "navigate-app",
+          input: { view: "slide-editor", deckId, slideId: id },
+        },
+      },
+    },
+  };
 }
 
-function resourceTree(resources: Awaited<ReturnType<typeof listDeckResources>>) {
+function createGroupResource(deckId: number, group: unknown): FrameworkResource | null {
+  if (!group || typeof group !== "object" || !("id" in group)) return null;
+  const id = Number(group.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const title = "title" in group && typeof group.title === "string" ? group.title : `Group ${id}`;
+
+  return {
+    id: `group:${deckId}:${id}`,
+    uri: `slides://deck/${deckId}/group/${id}`,
+    type: "group",
+    name: title,
+    title,
+    parentId: `deck:${deckId}`,
+    metadata: {
+      deckId,
+      groupId: id,
+      actions: {
+        update: "update-group",
+      },
+    },
+  };
+}
+
+async function listWorkspaceResources(actions: SlideDeckActions | undefined) {
+  const decks = await runFrameworkAction(actions, "list-decks", {});
+  if (!Array.isArray(decks)) return [];
+  const resources: FrameworkResource[] = [];
+
+  for (const deck of decks) {
+    const deckResource = createDeckResource(deck);
+    if (!deckResource) continue;
+    resources.push(deckResource);
+
+    const deckId = Number(deckResource.metadata.deckId);
+    const groups = await runFrameworkAction(actions, "list-groups", { pid: deckId });
+    if (Array.isArray(groups)) {
+      resources.push(
+        ...groups.map((group) => createGroupResource(deckId, group)).filter(isFrameworkResource),
+      );
+    }
+
+    const slides = await runFrameworkAction(actions, "list-slides", { pid: deckId });
+    if (Array.isArray(slides)) {
+      resources.push(
+        ...slides.map((slide) => createSlideResource(deckId, slide)).filter(isFrameworkResource),
+      );
+    }
+  }
+
+  return resources;
+}
+
+function resourceTree(resources: Awaited<ReturnType<typeof listWorkspaceResources>>) {
+  const deckResources = resources.filter((resource) => resource.type === "deck");
   return [
     {
       id: "slides",
       type: "collection",
       name: "Slides",
       title: "Slides",
-      children: resources.map((resource) => resource.id),
+      children: deckResources.map((resource) => resource.id),
     },
+    ...deckResources.map((deck) => ({
+      id: deck.id,
+      type: "deck",
+      name: deck.name,
+      title: deck.title,
+      children: resources
+        .filter((resource) => resource.parentId === deck.id)
+        .map((resource) => resource.id),
+    })),
   ];
 }
 
@@ -490,7 +588,7 @@ function createFrameworkMcpTools(actions: SlideDeckActions | undefined) {
 function registerFrameworkResourceRoutes(router: Router, options: { actions?: SlideDeckActions }) {
   router.get("/resources/tree", async (_req, res, next) => {
     try {
-      const resources = await listDeckResources(options.actions);
+      const resources = await listWorkspaceResources(options.actions);
       res.json({ items: resources, resources, tree: resourceTree(resources) });
     } catch (err) {
       next(err);
@@ -499,7 +597,7 @@ function registerFrameworkResourceRoutes(router: Router, options: { actions?: Sl
 
   router.get("/resources", async (_req, res, next) => {
     try {
-      const resources = await listDeckResources(options.actions);
+      const resources = await listWorkspaceResources(options.actions);
       res.json({ resources });
     } catch (err) {
       next(err);

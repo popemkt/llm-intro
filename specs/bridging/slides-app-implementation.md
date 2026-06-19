@@ -190,9 +190,10 @@ server-side terminal policy.
 capabilities for framework shells. The frontend imports the same shared
 manifest for starter suggestions so the UI and protocol surface stay aligned.
 `GET /_agent-native/resources` and `GET /_agent-native/resources/tree` expose
-local decks as `slides://deck/:id` resources with product-safe action URLs for
-reading deck data, listing slides/groups, and opening the deck through
-`navigate-app`; they do not expose filesystem paths.
+local decks, slides, and groups as `slides://...` resources with product-safe
+action/navigation metadata for reading deck data, listing slides/groups, and
+opening decks/slides through `navigate-app`; they do not expose filesystem
+paths.
 `GET /_agent-native/mcp/servers` advertises the local `slides-actions` MCP
 server, and `GET /_agent-native/mcp/builtin` lists the same public action tools
 that `/_agent-native/actions/mcp` can invoke.

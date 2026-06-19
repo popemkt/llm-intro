@@ -132,9 +132,9 @@ editing, themed presentation playback, and HTML export.
 - Local App Mode exposes a manifest and compact capabilities endpoint so shells
   can discover prompt families, starter suggestions, local-only tool boundaries,
   and action protocol URLs without relying on hard-coded UI copy.
-- Framework resource probes expose local deck resources and product-safe action
-  URLs, not filesystem paths, so shells can render app context inside the App
-  Mode permission boundary.
+- Framework resource probes expose local deck, slide, and group resources with
+  product-safe action/navigation metadata, not filesystem paths, so shells can
+  render app context inside the App Mode permission boundary.
 - Framework MCP probes advertise the local slides action server and its
   product-safe tools while keeping invocation on the existing
   `/_agent-native/actions/mcp` route.

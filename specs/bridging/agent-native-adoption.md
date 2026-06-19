@@ -17,7 +17,7 @@ Reference documentation:
 - App source now lives under `apps/slides`, so the Nx app boundary matches
   Agent-Native template shape.
 - The React root uses Agent-Native's shared `AppProviders`.
-- The app uses `createAgentNativeQueryClient()` so future action hooks share the
+- The app uses `createAgentNativeQueryClient()` so action hooks share the
   framework's cache defaults.
 - Agent-Native global styles are loaded with an explicit token bridge in
   `themes.css`. Existing app and slide theme variables remain authoritative;
@@ -71,8 +71,10 @@ Reference documentation:
 
 Agent-Native's Slides template exposes deck operations as actions mounted under
 `/_agent-native/actions/:name`, with UI code using `useActionQuery`,
-`useActionMutation`, or `callAction`. This app still uses `/api/*` REST routes
-for now. The migration should replace one workflow at a time:
+`useActionMutation`, or `callAction`. This app now routes the main deck, slide,
+group, snapshot, theme, prompt-deck, import/export, and app-context workflows
+through that action surface. Legacy `/api/*` routes remain for compatibility and
+file download/export behavior.
 
 | Current workflow | Target Agent-Native action shape |
 |---|---|

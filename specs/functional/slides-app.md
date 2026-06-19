@@ -132,6 +132,9 @@ editing, themed presentation playback, and HTML export.
 - Framework resource probes expose local deck resources and product-safe action
   URLs, not filesystem paths, so shells can render app context inside the App
   Mode permission boundary.
+- Framework MCP probes advertise the local slides action server and its
+  product-safe tools while keeping invocation on the existing
+  `/_agent-native/actions/mcp` route.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

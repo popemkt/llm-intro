@@ -191,6 +191,9 @@ manifest for starter suggestions so the UI and protocol surface stay aligned.
 local decks as `slides://deck/:id` resources with product-safe action URLs for
 reading deck data, listing slides/groups, and opening the deck through
 `navigate-app`; they do not expose filesystem paths.
+`GET /_agent-native/mcp/servers` advertises the local `slides-actions` MCP
+server, and `GET /_agent-native/mcp/builtin` lists the same public action tools
+that `/_agent-native/actions/mcp` can invoke.
 
 ### App Mode And Code Mode
 

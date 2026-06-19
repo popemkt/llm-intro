@@ -439,6 +439,39 @@ function resourceTree(resources: Awaited<ReturnType<typeof listDeckResources>>) 
   ];
 }
 
+type FrameworkActionMetadata = {
+  tool?: {
+    description?: string;
+    parameters?: unknown;
+  };
+  publicAgent?: {
+    expose?: boolean;
+    title?: string;
+    description?: string;
+  };
+  agentTool?: boolean;
+  readOnly?: boolean;
+};
+
+function createFrameworkMcpTools(actions: SlideDeckActions | undefined) {
+  return Object.entries(actions ?? {})
+    .filter(([, action]) => {
+      const metadata = action as FrameworkActionMetadata;
+      return metadata.agentTool !== false && metadata.publicAgent?.expose !== false;
+    })
+    .map(([name, action]) => {
+      const metadata = action as FrameworkActionMetadata;
+      return {
+        name,
+        title: metadata.publicAgent?.title ?? name,
+        description: metadata.publicAgent?.description ?? metadata.tool?.description ?? "",
+        inputSchema: metadata.tool?.parameters ?? { type: "object", properties: {} },
+        readOnly: metadata.readOnly ?? false,
+        server: "slides-actions",
+      };
+    });
+}
+
 function registerFrameworkResourceRoutes(router: Router, options: { actions?: SlideDeckActions }) {
   router.get("/resources/tree", async (_req, res, next) => {
     try {
@@ -459,10 +492,22 @@ function registerFrameworkResourceRoutes(router: Router, options: { actions?: Sl
   });
 
   router.get("/mcp/servers", (_req, res) => {
-    res.json({ servers: [] });
+    const tools = createFrameworkMcpTools(options.actions);
+    res.json({
+      servers: [
+        {
+          id: "slides-actions",
+          name: "Slides Actions",
+          transport: "http",
+          url: "/_agent-native/actions/mcp",
+          hosted: false,
+          toolCount: tools.length,
+        },
+      ],
+    });
   });
 
   router.get("/mcp/builtin", (_req, res) => {
-    res.json({ tools: [] });
+    res.json({ tools: createFrameworkMcpTools(options.actions) });
   });
 }

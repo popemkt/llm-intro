@@ -566,11 +566,25 @@ describe("Agent Native resource and app-state probes", () => {
     });
     await expect(request(app).get("/_agent-native/mcp/servers")).resolves.toMatchObject({
       status: 200,
-      body: { servers: [] },
+      body: {
+        servers: [
+          expect.objectContaining({
+            id: "slides-actions",
+            transport: "http",
+            url: "/_agent-native/actions/mcp",
+            hosted: false,
+          }),
+        ],
+      },
     });
     await expect(request(app).get("/_agent-native/mcp/builtin")).resolves.toMatchObject({
       status: 200,
-      body: { tools: [] },
+      body: {
+        tools: expect.arrayContaining([
+          expect.objectContaining({ name: "list-decks", server: "slides-actions" }),
+          expect.objectContaining({ name: "create-normal-slide", server: "slides-actions" }),
+        ]),
+      },
     });
   });
 

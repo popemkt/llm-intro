@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import type { Server } from "node:http";
+import type { IncomingMessage, Server } from "node:http";
 import type { IPty } from "node-pty";
 import { WebSocketServer, WebSocket } from "ws";
 import { CLI_REGISTRY, commandExists, isAllowedCommand } from "@agent-native/core/terminal/server";
@@ -19,6 +19,8 @@ type LocalPtyServerOptions = {
   port?: number;
   logPrefix?: string;
 };
+
+type PtyModule = typeof import("node-pty");
 
 const shellMetacharacters = /[;&|`$(){}\n\r<>]/;
 
@@ -58,6 +60,107 @@ async function resolveSpawn(command: string, extraFlags: string) {
   return { file: "npx", args: ["--yes", registry.installPackage, ...flags] };
 }
 
+function createPtyEnv(command: string) {
+  const registry = CLI_REGISTRY[command];
+  const env: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
+    ),
+    TERM: "xterm-256color",
+  };
+  for (const key of registry?.stripEnv ?? []) delete env[key];
+  return env;
+}
+
+function handleTerminalMessage(ws: WebSocket, ptyProcess: IPty, data: WebSocket.RawData) {
+  const value = typeof data === "string" ? data : data.toString();
+  try {
+    const message = JSON.parse(value) as { type?: string; cols?: unknown; rows?: unknown };
+    if (message.type === "resize") {
+      const cols = Math.max(1, Math.trunc(Number(message.cols)));
+      const rows = Math.max(1, Math.trunc(Number(message.rows)));
+      if (Number.isFinite(cols) && Number.isFinite(rows)) ptyProcess.resize(cols, rows);
+      return;
+    }
+  } catch {
+    // Plain terminal input.
+  }
+  ptyProcess.write(value);
+}
+
+function attachPtyProcess(
+  ws: WebSocket,
+  ptyProcess: IPty,
+  activePtys: Set<IPty>,
+  logPrefix: string,
+) {
+  activePtys.add(ptyProcess);
+  ptyProcess.onData((data) => {
+    if (ws.readyState === WebSocket.OPEN) ws.send(data);
+  });
+  ptyProcess.onExit(({ exitCode }) => {
+    console.log(`${logPrefix} PTY exited with code ${exitCode}`);
+    activePtys.delete(ptyProcess);
+    if (ws.readyState === WebSocket.OPEN) ws.close();
+  });
+  ws.on("message", (data) => handleTerminalMessage(ws, ptyProcess, data));
+  ws.on("close", () => {
+    activePtys.delete(ptyProcess);
+    killProcessTree(ptyProcess.pid);
+  });
+}
+
+async function handlePtyConnection(options: {
+  ws: WebSocket;
+  req: IncomingMessage;
+  pty: PtyModule;
+  defaultCommand: string;
+  resolvedAppDir: string;
+  activePtys: Set<IPty>;
+  logPrefix: string;
+}) {
+  const { ws, req, pty, defaultCommand, resolvedAppDir, activePtys, logPrefix } = options;
+  const url = new URL(req.url || "", `http://${req.headers.host}`);
+  const command = url.searchParams.get("command") || defaultCommand;
+  const extraFlags = url.searchParams.get("flags") || "";
+
+  if (!isAllowedCommand(command)) {
+    sendStatus(ws, "not-found", `"${command}" is not a recognized CLI.`);
+    ws.close();
+    return;
+  }
+  if (extraFlags && shellMetacharacters.test(extraFlags)) {
+    sendStatus(ws, "failed", "Invalid flags: shell metacharacters are not allowed.");
+    ws.close();
+    return;
+  }
+
+  const spawnTarget = await resolveSpawn(command, extraFlags);
+  if (!spawnTarget) {
+    sendStatus(ws, "not-found", `"${command}" not found on PATH.`);
+    ws.close();
+    return;
+  }
+
+  try {
+    console.log(`${logPrefix} Spawning PTY directly: ${spawnTarget.file}`);
+    const ptyProcess = pty.spawn(spawnTarget.file, spawnTarget.args, {
+      name: "xterm-256color",
+      cols: 120,
+      rows: 40,
+      cwd: resolvedAppDir,
+      env: createPtyEnv(command),
+    });
+    attachPtyProcess(ws, ptyProcess, activePtys, logPrefix);
+  } catch (error) {
+    console.error(`${logPrefix} Failed to spawn PTY:`, error);
+    sendStatus(ws, "failed", `Failed to spawn ${command}.`);
+    ws.close();
+  }
+}
+
 export async function createLocalPtyWebSocketServer(
   options: LocalPtyServerOptions = {},
 ): Promise<LocalPtyServerResult> {
@@ -93,83 +196,14 @@ export async function createLocalPtyWebSocketServer(
   });
 
   wss.on("connection", async (ws, req) => {
-    const url = new URL(req.url || "", `http://${req.headers.host}`);
-    const command = url.searchParams.get("command") || defaultCommand;
-    const extraFlags = url.searchParams.get("flags") || "";
-
-    if (!isAllowedCommand(command)) {
-      sendStatus(ws, "not-found", `"${command}" is not a recognized CLI.`);
-      ws.close();
-      return;
-    }
-    if (extraFlags && shellMetacharacters.test(extraFlags)) {
-      sendStatus(ws, "failed", "Invalid flags: shell metacharacters are not allowed.");
-      ws.close();
-      return;
-    }
-
-    const spawnTarget = await resolveSpawn(command, extraFlags);
-    if (!spawnTarget) {
-      sendStatus(ws, "not-found", `"${command}" not found on PATH.`);
-      ws.close();
-      return;
-    }
-
-    const registry = CLI_REGISTRY[command];
-    const env: Record<string, string> = {
-      ...Object.fromEntries(
-        Object.entries(process.env).filter(
-          (entry): entry is [string, string] => typeof entry[1] === "string",
-        ),
-      ),
-      TERM: "xterm-256color",
-    };
-    for (const key of registry?.stripEnv ?? []) delete env[key];
-
-    let ptyProcess: IPty;
-    try {
-      console.log(`${logPrefix} Spawning PTY directly: ${spawnTarget.file}`);
-      ptyProcess = pty.spawn(spawnTarget.file, spawnTarget.args, {
-        name: "xterm-256color",
-        cols: 120,
-        rows: 40,
-        cwd: resolvedAppDir,
-        env,
-      });
-    } catch (error) {
-      console.error(`${logPrefix} Failed to spawn PTY:`, error);
-      sendStatus(ws, "failed", `Failed to spawn ${command}.`);
-      ws.close();
-      return;
-    }
-
-    activePtys.add(ptyProcess);
-    ptyProcess.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(data);
-    });
-    ptyProcess.onExit(({ exitCode }) => {
-      console.log(`${logPrefix} PTY exited with code ${exitCode}`);
-      activePtys.delete(ptyProcess);
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-    });
-    ws.on("message", (data) => {
-      const value = typeof data === "string" ? data : data.toString();
-      try {
-        const message = JSON.parse(value) as { type?: string; cols?: unknown; rows?: unknown };
-        if (message.type === "resize") {
-          const cols = Math.max(1, Math.trunc(Number(message.cols)));
-          const rows = Math.max(1, Math.trunc(Number(message.rows)));
-          if (Number.isFinite(cols) && Number.isFinite(rows)) ptyProcess.resize(cols, rows);
-          return;
-        }
-      } catch {
-        // Plain terminal input.
-      }
-      ptyProcess.write(value);
-    });
-    ws.on("close", () => {
-      activePtys.delete(ptyProcess);
-      killProcessTree(ptyProcess.pid);
+    await handlePtyConnection({
+      ws,
+      req,
+      pty,
+      defaultCommand,
+      resolvedAppDir,
+      activePtys,
+      logPrefix,
     });
   });
 

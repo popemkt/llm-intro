@@ -371,6 +371,53 @@ describe("Manual slide actions", () => {
     expect(deleted.status).toBe(200);
     expect(deleted.body.blocks).toEqual([expect.objectContaining({ id: "title" })]);
   });
+
+  it("manual arrange actions align, distribute, duplicate, and reorder blocks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Arrange Blocks",
+          blocks: [
+            { id: "a", type: "text", markdown: "A", x: 10, y: 10, w: 10, h: 10 },
+            { id: "b", type: "text", markdown: "B", x: 35, y: 20, w: 10, h: 10 },
+            { id: "c", type: "text", markdown: "C", x: 80, y: 30, w: 10, h: 10 },
+          ],
+        })
+    ).body;
+
+    const aligned = await request(app)
+      .put("/_agent-native/actions/arrange-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["a", "b", "c"], action: "align-top" });
+    expect(aligned.status).toBe(200);
+    expect(aligned.body.blocks.map((block: { y: number }) => block.y)).toEqual([10, 10, 10]);
+
+    const distributed = await request(app)
+      .put("/_agent-native/actions/arrange-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        blockIds: ["a", "b", "c"],
+        action: "distribute-horizontal",
+      });
+    expect(distributed.status).toBe(200);
+    expect(distributed.body.blocks.map((block: { x: number }) => block.x)).toEqual([10, 45, 80]);
+
+    const duplicated = await request(app)
+      .post("/_agent-native/actions/duplicate-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["b"], offsetX: 4, offsetY: 5 });
+    expect(duplicated.status).toBe(200);
+    const copy = duplicated.body.blocks[2];
+    expect(copy).toMatchObject({ markdown: "B", x: 49, y: 15 });
+    expect(copy.id).not.toBe("b");
+
+    const layered = await request(app)
+      .put("/_agent-native/actions/move-manual-block-layer")
+      .send({ pid, sid: slide.id, blockIds: ["a"], direction: "front" });
+    expect(layered.status).toBe(200);
+    expect(layered.body.blocks.at(-1)).toMatchObject({ id: "a" });
+  });
 });
 
 describe("Deck asset actions", () => {

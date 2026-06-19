@@ -193,6 +193,10 @@ editing, themed presentation playback, and HTML export.
 - Agents can refine manual slides without replacing the whole block array via
   `add-manual-block`, `update-manual-block`, `delete-manual-block`,
   `group-manual-blocks`, and `ungroup-manual-blocks`.
+- Agents can perform PowerPoint-style manual layout operations via
+  `arrange-manual-blocks`, `duplicate-manual-blocks`, and
+  `move-manual-block-layer`, including multi-block alignment/distribution,
+  block duplication with fresh ids, and layer stack changes.
 - Agents can create full-canvas HTML slides through `create-html-slide` by
   providing authored HTML/CSS/JS source.
 - Users can create a new deck from Home in either blank mode or outline mode.

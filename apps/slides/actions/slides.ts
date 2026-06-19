@@ -14,9 +14,43 @@ import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slid
 import { z } from "zod";
 
 type SlidesService = ReturnType<typeof createSlidesService>;
+type RectPercent = { h: number; w: number; x: number; y: number };
+type ManualArrangeAction =
+  | "align-left"
+  | "align-center"
+  | "align-right"
+  | "align-top"
+  | "align-middle"
+  | "align-bottom"
+  | "distribute-horizontal"
+  | "distribute-vertical"
+  | "fit-width"
+  | "fit-height"
+  | "fit-slide";
+type ManualLayerDirection = "forward" | "backward" | "front" | "back";
 
 const blockInput = z.record(z.string(), z.unknown());
 const transitionInput = z.record(z.string(), z.unknown()).nullable();
+const manualArrangeActions = [
+  "align-left",
+  "align-center",
+  "align-right",
+  "align-top",
+  "align-middle",
+  "align-bottom",
+  "distribute-horizontal",
+  "distribute-vertical",
+  "fit-width",
+  "fit-height",
+  "fit-slide",
+] as const;
+const manualLayerDirections = ["forward", "backward", "front", "back"] as const;
+const blockDefaults: Record<Block["type"], RectPercent> = {
+  text: { x: 5, y: 5, w: 90, h: 30 },
+  image: { x: 10, y: 12, w: 80, h: 70 },
+  iframe: { x: 5, y: 5, w: 90, h: 88 },
+  shape: { x: 30, y: 30, w: 40, h: 30 },
+};
 const publicReadAction = { expose: true, readOnly: true, requiresAuth: false };
 const publicWriteAction = {
   expose: true,
@@ -46,6 +80,186 @@ function parseOneBlock(input: unknown) {
   const block = blocks?.[0];
   if (!block) throw new AppError(400, "block is required");
   return block;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function blockRect(block: Block): RectPercent {
+  const defaults = blockDefaults[block.type];
+  return {
+    x: block.x ?? defaults.x,
+    y: block.y ?? defaults.y,
+    w: block.w ?? defaults.w,
+    h: block.h ?? defaults.h,
+  };
+}
+
+function selectionBounds(blocks: Block[]) {
+  const rects = blocks.map((block) => ({ id: block.id, ...blockRect(block) }));
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.w));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
+  return { bottom, height: bottom - top, left, rects, right, top, width: right - left };
+}
+
+function assertBlockIdsExist(blocks: Block[], blockIds: string[]) {
+  const ids = new Set(blocks.map((block) => block.id));
+  const missing = blockIds.filter((id) => !ids.has(id));
+  if (missing.length > 0) throw new AppError(404, `block not found: ${missing[0]}`);
+}
+
+function arrangeOneBlock(block: Block, action: ManualArrangeAction): Block {
+  const rect = blockRect(block);
+  const maxX = Math.max(0, 100 - rect.w);
+  const maxY = Math.max(0, 100 - rect.h);
+  switch (action) {
+    case "align-left":
+      return { ...block, x: 0 };
+    case "align-center":
+      return { ...block, x: clamp((100 - rect.w) / 2, 0, maxX) };
+    case "align-right":
+      return { ...block, x: maxX };
+    case "align-top":
+      return { ...block, y: 0 };
+    case "align-middle":
+      return { ...block, y: clamp((100 - rect.h) / 2, 0, maxY) };
+    case "align-bottom":
+      return { ...block, y: maxY };
+    case "fit-width":
+      return { ...block, x: 5, w: 90 };
+    case "fit-height":
+      return { ...block, y: 5, h: 90 };
+    case "fit-slide":
+      return { ...block, x: 5, y: 5, w: 90, h: 90 };
+    case "distribute-horizontal":
+    case "distribute-vertical":
+      return block;
+  }
+}
+
+function arrangeManualBlocks(blocks: Block[], blockIds: string[], action: ManualArrangeAction) {
+  const selected = new Set(blockIds);
+  const selectedBlocks = blocks.filter((block) => selected.has(block.id));
+  if (selectedBlocks.length === 0) return blocks;
+  if (
+    action === "fit-width" ||
+    action === "fit-height" ||
+    action === "fit-slide" ||
+    selectedBlocks.length === 1
+  ) {
+    return blocks.map((block) => (selected.has(block.id) ? arrangeOneBlock(block, action) : block));
+  }
+  if (action === "distribute-horizontal" || action === "distribute-vertical") {
+    if (selectedBlocks.length < 3) {
+      throw new AppError(400, "distribute actions require at least three blocks");
+    }
+    return distributeManualBlocks(blocks, selectedBlocks, action);
+  }
+
+  const bounds = selectionBounds(selectedBlocks);
+  const patches = new Map<string, { x?: number; y?: number }>();
+  for (const rect of bounds.rects) {
+    if (action === "align-left") patches.set(rect.id, { x: bounds.left });
+    if (action === "align-center")
+      patches.set(rect.id, { x: bounds.left + (bounds.width - rect.w) / 2 });
+    if (action === "align-right") patches.set(rect.id, { x: bounds.right - rect.w });
+    if (action === "align-top") patches.set(rect.id, { y: bounds.top });
+    if (action === "align-middle")
+      patches.set(rect.id, { y: bounds.top + (bounds.height - rect.h) / 2 });
+    if (action === "align-bottom") patches.set(rect.id, { y: bounds.bottom - rect.h });
+  }
+  return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
+}
+
+function distributeManualBlocks(
+  blocks: Block[],
+  selectedBlocks: Block[],
+  action: "distribute-horizontal" | "distribute-vertical",
+) {
+  const axis = action === "distribute-horizontal" ? "x" : "y";
+  const size = action === "distribute-horizontal" ? "w" : "h";
+  const rects = selectedBlocks.map((block) => ({ id: block.id, ...blockRect(block) }));
+  const sorted = rects.sort((a, b) => a[axis] + a[size] / 2 - (b[axis] + b[size] / 2));
+  const first = sorted[0]!;
+  const last = sorted[sorted.length - 1]!;
+  const start = first[axis] + first[size] / 2;
+  const end = last[axis] + last[size] / 2;
+  const step = (end - start) / (sorted.length - 1);
+  const patches = new Map<string, { x?: number; y?: number }>();
+  sorted.forEach((rect, index) => {
+    const center = start + step * index;
+    const next = clamp(center - rect[size] / 2, 0, 100 - rect[size]);
+    patches.set(rect.id, axis === "x" ? { x: next } : { y: next });
+  });
+  return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
+}
+
+function duplicateManualBlocks(
+  blocks: Block[],
+  blockIds: string[],
+  offsetX: number,
+  offsetY: number,
+) {
+  const selected = new Set(blockIds);
+  const groupIdCopies = new Map<string, string>();
+  const copies = blocks
+    .filter((block) => selected.has(block.id))
+    .map((source) => {
+      const rect = blockRect(source);
+      const nextGroupId = source.groupId
+        ? (groupIdCopies.get(source.groupId) ?? `group-${nanoid(8)}`)
+        : undefined;
+      if (source.groupId && nextGroupId) groupIdCopies.set(source.groupId, nextGroupId);
+      return {
+        copy: {
+          ...source,
+          id: nanoid(),
+          groupId: nextGroupId,
+          x: clamp(rect.x + offsetX, 0, 100 - rect.w),
+          y: clamp(rect.y + offsetY, 0, 100 - rect.h),
+        } as Block,
+        sourceId: source.id,
+      };
+    });
+  const copiesBySource = new Map(copies.map((entry) => [entry.sourceId, entry.copy]));
+  const next: Block[] = [];
+  for (const block of blocks) {
+    next.push(block);
+    const copy = copiesBySource.get(block.id);
+    if (copy) next.push(copy);
+  }
+  return next;
+}
+
+function moveManualBlockLayer(
+  blocks: Block[],
+  blockIds: string[],
+  direction: ManualLayerDirection,
+) {
+  const selected = new Set(blockIds);
+  const selectedBlocks = blocks.filter((block) => selected.has(block.id));
+  const remaining = blocks.filter((block) => !selected.has(block.id));
+  if (direction === "front") return [...remaining, ...selectedBlocks];
+  if (direction === "back") return [...selectedBlocks, ...remaining];
+
+  const next = [...blocks];
+  if (direction === "forward") {
+    for (let index = next.length - 2; index >= 0; index -= 1) {
+      if (selected.has(next[index]!.id) && !selected.has(next[index + 1]!.id)) {
+        [next[index], next[index + 1]] = [next[index + 1]!, next[index]!];
+      }
+    }
+  } else {
+    for (let index = 1; index < next.length; index += 1) {
+      if (selected.has(next[index]!.id) && !selected.has(next[index - 1]!.id)) {
+        [next[index - 1], next[index]] = [next[index]!, next[index - 1]!];
+      }
+    }
+  }
+  return next;
 }
 
 function createListSlidesAction(slidesService: SlidesService) {
@@ -339,6 +553,94 @@ function createUngroupManualBlocksAction(slidesService: SlidesService) {
   });
 }
 
+function createArrangeManualBlocksAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Align, distribute, or fit manual slide blocks on the normalized canvas.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      blockIds: z.array(z.string().min(1)).min(1),
+      action: z.enum(manualArrangeActions),
+    }),
+    http: { method: "PUT", path: "arrange-manual-blocks" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Arrange manual blocks",
+      description: "Align, distribute, or fit manual slide blocks on the normalized canvas.",
+    },
+    run: ({ pid, sid, blockIds, action }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      return updateManualSlideBlocks(
+        slidesService,
+        pid,
+        sid,
+        arrangeManualBlocks(slide.blocks, blockIds, action),
+      );
+    },
+  });
+}
+
+function createDuplicateManualBlocksAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Duplicate existing manual slide blocks with fresh block ids.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      blockIds: z.array(z.string().min(1)).min(1),
+      offsetX: z.coerce.number().min(-100).max(100).default(3),
+      offsetY: z.coerce.number().min(-100).max(100).default(3),
+    }),
+    http: { method: "POST", path: "duplicate-manual-blocks" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Duplicate manual blocks",
+      description: "Duplicate existing manual slide blocks with fresh block ids.",
+    },
+    run: ({ pid, sid, blockIds, offsetX, offsetY }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      return updateManualSlideBlocks(
+        slidesService,
+        pid,
+        sid,
+        duplicateManualBlocks(slide.blocks, blockIds, offsetX, offsetY),
+      );
+    },
+  });
+}
+
+function createMoveManualBlockLayerAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Move manual slide blocks through the layer stack.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      blockIds: z.array(z.string().min(1)).min(1),
+      direction: z.enum(manualLayerDirections),
+    }),
+    http: { method: "PUT", path: "move-manual-block-layer" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Move manual block layer",
+      description: "Move manual slide blocks through the layer stack.",
+    },
+    run: ({ pid, sid, blockIds, direction }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      return updateManualSlideBlocks(
+        slidesService,
+        pid,
+        sid,
+        moveManualBlockLayer(slide.blocks, blockIds, direction),
+      );
+    },
+  });
+}
+
 function createUpdateDeckLayoutAction(slidesService: SlidesService) {
   return defineAction({
     description: "Apply slide and group ordering for a deck.",
@@ -381,6 +683,9 @@ export function createSlideActions(slidesService: SlidesService) {
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),
+    "arrange-manual-blocks": createArrangeManualBlocksAction(slidesService),
+    "duplicate-manual-blocks": createDuplicateManualBlocksAction(slidesService),
+    "move-manual-block-layer": createMoveManualBlockLayerAction(slidesService),
     "update-deck-layout": createUpdateDeckLayoutAction(slidesService),
   };
 }

@@ -120,15 +120,30 @@ type SlideTransitionPhase = {
 };
 
 type SlideTransition = {
-  engine?: "waapi" | "css" | "motion" | "custom";
+  engine?: "waapi" | "css" | "motion" | "three" | "custom";
+  name?: string;
   duration: number;
   easing?: string;
   enter?: SlideTransitionPhase;
   exit?: SlideTransitionPhase;
+  params?: Record<string, unknown>;
 };
 ```
 
 WAAPI should be the default runtime engine for deck-level page transitions because it is data-driven, interruptible, and independent of slide implementation. CSS, Framer Motion, and custom engines can remain available for slide-local effects.
+
+First runtime slice:
+
+- `apps/slides/src/lib/slideTransitions.ts` defines the transition data shape, default WAAPI slide transition, and `slide` / `fade` / `scale` / `none` presets.
+- `apps/slides/src/components/SlideTransitionStage.tsx` renders outgoing and incoming slide layers and runs enter/exit phases through WAAPI.
+- `PresentationView` and `FullscreenView` now use the shared transition stage instead of duplicated Framer Motion page-swipe variants.
+
+Still future work:
+
+- persist per-deck or per-slide transition choices;
+- expose transition resources/actions to the product agent;
+- add UI controls for choosing presets and timings;
+- implement non-WAAPI engines, including a `three` overlay path for 3D transitions.
 
 ## Reference Project
 

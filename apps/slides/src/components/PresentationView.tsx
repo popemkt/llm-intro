@@ -14,6 +14,7 @@ import {
 import type { UnifiedSlide } from "@/types";
 import { SlideShell } from "./SlideShell";
 import { DbSlideRenderer } from "./DbSlideRenderer";
+import { SlideTransitionStage } from "./SlideTransitionStage";
 
 interface PresentationViewProps {
   slides: UnifiedSlide[];
@@ -26,18 +27,6 @@ interface PresentationViewProps {
   showCounter?: boolean;
   externalDisplayUrl?: string;
 }
-
-const variants = {
-  enter: (dir: number) => ({
-    x: dir > 0 ? "100%" : "-100%",
-    opacity: 0,
-  }),
-  center: { x: 0, opacity: 1 },
-  exit: (dir: number) => ({
-    x: dir > 0 ? "-100%" : "100%",
-    opacity: 0,
-  }),
-};
 
 const SHORTCUTS = [
   { key: "→ / ↓", desc: "Next slide" },
@@ -110,6 +99,16 @@ function MiniSlidePreview({ slide }: { slide: UnifiedSlide | undefined }) {
   return slide.kind === "code" ? (
     <SlideShell>
       <slide.component isActive={false} />
+    </SlideShell>
+  ) : (
+    <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
+  );
+}
+
+function RenderSlide({ slide, isActive }: { slide: UnifiedSlide; isActive: boolean }) {
+  return slide.kind === "code" ? (
+    <SlideShell>
+      <slide.component isActive={isActive} />
     </SlideShell>
   ) : (
     <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
@@ -273,6 +272,7 @@ export function PresentationView({
     (next: number) => {
       if (isTransitioning.current) return;
       if (next < 0 || next >= slides.length) return;
+      if (next === activeIndex) return;
       directionRef.current = next > activeIndex ? 1 : -1;
       isTransitioning.current = true;
       onNavigate(next);
@@ -369,29 +369,15 @@ export function PresentationView({
               borderRadius: 8,
             }}
           >
-            <AnimatePresence mode="wait" custom={directionRef.current}>
-              <motion.div
-                key={activeIndex}
-                custom={directionRef.current}
-                variants={variants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-                onAnimationComplete={() => {
-                  isTransitioning.current = false;
-                }}
-                style={{ position: "absolute", inset: 0 }}
-              >
-                {activeSlide.kind === "code" ? (
-                  <SlideShell>
-                    <activeSlide.component isActive={true} />
-                  </SlideShell>
-                ) : (
-                  <DbSlideRenderer blocks={activeSlide.blocks} theme={activeSlide.theme} />
-                )}
-              </motion.div>
-            </AnimatePresence>
+            <SlideTransitionStage
+              activeKey={activeIndex}
+              item={activeSlide}
+              direction={directionRef.current}
+              onTransitionEnd={() => {
+                isTransitioning.current = false;
+              }}
+              renderItem={(slide, isActive) => <RenderSlide slide={slide} isActive={isActive} />}
+            />
           </div>
         </div>
       </div>

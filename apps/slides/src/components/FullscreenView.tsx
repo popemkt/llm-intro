@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import type { UnifiedSlide } from "@/types";
 import { SlideShell } from "./SlideShell";
 import { DbSlideRenderer } from "./DbSlideRenderer";
+import { SlideTransitionStage } from "./SlideTransitionStage";
 
 interface Props {
   slides: UnifiedSlide[];
@@ -13,11 +13,15 @@ interface Props {
   requestFullscreen?: boolean;
 }
 
-const variants = {
-  enter: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 0 }),
-};
+function RenderSlide({ slide, isActive }: { slide: UnifiedSlide; isActive: boolean }) {
+  return slide.kind === "code" ? (
+    <SlideShell>
+      <slide.component isActive={isActive} />
+    </SlideShell>
+  ) : (
+    <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
+  );
+}
 
 export function FullscreenView({
   slides,
@@ -52,6 +56,7 @@ export function FullscreenView({
     (next: number) => {
       if (transitioning.current) return;
       if (next < 0 || next >= slides.length) return;
+      if (next === activeIndex) return;
       directionRef.current = next > activeIndex ? 1 : -1;
       transitioning.current = true;
       onNavigate(next);
@@ -117,29 +122,17 @@ export function FullscreenView({
             overflow: "hidden",
           }}
         >
-          <AnimatePresence mode="wait" custom={directionRef.current}>
-            <motion.div
-              key={activeIndex}
-              custom={directionRef.current}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              onAnimationComplete={() => {
-                transitioning.current = false;
-              }}
-              style={{ position: "absolute", inset: 0 }}
-            >
-              {slide.kind === "code" ? (
-                <SlideShell>
-                  <slide.component isActive={true} />
-                </SlideShell>
-              ) : (
-                <DbSlideRenderer blocks={slide.blocks} theme={slide.theme} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <SlideTransitionStage
+            activeKey={activeIndex}
+            item={slide}
+            direction={directionRef.current}
+            onTransitionEnd={() => {
+              transitioning.current = false;
+            }}
+            renderItem={(layerSlide, isActive) => (
+              <RenderSlide slide={layerSlide} isActive={isActive} />
+            )}
+          />
         </div>
       </div>
     </div>

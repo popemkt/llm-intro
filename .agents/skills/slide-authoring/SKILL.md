@@ -26,6 +26,8 @@ The shell is in `apps/slides/src/components/SlideShell.tsx`. It scales and cente
 
 ## Code-Backed Slides
 
+For detailed repo-specific patterns, read the `code-slide-patterns` skill before implementing or substantially changing code-backed slides.
+
 1. Create `apps/slides/src/slides/NN-name.tsx`.
 2. Export a React component accepting `SlideProps`.
 3. Register it in `apps/slides/src/slides/registry.ts`.

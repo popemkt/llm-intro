@@ -56,7 +56,7 @@ Keep one idea per slide. Split when vertical budget gets tight.
 
 Read the `slide-authoring` skill before writing slide source or mutating slide content.
 
-Use existing product actions/API for DB slides. Register code slides through the registry.
+Use existing product actions/API for DB slides. For code-backed slides, also read `code-slide-patterns` and register the slide through the registry.
 
 ## 5. Assets
 

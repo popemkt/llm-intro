@@ -49,6 +49,7 @@ Claude Code entrypoint skill files live under `.claude/skills/*.md` and point to
 Installed skills:
 
 - `slide-authoring`
+- `code-slide-patterns`
 - `create-slide`
 - `apply-slide-feedback`
 - `current-slide`
@@ -68,6 +69,20 @@ Open Slide persists comments as source markers and expects an agent command to a
 This is closer to Plannotator-style review: the agent can still own the session, but the user should be able to continue it from the UI.
 
 Vibe Kanban is a useful supporting reference for this direction: its README describes inline diff comments, a built-in browser with inspect mode/device emulation, and sending feedback directly to coding agents from the UI. We should borrow the product shape, not vendor its whole task/workspace manager.
+
+### WIP: CLI Agent Session Survival
+
+There is a fatal flaw if a CLI/code agent is owned by the Vite-rendered browser page: when the agent edits the app, Vite can refresh the page and kill the session exactly when the self-modification succeeds.
+
+Target architecture:
+
+- the backend/harness process owns Codex/Claude CLI sessions;
+- the browser attaches as a reconnectable client over WebSocket/SSE;
+- session ids, cwd, branch, mode, prompt state, and output buffers are stored server-side;
+- after Vite refreshes, the UI reconnects to the same session and replays recent terminal/chat output;
+- code mode is therefore a remote session surface, not an in-page worker.
+
+This should be implemented before relying on app self-modification flows for serious work. Product-mode actions can continue separately because they do not require a long-lived local CLI process inside the browser.
 
 ## Assets And SVGL
 

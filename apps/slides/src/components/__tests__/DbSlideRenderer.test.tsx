@@ -81,6 +81,18 @@ describe("DbSlideRenderer", () => {
         w: 20,
         h: 10,
       },
+      {
+        id: "3",
+        type: "line",
+        color: "#ffd93d",
+        strokeWidth: 5,
+        dash: "dash",
+        endArrow: true,
+        x: 10,
+        y: 58,
+        w: 50,
+        h: 10,
+      },
     ];
     const { container } = render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
 
@@ -96,5 +108,11 @@ describe("DbSlideRenderer", () => {
     const badge = screen.getByText("Badge").parentElement as HTMLElement;
     expect(badge.style.border).toBe("2px solid rgb(255, 255, 255)");
     expect(screen.getByText("Badge")).toHaveStyle({ color: "rgb(13, 15, 14)" });
+
+    const line = container.querySelector('line[stroke="#ffd93d"]') as SVGLineElement;
+    expect(line).toBeInTheDocument();
+    expect(line.getAttribute("stroke-width")).toBe("5");
+    expect(line.getAttribute("stroke-dasharray")).toBe("10 8");
+    expect(line.getAttribute("marker-end")).toContain("line-arrow-3");
   });
 });

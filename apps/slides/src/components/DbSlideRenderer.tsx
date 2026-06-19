@@ -90,6 +90,9 @@ function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
 
     case "shape":
       return <ShapeBlockView block={block} canvas={canvas} />;
+
+    case "line":
+      return <LineBlockView block={block} />;
   }
 }
 
@@ -233,5 +236,48 @@ function ShapeBlockView({
         )}
       </div>
     </div>
+  );
+}
+
+function LineBlockView({ block }: { block: Extract<Block, { type: "line" }> }) {
+  const markerId = `line-arrow-${block.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const strokeWidth = block.strokeWidth ?? 3;
+  const dashArray = block.dash === "dash" ? "10 8" : block.dash === "dot" ? "2 7" : undefined;
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-label="line"
+      style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }}
+    >
+      {(block.startArrow || block.endArrow) && (
+        <defs>
+          <marker
+            id={markerId}
+            markerWidth="8"
+            markerHeight="8"
+            refX="7"
+            refY="4"
+            orient="auto-start-reverse"
+            markerUnits="strokeWidth"
+          >
+            <path d="M 0 0 L 8 4 L 0 8 z" fill={block.color} />
+          </marker>
+        </defs>
+      )}
+      <line
+        x1={block.startX ?? 0}
+        y1={block.startY ?? 50}
+        x2={block.endX ?? 100}
+        y2={block.endY ?? 50}
+        stroke={block.color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={dashArray}
+        vectorEffect="non-scaling-stroke"
+        markerStart={block.startArrow ? `url(#${markerId})` : undefined}
+        markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
+      />
+    </svg>
   );
 }

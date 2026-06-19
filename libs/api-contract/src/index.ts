@@ -61,8 +61,21 @@ export type ShapeBlock = {
   width?: string;
   height?: string;
 } & BlockPos;
+export type LineBlock = {
+  id: string;
+  type: "line";
+  color: string;
+  strokeWidth?: number;
+  dash?: "solid" | "dash" | "dot";
+  startX?: number;
+  startY?: number;
+  endX?: number;
+  endY?: number;
+  startArrow?: boolean;
+  endArrow?: boolean;
+} & BlockPos;
 
-export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock;
+export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock | LineBlock;
 
 export type SlideTransitionEngine = "waapi" | "css" | "motion" | "three" | "custom";
 export type SlideTransitionPreset = "slide" | "fade" | "scale" | "none";

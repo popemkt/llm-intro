@@ -51,6 +51,7 @@ const blockDefaults: Record<Block["type"], RectPercent> = {
   image: { x: 10, y: 12, w: 80, h: 70 },
   iframe: { x: 5, y: 5, w: 90, h: 88 },
   shape: { x: 30, y: 30, w: 40, h: 30 },
+  line: { x: 20, y: 45, w: 60, h: 10 },
 };
 const publicReadAction = { expose: true, readOnly: true, requiresAuth: false };
 const publicWriteAction = {

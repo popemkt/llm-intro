@@ -138,6 +138,25 @@ function shapeBlock(
   };
 }
 
+function lineBlock(
+  rect: Rect,
+  createId: () => string,
+  extra: Partial<Extract<Block, { type: "line" }>> = {},
+): Block {
+  return {
+    id: createId(),
+    type: "line",
+    color: "#25d366",
+    strokeWidth: 3,
+    startX: 0,
+    startY: 50,
+    endX: 100,
+    endY: 50,
+    ...rect,
+    ...extra,
+  };
+}
+
 function imageBlock(alt: string, rect: Rect, createId: () => string): Block {
   return { id: createId(), type: "image", url: "", alt, ...rect };
 }
@@ -220,6 +239,8 @@ function comparisonPreset(createId: () => string) {
 
 function timelinePreset(createId: () => string) {
   return [
+    lineBlock({ x: 18, y: 42, w: 27, h: 2 }, createId),
+    lineBlock({ x: 55, y: 42, w: 27, h: 2 }, createId),
     shapeBlock("1", { x: 10, y: 38, w: 10, h: 10 }, createId, { shape: "circle" }),
     shapeBlock("2", { x: 45, y: 38, w: 10, h: 10 }, createId, { shape: "circle" }),
     shapeBlock("3", { x: 80, y: 38, w: 10, h: 10 }, createId, { shape: "circle" }),
@@ -249,7 +270,15 @@ function imageLeftPreset(createId: () => string) {
 function processPreset(createId: () => string) {
   return [
     shapeBlock("Input", { x: 8, y: 36, w: 22, h: 12 }, createId),
+    lineBlock({ x: 30, y: 41, w: 9, h: 2 }, createId, {
+      color: "#8aa39b",
+      endArrow: true,
+    }),
     shapeBlock("Transform", { x: 39, y: 36, w: 22, h: 12 }, createId, { color: "#4c9fff" }),
+    lineBlock({ x: 61, y: 41, w: 9, h: 2 }, createId, {
+      color: "#8aa39b",
+      endArrow: true,
+    }),
     shapeBlock("Output", { x: 70, y: 36, w: 22, h: 12 }, createId, { color: "#ffd93d" }),
     textBlock("### Input\nRaw material", { x: 8, y: 54, w: 22, h: 22 }, createId, {
       align: "center",

@@ -260,6 +260,7 @@ const BLOCK_DEFAULTS: Record<Block["type"], { x: number; y: number; w: number; h
   image: { x: 10, y: 12, w: 80, h: 70 },
   iframe: { x: 5, y: 5, w: 90, h: 88 },
   shape: { x: 30, y: 30, w: 40, h: 30 },
+  line: { x: 20, y: 45, w: 60, h: 10 },
 };
 
 function makeBlock(type: Block["type"]): Block {
@@ -274,6 +275,20 @@ function makeBlock(type: Block["type"]): Block {
       return { id, type, url: "", ...pos };
     case "shape":
       return { id, type, shape: "rect", color: "#25d366", label: "", ...pos };
+    case "line":
+      return {
+        id,
+        type,
+        color: "#25d366",
+        strokeWidth: 3,
+        dash: "solid",
+        startX: 0,
+        startY: 50,
+        endX: 100,
+        endY: 50,
+        endArrow: true,
+        ...pos,
+      };
   }
 }
 
@@ -1803,6 +1818,13 @@ export function SlideEditorPage() {
                         onUpdate={(p) => updateBlock(selectedBlock.id, p)}
                       />
                     )}
+
+                    {selectedBlock.type === "line" && (
+                      <LinePropEditor
+                        block={selectedBlock}
+                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                      />
+                    )}
                   </>
                 ) : selectedIds.length > 1 ? (
                   <MultiSelectionPanel
@@ -1938,7 +1960,9 @@ export function SlideEditorPage() {
                             ? b.url.slice(0, 22) || "(no url)"
                             : b.type === "iframe"
                               ? b.url.slice(0, 22) || "(no url)"
-                              : `${b.shape} ${b.color}`}
+                              : b.type === "line"
+                                ? `${b.dash ?? "solid"} ${b.color}`
+                                : `${b.shape} ${b.color}`}
                       </span>
                       <button
                         onClick={(e) => {
@@ -3035,6 +3059,9 @@ function CanvasBlockContent({ block }: { block: Block }) {
 
     case "shape":
       return <CanvasShapeBlock block={block} />;
+
+    case "line":
+      return <CanvasLineBlock block={block} />;
   }
 }
 
@@ -3174,6 +3201,48 @@ function CanvasShapeBlock({ block }: { block: Extract<Block, { type: "shape" }> 
         )}
       </div>
     </div>
+  );
+}
+
+function CanvasLineBlock({ block }: { block: Extract<Block, { type: "line" }> }) {
+  const markerId = `editor-line-arrow-${block.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const strokeWidth = block.strokeWidth ?? 3;
+  const dashArray = block.dash === "dash" ? "10 8" : block.dash === "dot" ? "2 7" : undefined;
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }}
+    >
+      {(block.startArrow || block.endArrow) && (
+        <defs>
+          <marker
+            id={markerId}
+            markerWidth="8"
+            markerHeight="8"
+            refX="7"
+            refY="4"
+            orient="auto-start-reverse"
+            markerUnits="strokeWidth"
+          >
+            <path d="M 0 0 L 8 4 L 0 8 z" fill={block.color} />
+          </marker>
+        </defs>
+      )}
+      <line
+        x1={block.startX ?? 0}
+        y1={block.startY ?? 50}
+        x2={block.endX ?? 100}
+        y2={block.endY ?? 50}
+        stroke={block.color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={dashArray}
+        vectorEffect="non-scaling-stroke"
+        markerStart={block.startArrow ? `url(#${markerId})` : undefined}
+        markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
+      />
+    </svg>
   );
 }
 
@@ -3342,6 +3411,110 @@ function ShapeLabelControls({
         placeholder="Label text"
         style={inp}
       />
+    </div>
+  );
+}
+
+// ─── Line property editor ─────────────────────────────────────────────────────
+
+function LinePropEditor({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "line" }>;
+  onUpdate: (p: Partial<Extract<Block, { type: "line" }>>) => void;
+}) {
+  const dashButton = (
+    dash: NonNullable<Extract<Block, { type: "line" }>["dash"]>,
+    label: string,
+  ) => (
+    <button
+      key={dash}
+      type="button"
+      onClick={() => onUpdate({ dash })}
+      style={{
+        ...arrangeButton,
+        background: (block.dash ?? "solid") === dash ? C.accentSubtle : C.bg,
+        color: (block.dash ?? "solid") === dash ? C.accent : C.text,
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <ColorInput
+        label="Stroke color"
+        value={block.color}
+        onChange={(color) => color && onUpdate({ color })}
+      />
+      <NumberInput
+        label="Stroke"
+        min={1}
+        max={32}
+        value={block.strokeWidth}
+        onChange={(strokeWidth) => onUpdate({ strokeWidth })}
+      />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {dashButton("solid", "Solid")}
+        {dashButton("dash", "Dash")}
+        {dashButton("dot", "Dot")}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => onUpdate({ startArrow: !block.startArrow })}
+          style={{
+            ...arrangeButton,
+            background: block.startArrow ? C.accentSubtle : C.bg,
+            color: block.startArrow ? C.accent : C.text,
+          }}
+        >
+          Start
+        </button>
+        <button
+          type="button"
+          onClick={() => onUpdate({ endArrow: !block.endArrow })}
+          style={{
+            ...arrangeButton,
+            background: block.endArrow ? C.accentSubtle : C.bg,
+            color: block.endArrow ? C.accent : C.text,
+          }}
+        >
+          End
+        </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <NumberInput
+          label="Start X"
+          min={0}
+          max={100}
+          value={block.startX}
+          onChange={(startX) => onUpdate({ startX })}
+        />
+        <NumberInput
+          label="Start Y"
+          min={0}
+          max={100}
+          value={block.startY}
+          onChange={(startY) => onUpdate({ startY })}
+        />
+        <NumberInput
+          label="End X"
+          min={0}
+          max={100}
+          value={block.endX}
+          onChange={(endX) => onUpdate({ endX })}
+        />
+        <NumberInput
+          label="End Y"
+          min={0}
+          max={100}
+          value={block.endY}
+          onChange={(endY) => onUpdate({ endY })}
+        />
+      </div>
     </div>
   );
 }

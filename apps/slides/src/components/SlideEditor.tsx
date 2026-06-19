@@ -7,6 +7,7 @@ import {
   Type,
   Image as ImageIcon,
   Globe,
+  Minus,
   Square,
   Circle,
   Pill,
@@ -43,6 +44,7 @@ const SHAPE_COLORS = [
 const BLOCK_TYPES: { type: Block["type"]; icon: React.ReactNode; label: string }[] = [
   { type: "text", icon: <Type size={13} />, label: "Text" },
   { type: "shape", icon: <Square size={13} />, label: "Shape" },
+  { type: "line", icon: <Minus size={13} />, label: "Line" },
   { type: "image", icon: <ImageIcon size={13} />, label: "Image" },
   { type: "iframe", icon: <Globe size={13} />, label: "Embed" },
 ];
@@ -58,6 +60,19 @@ function makeBlock(type: Block["type"]): Block {
       return { id, type, url: "", height: 300 };
     case "shape":
       return { id, type, shape: "rect", color: "#25d366", label: "" };
+    case "line":
+      return {
+        id,
+        type,
+        color: "#25d366",
+        strokeWidth: 3,
+        dash: "solid",
+        startX: 0,
+        startY: 50,
+        endX: 100,
+        endY: 50,
+        endArrow: true,
+      };
   }
 }
 

@@ -6,6 +6,7 @@ import {
   Globe,
   Image as ImageIcon,
   List,
+  Minus,
   Quote,
   Route,
   Square,
@@ -30,6 +31,7 @@ const primitiveBlocks = [
   { type: "image" as const, icon: <ImageIcon size={12} />, label: "Image" },
   { type: "iframe" as const, icon: <Globe size={12} />, label: "Embed" },
   { type: "shape" as const, icon: <Square size={12} />, label: "Shape" },
+  { type: "line" as const, icon: <Minus size={12} />, label: "Line" },
 ];
 
 type PrimitiveBlockType = (typeof primitiveBlocks)[number]["type"];
@@ -37,6 +39,8 @@ type PrimitiveBlockType = (typeof primitiveBlocks)[number]["type"];
 const primitiveByCommand = new Map<string, PrimitiveBlockType>([
   ...primitiveBlocks.map((block) => [block.type, block.type] as const),
   ["embed", "iframe"],
+  ["arrow", "line"],
+  ["connector", "line"],
 ]);
 
 const iconByPreset: Record<ManualPresetIcon, React.ReactNode> = {

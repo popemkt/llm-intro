@@ -110,6 +110,14 @@ function parseObjectFit(value: unknown) {
   return value as "contain" | "cover" | "fill";
 }
 
+function parseLineDash(value: unknown) {
+  if (value === undefined) return undefined;
+  if (!["solid", "dash", "dot"].includes(String(value))) {
+    throw new AppError(400, "line block dash is invalid");
+  }
+  return value as "solid" | "dash" | "dot";
+}
+
 function parseOptionalBlockGroupString(value: unknown, field: string) {
   if (value === undefined) return undefined;
   if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
@@ -224,6 +232,29 @@ function validateShapeBlock(id: string, value: JsonRecord, position: BlockPositi
   };
 }
 
+function validateLineBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  if (typeof value.color !== "string" || !value.color) {
+    throw new AppError(400, "line block color is required");
+  }
+  return {
+    id,
+    type: "line",
+    color: value.color,
+    strokeWidth: parseBoundedNumber(value.strokeWidth, "line block strokeWidth", {
+      min: 1,
+      max: 32,
+    }),
+    dash: parseLineDash(value.dash),
+    startX: parsePosition(value.startX, "line block startX"),
+    startY: parsePosition(value.startY, "line block startY"),
+    endX: parsePosition(value.endX, "line block endX"),
+    endY: parsePosition(value.endY, "line block endY"),
+    startArrow: parseOptionalBoolean(value.startArrow, "line block startArrow"),
+    endArrow: parseOptionalBoolean(value.endArrow, "line block endArrow"),
+    ...position,
+  };
+}
+
 function validateBlock(block: unknown): Block {
   const value = asRecord(block);
   const { id, type } = parseBlockIdentity(value);
@@ -238,6 +269,8 @@ function validateBlock(block: unknown): Block {
       return validateIframeBlock(id, value, position);
     case "shape":
       return validateShapeBlock(id, value, position);
+    case "line":
+      return validateLineBlock(id, value, position);
     default:
       throw new AppError(400, `unsupported block type: ${String(type)}`);
   }

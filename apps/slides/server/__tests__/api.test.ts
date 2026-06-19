@@ -268,6 +268,22 @@ describe("Manual slide actions", () => {
             w: 24,
             h: 10,
           },
+          {
+            id: "arrow",
+            type: "line",
+            color: "#ffd93d",
+            strokeWidth: 5,
+            dash: "dash",
+            startX: 4,
+            startY: 50,
+            endX: 96,
+            endY: 50,
+            endArrow: true,
+            x: 38,
+            y: 72,
+            w: 48,
+            h: 10,
+          },
         ],
       });
 
@@ -300,6 +316,14 @@ describe("Manual slide actions", () => {
           textColor: "#0d0f0e",
           borderColor: "#ffffff",
           borderWidth: 2,
+        }),
+        expect.objectContaining({
+          id: "arrow",
+          type: "line",
+          color: "#ffd93d",
+          strokeWidth: 5,
+          dash: "dash",
+          endArrow: true,
         }),
       ],
     });

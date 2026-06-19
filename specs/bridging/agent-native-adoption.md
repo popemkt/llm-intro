@@ -219,9 +219,11 @@ Taken now:
   shells.
 - External local harness protocol discovery through
   `LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, and
-  `LOCAL_HARNESS_MCP_URL`. These are discovery-only until a concrete harness
-  invocation adapter is added; the app does not silently grant arbitrary local
-  tools product-action privileges.
+  `LOCAL_HARNESS_MCP_URL`. HTTP and OpenAPI harness entries remain discovery-only
+  until a concrete adapter contract is selected. MCP harnesses use the standard
+  MCP contract, so agents can list tools with `list-local-harness-tools` and
+  call one explicitly with `call-local-harness-tool`; the app does not silently
+  grant arbitrary local tools product-action privileges.
 
 Translated rather than copied:
 

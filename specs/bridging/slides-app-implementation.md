@@ -157,7 +157,6 @@ The same app code should run inside every frame. The agent talks to the app
 through the same action registry and application state regardless of which
 frame hosts it.
 
-Current implementation note: the app mounts `AgentSidebar` and the
 Current implementation note: the app uses a local shell wrapper instead of the
 framework `AgentSidebar` wrapper because this React Router app and
 Agent-Native's bundled router do not share the same router context. App Mode

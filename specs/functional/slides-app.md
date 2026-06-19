@@ -177,7 +177,8 @@ editing, themed presentation playback, and HTML export.
 ## Candidate Reference Features
 
 - Hosted LLM-backed prompt-to-deck streaming. The current local stream is
-  deterministic and action-backed until hosted model credentials are adopted.
+  action-backed and can use the local OpenAI-compatible model harness when
+  configured, with deterministic fallback when no local model is available.
 - Additional visual editor refinements beyond formatting and arrange controls.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.

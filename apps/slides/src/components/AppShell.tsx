@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AgentTerminal, AssistantChat, agentNativePath } from "@agent-native/core/client";
+import {
+  AgentTerminal,
+  AssistantChat,
+  agentNativePath,
+  callAction,
+} from "@agent-native/core/client";
 import type { AgentChatRuntime } from "@agent-native/core/client/chat";
 import {
   LayoutDashboard,
@@ -40,6 +45,13 @@ type AgentTerminalInfo =
       command?: string;
       error?: string;
     };
+
+type LocalModelStatus = {
+  available: boolean;
+  model?: string;
+  baseURL?: string;
+  reason?: string;
+};
 
 type SlidesNavigationState =
   | { view: "decks"; label: "Decks"; pathname: string }
@@ -271,6 +283,59 @@ function useSelectionContextBridge(location: ReturnType<typeof useLocation>) {
   }, [location.pathname, navigationState]);
 }
 
+function SlidesAppModePanel({
+  runtime,
+  suggestions,
+}: {
+  runtime: AgentChatRuntime;
+  suggestions: string[];
+}) {
+  const [localModelStatus, setLocalModelStatus] = useState<LocalModelStatus | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void callAction<LocalModelStatus>("get-local-model-status", {}, { method: "GET" })
+      .then((status) => {
+        if (active) setLocalModelStatus(status);
+      })
+      .catch(() => {
+        if (active) {
+          setLocalModelStatus({
+            available: false,
+            reason: "Local model status unavailable",
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return (
+    <div className="slides-agent-surface__app">
+      <div className="slides-agent-surface__app-status" aria-label="App mode status">
+        <span>Local actions</span>
+        <span title={localModelStatus?.baseURL || localModelStatus?.reason}>
+          {localModelStatus?.available
+            ? `Local model${localModelStatus.model ? `: ${localModelStatus.model}` : ""}`
+            : "Deterministic fallback"}
+        </span>
+      </div>
+      <AssistantChat
+        runtime={runtime}
+        emptyStateText="Ask about this deck"
+        suggestions={suggestions}
+        dynamicSuggestions={false}
+        providerStatusChecksEnabled={false}
+        plusMenuMode="hidden"
+        showHeader={false}
+        className="slides-agent-surface__chat"
+      />
+    </div>
+  );
+}
+
 function SlidesAgentSurface({
   runtime,
   suggestions,
@@ -341,22 +406,7 @@ function SlidesAgentSurface({
       </div>
 
       {mode === "app" ? (
-        <div className="slides-agent-surface__app">
-          <div className="slides-agent-surface__app-status" aria-label="App mode status">
-            <span>Local actions</span>
-            <span>No hosted model</span>
-          </div>
-          <AssistantChat
-            runtime={runtime}
-            emptyStateText="Ask about this deck"
-            suggestions={suggestions}
-            dynamicSuggestions={false}
-            providerStatusChecksEnabled={false}
-            plusMenuMode="hidden"
-            showHeader={false}
-            className="slides-agent-surface__chat"
-          />
-        </div>
+        <SlidesAppModePanel runtime={runtime} suggestions={suggestions} />
       ) : (
         <div className="slides-agent-surface__terminal">
           <div className="slides-agent-surface__terminal-status">

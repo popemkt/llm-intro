@@ -23,6 +23,12 @@ type LocalAgentChatThread = {
   scope: AppAgentRequest["scope"];
 };
 
+type FrameworkStatusRouteOptions = {
+  actions?: SlideDeckActions;
+  terminalBridge?: AgentTerminalBridge;
+  localModelProvider?: LocalDeckModelProvider;
+};
+
 function localCodeModeEnabled() {
   return process.env.NODE_ENV !== "production" && !process.env.FRAME_PORT;
 }
@@ -76,31 +82,10 @@ function registerFrameworkHealthRoutes(router: Router) {
   });
 }
 
-function registerFrameworkStatusRoutes(
-  router: Router,
-  options: {
-    actions?: SlideDeckActions;
-    terminalBridge?: AgentTerminalBridge;
-    localModelProvider?: LocalDeckModelProvider;
-  },
-) {
+function registerFrameworkStatusRoutes(router: Router, options: FrameworkStatusRouteOptions) {
   router.get("/env-status", (_req, res) => {
     const status = getLocalProviderStatus(options.localModelProvider);
-    res.json([
-      {
-        id: "local-openai-compatible",
-        label: "Local OpenAI-compatible model",
-        configured: status.available,
-        hosted: false,
-        source: status.source,
-        model: status.model ?? null,
-        baseURL: status.baseURL ?? null,
-        reason: status.reason ?? null,
-        secrets: {
-          OPENAI_API_KEY: status.available && !status.baseURL ? "configured" : "not-required",
-        },
-      },
-    ]);
+    res.json(createEnvStatus(status));
   });
 
   router.get("/builder/status", (_req, res) => {
@@ -116,26 +101,7 @@ function registerFrameworkStatusRoutes(
   });
 
   router.get("/agent-engine/status", (_req, res) => {
-    const codeModeAvailable = localCodeModeEnabled();
-    res.json({
-      configured: true,
-      connected: true,
-      available: true,
-      hosted: false,
-      requiresHostedModel: false,
-      defaultMode: "app",
-      modes: {
-        app: {
-          ...APP_AGENT_MANIFEST.modes.app,
-          available: true,
-          capabilitiesUrl: "/_agent-native/app-agent/capabilities",
-        },
-        code: {
-          ...APP_AGENT_MANIFEST.modes.code,
-          available: codeModeAvailable,
-        },
-      },
-    });
+    res.json(createAgentEngineStatus());
   });
 
   router.get("/available-clis", async (_req, res) => {
@@ -159,65 +125,7 @@ function registerFrameworkStatusRoutes(
 
   router.get("/local-runtime/protocols", (_req, res) => {
     const status = getLocalProviderStatus(options.localModelProvider);
-    res.json({
-      hosted: false,
-      requiresBuilderAuth: false,
-      defaultMode: "app",
-      protocols: [
-        {
-          id: "app-agent-http",
-          mode: "app",
-          label: "Local App Mode HTTP runtime",
-          available: true,
-          endpoint: "/_agent-native/app-agent",
-          hosted: false,
-          toolBoundary: "product-actions",
-          description: "Deck-scoped product prompts routed through slide/deck/group actions.",
-        },
-        {
-          id: "actions-http",
-          mode: "app",
-          label: "Agent-Native action HTTP",
-          available: Boolean(options.actions),
-          endpoint: "/_agent-native/actions/:name",
-          hosted: false,
-          toolBoundary: "product-actions",
-          description: "Direct invocation of validated product actions.",
-        },
-        {
-          id: "actions-mcp",
-          mode: "app",
-          label: "MCP-compatible action tools",
-          available: Boolean(options.actions),
-          endpoint: "/_agent-native/actions/mcp",
-          hosted: false,
-          toolBoundary: "product-actions",
-          description: "MCP-shaped tool discovery and calls over the same action registry.",
-        },
-        {
-          id: "local-openai-compatible-model",
-          mode: "app",
-          label: "Local OpenAI-compatible model harness",
-          available: status.available,
-          endpoint: status.baseURL ?? null,
-          hosted: false,
-          toolBoundary: "prompt-drafting-only",
-          model: status.model ?? null,
-          reason: status.reason ?? null,
-          description: "Optional local model used by prompt deck drafting actions.",
-        },
-        {
-          id: "local-terminal-code-mode",
-          mode: "code",
-          label: "Local terminal Code Mode",
-          available: localCodeModeEnabled(),
-          endpoint: getTerminalEndpoint(options.terminalBridge),
-          hosted: false,
-          toolBoundary: "trusted-local-cli",
-          description: "Trusted local CLI bridge for repository self-modification.",
-        },
-      ],
-    });
+    res.json(createLocalRuntimeProtocols(options, status));
   });
 
   router.get("/agent-model-defaults", (_req, res) => {
@@ -258,6 +166,112 @@ function registerFrameworkStatusRoutes(
       requiresHostedModel: false,
     });
   });
+}
+
+function createEnvStatus(status: LocalModelStatus) {
+  return [
+    {
+      id: "local-openai-compatible",
+      label: "Local OpenAI-compatible model",
+      configured: status.available,
+      hosted: false,
+      source: status.source,
+      model: status.model ?? null,
+      baseURL: status.baseURL ?? null,
+      reason: status.reason ?? null,
+      secrets: {
+        OPENAI_API_KEY: status.available && !status.baseURL ? "configured" : "not-required",
+      },
+    },
+  ];
+}
+
+function createAgentEngineStatus() {
+  const codeModeAvailable = localCodeModeEnabled();
+  return {
+    configured: true,
+    connected: true,
+    available: true,
+    hosted: false,
+    requiresHostedModel: false,
+    defaultMode: "app",
+    modes: {
+      app: {
+        ...APP_AGENT_MANIFEST.modes.app,
+        available: true,
+        capabilitiesUrl: "/_agent-native/app-agent/capabilities",
+      },
+      code: {
+        ...APP_AGENT_MANIFEST.modes.code,
+        available: codeModeAvailable,
+      },
+    },
+  };
+}
+
+function createLocalRuntimeProtocols(
+  options: FrameworkStatusRouteOptions,
+  status: LocalModelStatus,
+) {
+  return {
+    hosted: false,
+    requiresBuilderAuth: false,
+    defaultMode: "app",
+    protocols: [
+      {
+        id: "app-agent-http",
+        mode: "app",
+        label: "Local App Mode HTTP runtime",
+        available: true,
+        endpoint: "/_agent-native/app-agent",
+        hosted: false,
+        toolBoundary: "product-actions",
+        description: "Deck-scoped product prompts routed through slide/deck/group actions.",
+      },
+      {
+        id: "actions-http",
+        mode: "app",
+        label: "Agent-Native action HTTP",
+        available: Boolean(options.actions),
+        endpoint: "/_agent-native/actions/:name",
+        hosted: false,
+        toolBoundary: "product-actions",
+        description: "Direct invocation of validated product actions.",
+      },
+      {
+        id: "actions-mcp",
+        mode: "app",
+        label: "MCP-compatible action tools",
+        available: Boolean(options.actions),
+        endpoint: "/_agent-native/actions/mcp",
+        hosted: false,
+        toolBoundary: "product-actions",
+        description: "MCP-shaped tool discovery and calls over the same action registry.",
+      },
+      {
+        id: "local-openai-compatible-model",
+        mode: "app",
+        label: "Local OpenAI-compatible model harness",
+        available: status.available,
+        endpoint: status.baseURL ?? null,
+        hosted: false,
+        toolBoundary: "prompt-drafting-only",
+        model: status.model ?? null,
+        reason: status.reason ?? null,
+        description: "Optional local model used by prompt deck drafting actions.",
+      },
+      {
+        id: "local-terminal-code-mode",
+        mode: "code",
+        label: "Local terminal Code Mode",
+        available: localCodeModeEnabled(),
+        endpoint: getTerminalEndpoint(options.terminalBridge),
+        hosted: false,
+        toolBoundary: "trusted-local-cli",
+        description: "Trusted local CLI bridge for repository self-modification.",
+      },
+    ],
+  };
 }
 
 function getLocalProviderStatus(provider?: LocalDeckModelProvider): LocalModelStatus {
@@ -409,42 +423,7 @@ async function runFrameworkAction(
 function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideDeckActions }) {
   const threads = new Map<string, LocalAgentChatThread>();
 
-  router.get("/auth/session", (_req, res) => {
-    res.json({
-      authenticated: true,
-      provider: "local",
-      hosted: false,
-      requiresBuilderAuth: false,
-      user: {
-        id: "local-user",
-        email: null,
-        name: "Local User",
-      },
-      org: {
-        id: "local-workspace",
-        name: "Local Workspace",
-      },
-    });
-  });
-
-  router.get("/org/me", (_req, res) => {
-    res.json({
-      org: {
-        id: "local-workspace",
-        name: "Local Workspace",
-        hosted: false,
-      },
-      user: {
-        id: "local-user",
-        email: null,
-        name: "Local User",
-      },
-      auth: {
-        provider: "local",
-        requiresBuilderAuth: false,
-      },
-    });
-  });
+  registerFrameworkIdentityRoutes(router);
 
   router.get("/agent-chat/mode", (_req, res) => {
     res.json({
@@ -533,6 +512,53 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
       next(err);
     }
   });
+}
+
+function registerFrameworkIdentityRoutes(router: Router) {
+  router.get("/auth/session", (_req, res) => {
+    res.json(createLocalSession());
+  });
+
+  router.get("/org/me", (_req, res) => {
+    res.json(createLocalOrgSession());
+  });
+}
+
+function createLocalSession() {
+  return {
+    authenticated: true,
+    provider: "local",
+    hosted: false,
+    requiresBuilderAuth: false,
+    user: {
+      id: "local-user",
+      email: null,
+      name: "Local User",
+    },
+    org: {
+      id: "local-workspace",
+      name: "Local Workspace",
+    },
+  };
+}
+
+function createLocalOrgSession() {
+  return {
+    org: {
+      id: "local-workspace",
+      name: "Local Workspace",
+      hosted: false,
+    },
+    user: {
+      id: "local-user",
+      email: null,
+      name: "Local User",
+    },
+    auth: {
+      provider: "local",
+      requiresBuilderAuth: false,
+    },
+  };
 }
 
 type FrameworkResource = {

@@ -2,6 +2,12 @@ import { THEME_NAMES, type Block, type ThemeName } from "@llm-intro/api-contract
 import { AppError } from "./errors.js";
 
 type JsonRecord = Record<string, unknown>;
+type BlockPosition = {
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+};
 
 function asRecord(value: unknown): JsonRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -55,63 +61,89 @@ function parseShapeDimension(value: unknown, field: string) {
   return value;
 }
 
-function validateBlock(block: unknown): Block {
-  const value = asRecord(block);
-
+function parseBlockIdentity(value: JsonRecord) {
   if (typeof value.id !== "string" || !value.id) throw new AppError(400, "block id is required");
   if (typeof value.type !== "string") throw new AppError(400, "block type is required");
+  return { id: value.id, type: value.type };
+}
 
-  const position = {
+function parseBlockPosition(value: JsonRecord): BlockPosition {
+  return {
     x: parsePosition(value.x, "block.x"),
     y: parsePosition(value.y, "block.y"),
     w: parsePosition(value.w, "block.w"),
     h: parsePosition(value.h, "block.h"),
   };
+}
 
-  switch (value.type) {
+function validateTextBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  if (typeof value.markdown !== "string") {
+    throw new AppError(400, "text block markdown must be a string");
+  }
+  return { id, type: "text", markdown: value.markdown, ...position };
+}
+
+function validateImageBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  if (typeof value.url !== "string") {
+    throw new AppError(400, "image block url must be a string");
+  }
+  if (value.alt !== undefined && typeof value.alt !== "string") {
+    throw new AppError(400, "image block alt must be a string");
+  }
+  return { id, type: "image", url: value.url, alt: value.alt, ...position };
+}
+
+function validateIframeBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  if (typeof value.url !== "string") {
+    throw new AppError(400, "iframe block url must be a string");
+  }
+  if (
+    value.height !== undefined &&
+    (typeof value.height !== "number" || !Number.isFinite(value.height) || value.height <= 0)
+  ) {
+    throw new AppError(400, "iframe block height must be a positive number");
+  }
+  return { id, type: "iframe", url: value.url, height: value.height, ...position };
+}
+
+function validateShapeBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
+  if (!["rect", "pill", "circle"].includes(String(value.shape))) {
+    throw new AppError(400, "shape block shape is invalid");
+  }
+  if (typeof value.color !== "string" || !value.color) {
+    throw new AppError(400, "shape block color is required");
+  }
+  if (value.label !== undefined && typeof value.label !== "string") {
+    throw new AppError(400, "shape block label must be a string");
+  }
+  return {
+    id,
+    type: "shape",
+    shape: value.shape as "rect" | "pill" | "circle",
+    color: value.color,
+    label: value.label as string | undefined,
+    width: parseShapeDimension(value.width, "shape block width"),
+    height: parseShapeDimension(value.height, "shape block height"),
+    ...position,
+  };
+}
+
+function validateBlock(block: unknown): Block {
+  const value = asRecord(block);
+  const { id, type } = parseBlockIdentity(value);
+  const position = parseBlockPosition(value);
+
+  switch (type) {
     case "text":
-      if (typeof value.markdown !== "string")
-        throw new AppError(400, "text block markdown must be a string");
-      return { id: value.id, type: "text", markdown: value.markdown, ...position };
-
+      return validateTextBlock(id, value, position);
     case "image":
-      if (typeof value.url !== "string")
-        throw new AppError(400, "image block url must be a string");
-      if (value.alt !== undefined && typeof value.alt !== "string")
-        throw new AppError(400, "image block alt must be a string");
-      return { id: value.id, type: "image", url: value.url, alt: value.alt, ...position };
-
+      return validateImageBlock(id, value, position);
     case "iframe":
-      if (typeof value.url !== "string")
-        throw new AppError(400, "iframe block url must be a string");
-      if (
-        value.height !== undefined &&
-        (typeof value.height !== "number" || !Number.isFinite(value.height) || value.height <= 0)
-      ) {
-        throw new AppError(400, "iframe block height must be a positive number");
-      }
-      return { id: value.id, type: "iframe", url: value.url, height: value.height, ...position };
-
+      return validateIframeBlock(id, value, position);
     case "shape":
-      if (!["rect", "pill", "circle"].includes(String(value.shape)))
-        throw new AppError(400, "shape block shape is invalid");
-      if (typeof value.color !== "string" || !value.color)
-        throw new AppError(400, "shape block color is required");
-      if (value.label !== undefined && typeof value.label !== "string")
-        throw new AppError(400, "shape block label must be a string");
-      return {
-        id: value.id,
-        type: "shape",
-        shape: value.shape as "rect" | "pill" | "circle",
-        color: value.color,
-        label: value.label as string | undefined,
-        width: parseShapeDimension(value.width, "shape block width"),
-        height: parseShapeDimension(value.height, "shape block height"),
-        ...position,
-      };
-
+      return validateShapeBlock(id, value, position);
     default:
-      throw new AppError(400, `unsupported block type: ${String(value.type)}`);
+      throw new AppError(400, `unsupported block type: ${String(type)}`);
   }
 }
 

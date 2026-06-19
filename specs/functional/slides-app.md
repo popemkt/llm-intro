@@ -213,6 +213,9 @@ editing, themed presentation playback, and HTML export.
 - Users can multi-select manual slide blocks from the canvas or layer list,
   drag the selected blocks as a group, duplicate or delete the selection, and
   nudge selected blocks with the keyboard.
+- Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
+  and neighboring block edges/centers, with visible guide lines during pointer
+  interaction. Holding Alt bypasses snapping for fine placement.
 - Users can align multi-selected manual slide blocks to their shared selection
   bounds and distribute selected blocks horizontally or vertically.
 - Text block editors include markdown formatting controls for headings, bold,
@@ -258,8 +261,8 @@ editing, themed presentation playback, and HTML export.
   configured, with deterministic fallback when no local model is available.
 - Additional visual editor refinements beyond formatting, arrange controls,
   multi-select, initial asset insertion, transition presets, and first-class
-  HTML slide authoring, including guides, snapping, grouping, masters/templates,
-  and custom transition authoring.
+  HTML slide authoring, including grouping, masters/templates, and custom
+  transition authoring.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,

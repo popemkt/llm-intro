@@ -68,7 +68,188 @@ type DragState = {
   }>;
 };
 
+type GuideAxis = "x" | "y";
+type ActiveGuide = { axis: GuideAxis; value: number };
+type RectPercent = { x: number; y: number; w: number; h: number };
+
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const SNAP_THRESHOLD = 1;
+
+function blockRect(block: Block): RectPercent {
+  const defaults = BLOCK_DEFAULTS[block.type];
+  return {
+    x: block.x ?? defaults.x,
+    y: block.y ?? defaults.y,
+    w: block.w ?? defaults.w,
+    h: block.h ?? defaults.h,
+  };
+}
+
+function rectBounds(rects: RectPercent[]): RectPercent {
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.w));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
+  return { x: left, y: top, w: right - left, h: bottom - top };
+}
+
+function guideValues(blocks: Block[], excludeIds: Set<string>, axis: GuideAxis) {
+  const values = [0, 50, 100];
+  for (const block of blocks) {
+    if (excludeIds.has(block.id)) continue;
+    const rect = blockRect(block);
+    if (axis === "x") values.push(rect.x, rect.x + rect.w / 2, rect.x + rect.w);
+    else values.push(rect.y, rect.y + rect.h / 2, rect.y + rect.h);
+  }
+  return values;
+}
+
+function snapDeltaForRect(
+  rect: RectPercent,
+  targets: number[],
+  axis: GuideAxis,
+): { delta: number; guide: ActiveGuide | null } {
+  const candidates =
+    axis === "x"
+      ? [rect.x, rect.x + rect.w / 2, rect.x + rect.w]
+      : [rect.y, rect.y + rect.h / 2, rect.y + rect.h];
+  let best: { distance: number; delta: number; guide: ActiveGuide } | null = null;
+  for (const point of candidates) {
+    for (const target of targets) {
+      const distance = Math.abs(point - target);
+      if (distance > SNAP_THRESHOLD) continue;
+      if (!best || distance < best.distance) {
+        best = { distance, delta: target - point, guide: { axis, value: target } };
+      }
+    }
+  }
+  return best ? { delta: best.delta, guide: best.guide } : { delta: 0, guide: null };
+}
+
+function snapRect(
+  rect: RectPercent,
+  allBlocks: Block[],
+  excludeIds: Set<string>,
+): { rect: RectPercent; guides: ActiveGuide[] } {
+  const xSnap = snapDeltaForRect(rect, guideValues(allBlocks, excludeIds, "x"), "x");
+  const ySnap = snapDeltaForRect(rect, guideValues(allBlocks, excludeIds, "y"), "y");
+  return {
+    rect: {
+      ...rect,
+      x: rect.x + xSnap.delta,
+      y: rect.y + ySnap.delta,
+    },
+    guides: [xSnap.guide, ySnap.guide].filter((guide): guide is ActiveGuide => guide !== null),
+  };
+}
+
+function resizeRectForDrag(
+  original: DragState["originals"][number],
+  mode: DragMode,
+  dx: number,
+  dy: number,
+): RectPercent {
+  switch (mode) {
+    case "resize-br":
+      return {
+        x: original.origX,
+        y: original.origY,
+        w: clamp(original.origW + dx, 5, 100 - original.origX),
+        h: clamp(original.origH + dy, 5, 100 - original.origY),
+      };
+    case "resize-bl": {
+      const right = original.origX + original.origW;
+      const x = clamp(original.origX + dx, 0, right - 5);
+      return {
+        x,
+        y: original.origY,
+        w: right - x,
+        h: clamp(original.origH + dy, 5, 100 - original.origY),
+      };
+    }
+    case "resize-tr": {
+      const bottom = original.origY + original.origH;
+      const y = clamp(original.origY + dy, 0, bottom - 5);
+      return {
+        x: original.origX,
+        y,
+        w: clamp(original.origW + dx, 5, 100 - original.origX),
+        h: bottom - y,
+      };
+    }
+    case "resize-tl": {
+      const right = original.origX + original.origW;
+      const bottom = original.origY + original.origH;
+      const x = clamp(original.origX + dx, 0, right - 5);
+      const y = clamp(original.origY + dy, 0, bottom - 5);
+      return { x, y, w: right - x, h: bottom - y };
+    }
+    case "move":
+      return {
+        x: original.origX + dx,
+        y: original.origY + dy,
+        w: original.origW,
+        h: original.origH,
+      };
+  }
+}
+
+function closestGuide(point: number, targets: number[], axis: GuideAxis): ActiveGuide | null {
+  let best: { distance: number; guide: ActiveGuide } | null = null;
+  for (const target of targets) {
+    const distance = Math.abs(point - target);
+    if (distance > SNAP_THRESHOLD) continue;
+    if (!best || distance < best.distance) best = { distance, guide: { axis, value: target } };
+  }
+  return best?.guide ?? null;
+}
+
+function snapResizeRect(
+  rect: RectPercent,
+  mode: DragMode,
+  allBlocks: Block[],
+  excludeIds: Set<string>,
+): { rect: RectPercent; guides: ActiveGuide[] } {
+  const next = { ...rect };
+  const guides: ActiveGuide[] = [];
+  const xTargets = guideValues(allBlocks, excludeIds, "x");
+  const yTargets = guideValues(allBlocks, excludeIds, "y");
+  const right = rect.x + rect.w;
+  const bottom = rect.y + rect.h;
+
+  if (mode === "resize-br" || mode === "resize-tr") {
+    const guide = closestGuide(right, xTargets, "x");
+    if (guide) {
+      next.w = clamp(guide.value - rect.x, 5, 100 - rect.x);
+      guides.push(guide);
+    }
+  }
+  if (mode === "resize-bl" || mode === "resize-tl") {
+    const guide = closestGuide(rect.x, xTargets, "x");
+    if (guide) {
+      next.x = clamp(guide.value, 0, right - 5);
+      next.w = right - next.x;
+      guides.push(guide);
+    }
+  }
+  if (mode === "resize-br" || mode === "resize-bl") {
+    const guide = closestGuide(bottom, yTargets, "y");
+    if (guide) {
+      next.h = clamp(guide.value - rect.y, 5, 100 - rect.y);
+      guides.push(guide);
+    }
+  }
+  if (mode === "resize-tr" || mode === "resize-tl") {
+    const guide = closestGuide(rect.y, yTargets, "y");
+    if (guide) {
+      next.y = clamp(guide.value, 0, bottom - 5);
+      next.h = bottom - next.y;
+      guides.push(guide);
+    }
+  }
+
+  return { rect: next, guides };
+}
 
 const BLOCK_DEFAULTS: Record<Block["type"], { x: number; y: number; w: number; h: number }> = {
   text: { x: 5, y: 5, w: 90, h: 30 },
@@ -298,6 +479,7 @@ export function SlideEditorPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [activeGuides, setActiveGuides] = useState<ActiveGuide[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -431,6 +613,41 @@ export function SlideEditorPage() {
       const rect = canvasRef.current.getBoundingClientRect();
       const dx = ((e.clientX - drag.startCx) / rect.width) * 100;
       const dy = ((e.clientY - drag.startCy) / rect.height) * 100;
+      const currentBlocks = blocksRef.current;
+      const draggedIds = new Set(drag.originals.map((entry) => entry.id));
+      const snapEnabled = !e.altKey;
+      let moveDelta = { x: dx, y: dy };
+      let resizeRect: RectPercent | null = null;
+      let guides: ActiveGuide[] = [];
+
+      if (snapEnabled && drag.mode === "move") {
+        const nextGroupRect = rectBounds(
+          drag.originals.map((entry) => ({
+            x: entry.origX + dx,
+            y: entry.origY + dy,
+            w: entry.origW,
+            h: entry.origH,
+          })),
+        );
+        const snapped = snapRect(nextGroupRect, currentBlocks, draggedIds);
+        moveDelta = {
+          x: dx + (snapped.rect.x - nextGroupRect.x),
+          y: dy + (snapped.rect.y - nextGroupRect.y),
+        };
+        guides = snapped.guides;
+      }
+
+      if (snapEnabled && drag.mode !== "move") {
+        const original = drag.originals.find((entry) => entry.id === drag.blockId);
+        if (original) {
+          const rawRect = resizeRectForDrag(original, drag.mode, dx, dy);
+          const snapped = snapResizeRect(rawRect, drag.mode, currentBlocks, draggedIds);
+          resizeRect = snapped.rect;
+          guides = snapped.guides;
+        }
+      }
+
+      setActiveGuides(guides);
 
       setBlocks((prev) =>
         prev.map((b) => {
@@ -442,11 +659,12 @@ export function SlideEditorPage() {
             case "move":
               return {
                 ...b,
-                x: clamp(original.origX + dx, 0, 100 - bw),
-                y: clamp(original.origY + dy, 0, 100 - bh),
+                x: clamp(original.origX + moveDelta.x, 0, 100 - bw),
+                y: clamp(original.origY + moveDelta.y, 0, 100 - bh),
               };
             case "resize-br":
               if (b.id !== drag.blockId) return b;
+              if (resizeRect) return { ...b, w: resizeRect.w, h: resizeRect.h };
               return {
                 ...b,
                 w: Math.max(5, original.origW + dx),
@@ -454,6 +672,7 @@ export function SlideEditorPage() {
               };
             case "resize-bl":
               if (b.id !== drag.blockId) return b;
+              if (resizeRect) return { ...b, x: resizeRect.x, w: resizeRect.w, h: resizeRect.h };
               return {
                 ...b,
                 x: clamp(original.origX + dx, 0, original.origX + original.origW - 5),
@@ -462,6 +681,7 @@ export function SlideEditorPage() {
               };
             case "resize-tr":
               if (b.id !== drag.blockId) return b;
+              if (resizeRect) return { ...b, y: resizeRect.y, w: resizeRect.w, h: resizeRect.h };
               return {
                 ...b,
                 y: clamp(original.origY + dy, 0, original.origY + original.origH - 5),
@@ -470,6 +690,8 @@ export function SlideEditorPage() {
               };
             case "resize-tl":
               if (b.id !== drag.blockId) return b;
+              if (resizeRect)
+                return { ...b, x: resizeRect.x, y: resizeRect.y, w: resizeRect.w, h: resizeRect.h };
               return {
                 ...b,
                 x: clamp(original.origX + dx, 0, original.origX + original.origW - 5),
@@ -483,6 +705,7 @@ export function SlideEditorPage() {
     };
     const onUp = () => {
       dragRef.current = null;
+      setActiveGuides([]);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -574,6 +797,7 @@ export function SlideEditorPage() {
     if (mode === "move" && (e.shiftKey || e.metaKey || e.ctrlKey)) {
       toggleBlockSelection(block.id);
       dragRef.current = null;
+      setActiveGuides([]);
       return;
     }
     const selectedSet =
@@ -600,6 +824,7 @@ export function SlideEditorPage() {
       startCy: e.clientY,
       originals,
     };
+    setActiveGuides([]);
   };
 
   const addBlock = useCallback((type: Block["type"]) => {
@@ -1002,6 +1227,33 @@ export function SlideEditorPage() {
                     add blocks using the panel →
                   </div>
                 )}
+
+                {activeGuides.map((guide, index) => (
+                  <div
+                    key={`${guide.axis}-${guide.value}-${index}`}
+                    style={{
+                      position: "absolute",
+                      pointerEvents: "none",
+                      zIndex: 30,
+                      background: "var(--theme-accent, #25d366)",
+                      boxShadow: "0 0 0 1px rgba(13,15,14,0.45)",
+                      opacity: 0.85,
+                      ...(guide.axis === "x"
+                        ? {
+                            left: `${guide.value}%`,
+                            top: 0,
+                            width: 1,
+                            height: "100%",
+                          }
+                        : {
+                            left: 0,
+                            top: `${guide.value}%`,
+                            width: "100%",
+                            height: 1,
+                          }),
+                    }}
+                  />
+                ))}
 
                 {blocks.map((block) => {
                   const isSelected = selectedIds.includes(block.id);

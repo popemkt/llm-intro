@@ -190,6 +190,9 @@ editing, themed presentation playback, and HTML export.
 - Agents can create fully manual, PowerPoint-style editable slides through
   `create-manual-slide` by providing typed text, image, iframe, and shape
   blocks with geometry and appearance fields.
+- Agents can refine manual slides without replacing the whole block array via
+  `add-manual-block`, `update-manual-block`, `delete-manual-block`,
+  `group-manual-blocks`, and `ungroup-manual-blocks`.
 - Agents can create full-canvas HTML slides through `create-html-slide` by
   providing authored HTML/CSS/JS source.
 - Users can create a new deck from Home in either blank mode or outline mode.

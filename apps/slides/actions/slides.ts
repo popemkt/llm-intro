@@ -1,11 +1,15 @@
 import { defineAction } from "@agent-native/core";
+import { nanoid } from "nanoid";
+import type { Block } from "@llm-intro/api-contract";
 import type { createSlidesService } from "../server/services/slides.js";
 import {
   parseHtmlSlideCreate,
+  parseBlocks,
   parseLayout,
   parseSlideCreate,
   parseSlidePatch,
 } from "../server/validation.js";
+import { AppError } from "../server/errors.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -20,6 +24,29 @@ const publicWriteAction = {
   requiresAuth: false,
   isConsequential: true,
 };
+
+function getManualSlide(slidesService: SlidesService, pid: number, sid: number) {
+  const slide = slidesService.list(pid).find((entry) => entry.id === sid);
+  if (!slide) throw new AppError(404, "slide not found");
+  if (slide.kind !== "db") throw new AppError(400, "manual block actions require a manual slide");
+  return slide;
+}
+
+function updateManualSlideBlocks(
+  slidesService: SlidesService,
+  pid: number,
+  sid: number,
+  blocks: Block[],
+) {
+  return slidesService.update(pid, sid, { blocks });
+}
+
+function parseOneBlock(input: unknown) {
+  const blocks = parseBlocks([input]);
+  const block = blocks?.[0];
+  if (!block) throw new AppError(400, "block is required");
+  return block;
+}
 
 function createListSlidesAction(slidesService: SlidesService) {
   return defineAction({
@@ -165,6 +192,153 @@ function createDeleteSlideAction(slidesService: SlidesService) {
   });
 }
 
+function createAddManualBlockAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Add one typed editable block to a manual slide.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      block: blockInput,
+    }),
+    http: { method: "POST", path: "add-manual-block" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Add manual block",
+      description: "Add one typed editable block to a manual slide.",
+    },
+    run: ({ pid, sid, block }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      const parsed = parseOneBlock(block);
+      return updateManualSlideBlocks(slidesService, pid, sid, [...slide.blocks, parsed]);
+    },
+  });
+}
+
+function createUpdateManualBlockAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Update one typed editable block on a manual slide.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      bid: z.string().min(1),
+      patch: blockInput,
+    }),
+    http: { method: "PUT", path: "update-manual-block" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Update manual block",
+      description: "Update one typed editable block on a manual slide.",
+    },
+    run: ({ pid, sid, bid, patch }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      const index = slide.blocks.findIndex((block) => block.id === bid);
+      if (index < 0) throw new AppError(404, "block not found");
+      const merged = { ...slide.blocks[index], ...patch, id: bid };
+      const parsed = parseOneBlock(merged);
+      const blocks = [...slide.blocks];
+      blocks[index] = parsed;
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
+function createDeleteManualBlockAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Delete one typed editable block from a manual slide.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      bid: z.string().min(1),
+    }),
+    http: { method: "DELETE", path: "delete-manual-block" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Delete manual block",
+      description: "Delete one typed editable block from a manual slide.",
+    },
+    run: ({ pid, sid, bid }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      if (!slide.blocks.some((block) => block.id === bid))
+        throw new AppError(404, "block not found");
+      return updateManualSlideBlocks(
+        slidesService,
+        pid,
+        sid,
+        slide.blocks.filter((block) => block.id !== bid),
+      );
+    },
+  });
+}
+
+function createGroupManualBlocksAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Group existing manual slide blocks so they select and move together.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      blockIds: z.array(z.string().min(1)).min(2),
+      groupId: z.string().min(1).optional(),
+      groupName: z.string().min(1).optional(),
+    }),
+    http: { method: "PUT", path: "group-manual-blocks" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Group manual blocks",
+      description: "Group existing manual slide blocks so they select and move together.",
+    },
+    run: ({ pid, sid, blockIds, groupId, groupName }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      const selected = new Set(blockIds);
+      const missing = blockIds.filter((id) => !slide.blocks.some((block) => block.id === id));
+      if (missing.length > 0) throw new AppError(404, `block not found: ${missing[0]}`);
+      const nextGroupId = groupId ?? `group-${nanoid(8)}`;
+      const blocks = slide.blocks.map((block) =>
+        selected.has(block.id)
+          ? ({ ...block, groupId: nextGroupId, groupName: groupName ?? "Group" } as Block)
+          : block,
+      );
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
+function createUngroupManualBlocksAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Remove block grouping metadata from manual slide blocks.",
+    schema: z
+      .object({
+        pid: z.coerce.number().int().positive(),
+        sid: z.coerce.number().int().positive(),
+        blockIds: z.array(z.string().min(1)).optional(),
+        groupId: z.string().min(1).optional(),
+      })
+      .refine((input) => input.groupId || (input.blockIds && input.blockIds.length > 0), {
+        message: "groupId or blockIds is required",
+      }),
+    http: { method: "PUT", path: "ungroup-manual-blocks" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Ungroup manual blocks",
+      description: "Remove block grouping metadata from manual slide blocks.",
+    },
+    run: ({ pid, sid, blockIds, groupId }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      const selected = new Set(blockIds ?? []);
+      const blocks = slide.blocks.map((block) =>
+        block.groupId === groupId || selected.has(block.id)
+          ? ({ ...block, groupId: undefined, groupName: undefined } as Block)
+          : block,
+      );
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
 function createUpdateDeckLayoutAction(slidesService: SlidesService) {
   return defineAction({
     description: "Apply slide and group ordering for a deck.",
@@ -202,6 +376,11 @@ export function createSlideActions(slidesService: SlidesService) {
     "create-normal-slides": createNormalSlidesAction(slidesService),
     "update-slide": createUpdateSlideAction(slidesService),
     "delete-slide": createDeleteSlideAction(slidesService),
+    "add-manual-block": createAddManualBlockAction(slidesService),
+    "update-manual-block": createUpdateManualBlockAction(slidesService),
+    "delete-manual-block": createDeleteManualBlockAction(slidesService),
+    "group-manual-blocks": createGroupManualBlocksAction(slidesService),
+    "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),
     "update-deck-layout": createUpdateDeckLayoutAction(slidesService),
   };
 }

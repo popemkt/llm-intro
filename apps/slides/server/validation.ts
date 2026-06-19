@@ -235,7 +235,7 @@ function validateBlock(block: unknown): Block {
   }
 }
 
-function parseBlocks(value: unknown) {
+export function parseBlocks(value: unknown) {
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) throw new AppError(400, "blocks must be an array");
   return value.map(validateBlock);

@@ -302,6 +302,75 @@ describe("Manual slide actions", () => {
       ],
     });
   });
+
+  it("manual block actions add, update, group, ungroup, and delete typed blocks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({ pid, title: "Block Actions", blocks: [] })
+    ).body;
+
+    const added = await request(app)
+      .post("/_agent-native/actions/add-manual-block")
+      .send({
+        pid,
+        sid: slide.id,
+        block: { id: "title", type: "text", markdown: "Hello", x: 10, y: 10, w: 40, h: 12 },
+      });
+    expect(added.status).toBe(200);
+    expect(added.body.blocks).toEqual([expect.objectContaining({ id: "title" })]);
+
+    const updated = await request(app)
+      .put("/_agent-native/actions/update-manual-block")
+      .send({ pid, sid: slide.id, bid: "title", patch: { markdown: "# Updated", fontSize: 42 } });
+    expect(updated.status).toBe(200);
+    expect(updated.body.blocks[0]).toMatchObject({ markdown: "# Updated", fontSize: 42 });
+
+    await request(app)
+      .post("/_agent-native/actions/add-manual-block")
+      .send({
+        pid,
+        sid: slide.id,
+        block: {
+          id: "badge",
+          type: "shape",
+          shape: "pill",
+          color: "#25d366",
+          label: "Ready",
+          x: 52,
+          y: 10,
+          w: 18,
+          h: 10,
+        },
+      });
+
+    const grouped = await request(app)
+      .put("/_agent-native/actions/group-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        blockIds: ["title", "badge"],
+        groupId: "hero",
+        groupName: "Hero",
+      });
+    expect(grouped.status).toBe(200);
+    expect(grouped.body.blocks).toEqual([
+      expect.objectContaining({ id: "title", groupId: "hero", groupName: "Hero" }),
+      expect.objectContaining({ id: "badge", groupId: "hero", groupName: "Hero" }),
+    ]);
+
+    const ungrouped = await request(app)
+      .put("/_agent-native/actions/ungroup-manual-blocks")
+      .send({ pid, sid: slide.id, groupId: "hero" });
+    expect(ungrouped.status).toBe(200);
+    expect(ungrouped.body.blocks.every((block: { groupId?: string }) => !block.groupId)).toBe(true);
+
+    const deleted = await request(app)
+      .delete("/_agent-native/actions/delete-manual-block")
+      .send({ pid, sid: slide.id, bid: "badge" });
+    expect(deleted.status).toBe(200);
+    expect(deleted.body.blocks).toEqual([expect.objectContaining({ id: "title" })]);
+  });
 });
 
 describe("Deck asset actions", () => {

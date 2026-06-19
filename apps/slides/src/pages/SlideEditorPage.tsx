@@ -1917,16 +1917,47 @@ const TRANSITION_PRESETS = [
   { value: "fade", label: "Fade" },
   { value: "scale", label: "Scale" },
   { value: "none", label: "None" },
+  { value: "custom", label: "Custom" },
 ] as const;
+
+const DEFAULT_CUSTOM_ENTER = [
+  { opacity: 0, transform: "translate3d(0, 18px, 0) scale(0.98)", filter: "blur(8px)" },
+  { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)", filter: "blur(0)" },
+];
+
+const DEFAULT_CUSTOM_EXIT = [
+  { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)", filter: "blur(0)" },
+  { opacity: 0, transform: "translate3d(0, -18px, 0) scale(1.02)", filter: "blur(8px)" },
+];
 
 function makePresetTransition(name: string, duration: number): ApiSlideTransition | null {
   if (name === "default") return null;
+  if (name === "custom") return makeCustomTransition(duration);
   return {
     engine: "waapi",
     name,
     duration: Math.max(0, Math.min(5000, Math.round(duration))),
     easing: "cubic-bezier(0.4, 0, 0.2, 1)",
   };
+}
+
+function makeCustomTransition(duration: number): ApiSlideTransition {
+  return {
+    engine: "waapi",
+    name: "custom",
+    duration: Math.max(0, Math.min(5000, Math.round(duration))),
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    enter: { keyframes: DEFAULT_CUSTOM_ENTER },
+    exit: { keyframes: DEFAULT_CUSTOM_EXIT },
+  };
+}
+
+function updateTransitionPatch(
+  transition: ApiSlideTransition | null,
+  patch: Partial<ApiSlideTransition>,
+) {
+  const base = transition ?? makeCustomTransition(350);
+  return { ...base, ...patch };
 }
 
 function SlideTransitionEditor({
@@ -1938,6 +1969,8 @@ function SlideTransitionEditor({
 }) {
   const selectedName = transition?.name ?? "default";
   const duration = transition?.duration ?? 350;
+  const isCustom = Boolean(transition && selectedName === "custom");
+  const customTransition = isCustom ? transition : null;
 
   return (
     <div>
@@ -1981,6 +2014,110 @@ function SlideTransitionEditor({
           aria-label="Transition duration"
         />
       </div>
+      {transition && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+          <select
+            value={transition.engine ?? "waapi"}
+            onChange={(event) =>
+              onTransition(
+                updateTransitionPatch(transition, {
+                  engine: event.target.value as ApiSlideTransition["engine"],
+                }),
+              )
+            }
+            style={inp}
+            aria-label="Transition engine"
+          >
+            <option value="waapi">WAAPI</option>
+            <option value="css">CSS</option>
+            <option value="motion">Motion</option>
+            <option value="three">Three</option>
+            <option value="custom">Custom</option>
+          </select>
+          <input
+            value={transition.easing ?? ""}
+            onChange={(event) =>
+              onTransition(updateTransitionPatch(transition, { easing: event.target.value }))
+            }
+            placeholder="Easing"
+            style={inp}
+            aria-label="Transition easing"
+          />
+        </div>
+      )}
+      {customTransition && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <TransitionKeyframeEditor
+            label="Enter keyframes"
+            phase={customTransition.enter ?? { keyframes: DEFAULT_CUSTOM_ENTER }}
+            onPhase={(enter) => onTransition(updateTransitionPatch(customTransition, { enter }))}
+          />
+          <TransitionKeyframeEditor
+            label="Exit keyframes"
+            phase={customTransition.exit ?? { keyframes: DEFAULT_CUSTOM_EXIT }}
+            onPhase={(exit) => onTransition(updateTransitionPatch(customTransition, { exit }))}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function parseKeyframesText(value: string) {
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("Expected a non-empty JSON array.");
+  }
+  if (parsed.some((frame) => !frame || typeof frame !== "object" || Array.isArray(frame))) {
+    throw new Error("Each keyframe must be a JSON object.");
+  }
+  return parsed as NonNullable<ApiSlideTransition["enter"]>["keyframes"];
+}
+
+function TransitionKeyframeEditor({
+  label,
+  onPhase,
+  phase,
+}: {
+  label: string;
+  onPhase: (phase: NonNullable<ApiSlideTransition["enter"]>) => void;
+  phase: NonNullable<ApiSlideTransition["enter"]>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState(() => JSON.stringify(phase.keyframes, null, 2));
+
+  useEffect(() => {
+    setDraft(JSON.stringify(phase.keyframes, null, 2));
+  }, [phase.keyframes]);
+
+  return (
+    <div>
+      <div style={inspectorLabel}>{label}</div>
+      <textarea
+        value={draft}
+        spellCheck={false}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          setError(null);
+        }}
+        onBlur={() => {
+          try {
+            onPhase({ ...phase, keyframes: parseKeyframesText(draft) });
+            setError(null);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Invalid keyframe JSON.");
+          }
+        }}
+        rows={5}
+        style={{
+          ...inp,
+          resize: "vertical",
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: 10,
+          lineHeight: 1.45,
+        }}
+      />
+      {error && <div style={{ color: "#ff8a8a", fontSize: 10, marginTop: 4 }}>{error}</div>}
     </div>
   );
 }

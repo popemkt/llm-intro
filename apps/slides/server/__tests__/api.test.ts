@@ -772,11 +772,34 @@ describe("Slides API", () => {
       .send({
         pid,
         sid: created.body.id,
-        transition: { engine: "waapi", name: "scale", duration: 450, easing: "ease-in-out" },
+        transition: {
+          engine: "waapi",
+          name: "custom",
+          duration: 450,
+          easing: "ease-in-out",
+          enter: {
+            keyframes: [
+              { opacity: 0, transform: "translateY(16px)" },
+              { opacity: 1, transform: "translateY(0)" },
+            ],
+          },
+          exit: {
+            keyframes: [
+              { opacity: 1, filter: "blur(0)" },
+              { opacity: 0, filter: "blur(10px)" },
+            ],
+            duration: 300,
+          },
+        },
       });
 
     expect(updated.status).toBe(200);
-    expect(updated.body.transition).toMatchObject({ name: "scale", duration: 450 });
+    expect(updated.body.transition).toMatchObject({
+      name: "custom",
+      duration: 450,
+      enter: { keyframes: [{ opacity: 0, transform: "translateY(16px)" }, expect.any(Object)] },
+      exit: { duration: 300 },
+    });
   });
 
   it("PUT /_agent-native/actions/update-slide updates HTML source on HTML slides", async () => {

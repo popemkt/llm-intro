@@ -251,6 +251,9 @@ editing, themed presentation playback, and HTML export.
   accept the same transition field for manual, HTML, and code-backed slide
   metadata, and presentation/fullscreen/export playback uses it through the
   shared transition stage.
+- Users can author custom transition keyframes for editable slides. Custom
+  transitions store engine, easing, duration, and JSON enter/exit keyframe
+  arrays in the same transition metadata used by agent actions.
 - Users and agents can export and import readable Markdown through
   `export-deck-markdown` and `import-deck-markdown`. The export includes deck
   metadata, slide titles, text blocks, image/embed references, shape labels,

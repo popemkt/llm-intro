@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+  AlignHorizontalJustifyCenter,
+  AlignHorizontalJustifyEnd,
+  AlignHorizontalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
   ArrowDown,
   ArrowUp,
   Bold,
@@ -18,7 +24,10 @@ import {
   Trash2,
   Circle,
   Check,
+  Maximize2,
   Quote,
+  StretchHorizontal,
+  StretchVertical,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
@@ -95,14 +104,73 @@ const inp: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const arrangeButton: React.CSSProperties = {
+  height: 30,
+  border: `1px solid ${C.border}`,
+  borderRadius: 6,
+  background: C.bg,
+  color: C.text,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
+type BlockArrangeAction =
+  | "align-left"
+  | "align-center"
+  | "align-right"
+  | "align-top"
+  | "align-middle"
+  | "align-bottom"
+  | "fit-width"
+  | "fit-height"
+  | "fit-slide";
 
 type MarkdownFormatResult = {
   value: string;
   selectionStart: number;
   selectionEnd: number;
 };
+
+function getBlockRect(block: Block) {
+  const defaults = BLOCK_DEFAULTS[block.type];
+  return {
+    x: block.x ?? defaults.x,
+    y: block.y ?? defaults.y,
+    w: block.w ?? defaults.w,
+    h: block.h ?? defaults.h,
+  };
+}
+
+function arrangeBlock(block: Block, action: BlockArrangeAction): Block {
+  const rect = getBlockRect(block);
+  const maxX = Math.max(0, 100 - rect.w);
+  const maxY = Math.max(0, 100 - rect.h);
+
+  switch (action) {
+    case "align-left":
+      return { ...block, x: 0 };
+    case "align-center":
+      return { ...block, x: clamp((100 - rect.w) / 2, 0, maxX) };
+    case "align-right":
+      return { ...block, x: maxX };
+    case "align-top":
+      return { ...block, y: 0 };
+    case "align-middle":
+      return { ...block, y: clamp((100 - rect.h) / 2, 0, maxY) };
+    case "align-bottom":
+      return { ...block, y: maxY };
+    case "fit-width":
+      return { ...block, x: 5, w: 90 };
+    case "fit-height":
+      return { ...block, y: 5, h: 90 };
+    case "fit-slide":
+      return { ...block, x: 5, y: 5, w: 90, h: 90 };
+  }
+}
 
 export function SlideEditorPage() {
   const { id: pidStr, sid: sidStr } = useParams<{ id: string; sid: string }>();
@@ -384,6 +452,15 @@ export function SlideEditorPage() {
   const updateBlock = useCallback(<K extends Block>(id: string, patch: Partial<K>) => {
     setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
   }, []);
+
+  const arrangeSelectedBlock = useCallback(
+    (action: BlockArrangeAction) => {
+      setBlocks((prev) =>
+        prev.map((block) => (block.id === selectedId ? arrangeBlock(block, action) : block)),
+      );
+    },
+    [selectedId],
+  );
 
   const duplicateBlock = useCallback((id: string) => {
     const source = blocksRef.current.find((block) => block.id === id);
@@ -795,6 +872,114 @@ export function SlideEditorPage() {
                   >
                     <Trash2 size={12} /> Delete
                   </button>
+                </div>
+
+                {/* Arrange */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: C.textDim,
+                      marginBottom: 6,
+                      fontFamily: "JetBrains Mono, monospace",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Arrange
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                    <button
+                      type="button"
+                      aria-label="Align left"
+                      title="Align left"
+                      onClick={() => arrangeSelectedBlock("align-left")}
+                      style={arrangeButton}
+                    >
+                      <AlignHorizontalJustifyStart size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Align center"
+                      title="Align center"
+                      onClick={() => arrangeSelectedBlock("align-center")}
+                      style={arrangeButton}
+                    >
+                      <AlignHorizontalJustifyCenter size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Align right"
+                      title="Align right"
+                      onClick={() => arrangeSelectedBlock("align-right")}
+                      style={arrangeButton}
+                    >
+                      <AlignHorizontalJustifyEnd size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Align top"
+                      title="Align top"
+                      onClick={() => arrangeSelectedBlock("align-top")}
+                      style={arrangeButton}
+                    >
+                      <AlignVerticalJustifyStart size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Align middle"
+                      title="Align middle"
+                      onClick={() => arrangeSelectedBlock("align-middle")}
+                      style={arrangeButton}
+                    >
+                      <AlignVerticalJustifyCenter size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Align bottom"
+                      title="Align bottom"
+                      onClick={() => arrangeSelectedBlock("align-bottom")}
+                      style={arrangeButton}
+                    >
+                      <AlignVerticalJustifyEnd size={14} />
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: 6,
+                      marginTop: 6,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-label="Fit width"
+                      title="Fit width"
+                      onClick={() => arrangeSelectedBlock("fit-width")}
+                      style={arrangeButton}
+                    >
+                      <StretchHorizontal size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Fit height"
+                      title="Fit height"
+                      onClick={() => arrangeSelectedBlock("fit-height")}
+                      style={arrangeButton}
+                    >
+                      <StretchVertical size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Fit slide"
+                      title="Fit slide"
+                      onClick={() => arrangeSelectedBlock("fit-slide")}
+                      style={arrangeButton}
+                    >
+                      <Maximize2 size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Position & size */}

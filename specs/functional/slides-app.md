@@ -134,6 +134,9 @@ editing, themed presentation playback, and HTML export.
   block menu to edit text, duplicate blocks, move layer order, and delete blocks.
 - Text block editors include markdown formatting controls for headings, bold,
   italic, quotes, and bullet lists while preserving plain markdown storage.
+- The selected block inspector can align blocks left, center, right, top,
+  middle, and bottom, and can fit blocks to slide width, height, or both while
+  preserving typed percentage geometry.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
@@ -161,7 +164,7 @@ editing, themed presentation playback, and HTML export.
 
 - Hosted LLM-backed prompt-to-deck streaming. The current local stream is
   deterministic and action-backed until hosted model credentials are adopted.
-- Additional visual editor refinements after the core formatting controls.
+- Additional visual editor refinements beyond formatting and arrange controls.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,

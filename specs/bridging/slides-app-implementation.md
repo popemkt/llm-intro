@@ -222,6 +222,13 @@ and A2A surfaces are protocol-compatible discovery/invocation adapters; they
 are not yet a full authenticated hosted agent runtime with chat state,
 approvals, memory, or streaming.
 
+Presenter mode includes a local external audience display. The presenter view
+opens `/p/:id/display`, writes the active slide index to browser `localStorage`,
+and the display route listens for storage changes from the presenter window. The
+display route bypasses the app shell and renders the existing fullscreen slide
+view without speaker notes or presenter HUD controls, so the audience screen
+stays clean while the presenter keeps notes, timer, next preview, and controls.
+
 The local App Mode runtime is intentionally narrower than the full hosted
 runtime. It accepts a deck scope from the shell, maps simple prompts to existing
 app actions, and returns plain chat text. Current supported prompt families

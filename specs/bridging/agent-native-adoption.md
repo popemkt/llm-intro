@@ -99,7 +99,8 @@ for now. The migration should replace one workflow at a time:
 - an Agent-Native frame/panel experience that supports App mode for product
   actions and Code mode for trusted repo self-modification through local CLIs,
   Desktop, or a Builder-hosted frame;
-- fullscreen/presenter refinements such as external presenter display;
+- additional fullscreen/presenter refinements beyond the current local audience
+  display route;
 - further import/export expansion for non-JSON formats after the core action
   surface is stable.
 

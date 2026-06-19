@@ -382,6 +382,7 @@ function SlidesAgentSurface({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const shellBypassed = /^\/p\/\d+\/display$/.test(location.pathname);
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("slides-shell-collapsed") === "true",
   );
@@ -419,6 +420,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.removeEventListener("agent-panel:close", close);
     };
   }, [agentOpen]);
+
+  if (shellBypassed) return <>{children}</>;
 
   return (
     <div className="slides-app-shell" data-shell-collapsed={collapsed ? "true" : "false"}>

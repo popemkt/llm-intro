@@ -9,6 +9,8 @@ interface Props {
   activeIndex: number;
   onNavigate: (index: number) => void;
   onExit: () => void;
+  allowKeyboardNavigation?: boolean;
+  requestFullscreen?: boolean;
 }
 
 const variants = {
@@ -17,25 +19,34 @@ const variants = {
   exit: (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 0 }),
 };
 
-export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Props) {
+export function FullscreenView({
+  slides,
+  activeIndex,
+  onNavigate,
+  onExit,
+  allowKeyboardNavigation = true,
+  requestFullscreen = true,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const directionRef = useRef(1);
   const transitioning = useRef(false);
 
   useEffect(() => {
+    if (!requestFullscreen) return;
     containerRef.current?.requestFullscreen().catch(() => {});
     return () => {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     };
-  }, []);
+  }, [requestFullscreen]);
 
   useEffect(() => {
+    if (!requestFullscreen) return;
     const onFSChange = () => {
       if (!document.fullscreenElement) onExit();
     };
     document.addEventListener("fullscreenchange", onFSChange);
     return () => document.removeEventListener("fullscreenchange", onFSChange);
-  }, [onExit]);
+  }, [onExit, requestFullscreen]);
 
   const go = useCallback(
     (next: number) => {
@@ -49,6 +60,7 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
   );
 
   useEffect(() => {
+    if (!allowKeyboardNavigation) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -60,7 +72,7 @@ export function FullscreenView({ slides, activeIndex, onNavigate, onExit }: Prop
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, activeIndex]);
+  }, [activeIndex, allowKeyboardNavigation, go]);
 
   const slide = slides[activeIndex];
 

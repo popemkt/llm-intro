@@ -5,45 +5,10 @@ import { useActionMutation, useActionQuery } from "@agent-native/core/client";
 import { OverviewGrid, type NormalSlideQuickLayout } from "@/components/OverviewGrid";
 import { PresentationView } from "@/components/PresentationView";
 import { FullscreenView } from "@/components/FullscreenView";
-import { codeSlideRegistry } from "@/slides/registry";
 import { getErrorMessage } from "@/api/client";
+import { toUnifiedSlide } from "@/lib/presentationSlides";
+import { writePresenterSyncState } from "@/lib/presenterSync";
 import type { UnifiedSlide, ApiSlide, ApiSlideGroup, ApiPresentation, LayoutInput } from "@/types";
-
-function toUnified(slide: ApiSlide, theme: ApiPresentation["theme"]): UnifiedSlide {
-  const groupId = slide.group_id ?? null;
-  if (slide.kind === "code") {
-    const component = codeSlideRegistry[slide.code_id ?? ""];
-    if (!component) {
-      console.warn(`Unknown code_id: ${slide.code_id}`);
-      return {
-        kind: "db",
-        id: slide.id,
-        groupId,
-        title: slide.title,
-        notes: slide.notes,
-        blocks: [],
-        theme,
-      };
-    }
-    return {
-      kind: "code",
-      id: slide.id,
-      groupId,
-      title: slide.title,
-      notes: slide.notes,
-      component,
-    };
-  }
-  return {
-    kind: "db",
-    id: slide.id,
-    groupId,
-    title: slide.title,
-    notes: slide.notes,
-    blocks: slide.blocks,
-    theme,
-  };
-}
 
 const normalSlideTitles: Record<NormalSlideQuickLayout, string> = {
   title: "Title slide",
@@ -107,7 +72,7 @@ export function PresentationPage() {
   });
 
   const hydrateSlides = useCallback((apiSlides: ApiSlide[], pres: ApiPresentation) => {
-    setSlides(apiSlides.map((slide) => toUnified(slide, pres.theme)));
+    setSlides(apiSlides.map((slide) => toUnifiedSlide(slide, pres.theme)));
   }, []);
 
   useEffect(() => {
@@ -147,6 +112,11 @@ export function PresentationPage() {
     setActiveIndex((index) => Math.min(index, slides.length - 1));
   }, [mode, slides.length]);
 
+  useEffect(() => {
+    if (!presentation) return;
+    writePresenterSyncState(presentation.id, activeIndex, slides.length);
+  }, [activeIndex, presentation, slides.length]);
+
   const showNotice = useCallback((msg: string, type: "error" | "success" = "error") => {
     setNotice({ msg, type });
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -157,7 +127,7 @@ export function PresentationPage() {
     if (!presentation) return;
     try {
       const slide = await createSlide.mutateAsync({ pid: presentation.id });
-      setSlides((prev) => [...prev, toUnified(slide, presentation.theme)]);
+      setSlides((prev) => [...prev, toUnifiedSlide(slide, presentation.theme)]);
     } catch (err) {
       showNotice(getErrorMessage(err));
     }
@@ -172,7 +142,7 @@ export function PresentationPage() {
           layout,
           title: normalSlideTitles[layout],
         });
-        setSlides((prev) => [...prev, toUnified(slide, presentation.theme)]);
+        setSlides((prev) => [...prev, toUnifiedSlide(slide, presentation.theme)]);
       } catch (err) {
         showNotice(getErrorMessage(err));
       }
@@ -228,7 +198,7 @@ export function PresentationPage() {
       try {
         const slide = await createSlide.mutateAsync({ pid: presentation.id });
         // New slide is created in ungrouped; move it into the target group.
-        const unified = toUnified(slide, presentation.theme);
+        const unified = toUnifiedSlide(slide, presentation.theme);
         const nextSlides = [...slides, unified];
         setSlides(nextSlides);
         const layout: LayoutInput = {
@@ -327,7 +297,7 @@ export function PresentationPage() {
         });
         setSlides((prev) =>
           prev.map((slide) =>
-            slide.id === slideId ? toUnified(updatedSlide, presentation.theme) : slide,
+            slide.id === slideId ? toUnifiedSlide(updatedSlide, presentation.theme) : slide,
           ),
         );
       } catch (err) {
@@ -457,6 +427,7 @@ export function PresentationPage() {
             onNavigate={setActiveIndex}
             onGoHome={() => navigate("/")}
             onEnterFullscreen={() => setMode("fullscreen")}
+            externalDisplayUrl={`/p/${presentation.id}/display`}
           />
         ) : (
           <FullscreenView

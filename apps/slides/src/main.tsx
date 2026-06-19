@@ -15,6 +15,11 @@ const HomePage = lazy(() =>
 const PresentationPage = lazy(() =>
   import("./pages/PresentationPage").then((module) => ({ default: module.PresentationPage })),
 );
+const AudienceDisplayPage = lazy(() =>
+  import("./pages/AudienceDisplayPage").then((module) => ({
+    default: module.AudienceDisplayPage,
+  })),
+);
 const SlideEditorPage = lazy(() =>
   import("./pages/SlideEditorPage").then((module) => ({ default: module.SlideEditorPage })),
 );
@@ -60,6 +65,7 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/p/:id" element={<PresentationPage />} />
+              <Route path="/p/:id/display" element={<AudienceDisplayPage />} />
               <Route path="/p/:id/edit/:sid" element={<SlideEditorPage />} />
               <Route path="/p/:id/settings" element={<SettingsPage />} />
               <Route path="/settings" element={<AppSettingsPage />} />

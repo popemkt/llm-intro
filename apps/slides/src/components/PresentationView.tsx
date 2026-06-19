@@ -8,6 +8,7 @@ import {
   Home,
   Keyboard,
   Maximize2,
+  MonitorUp,
   RotateCcw,
 } from "lucide-react";
 import type { UnifiedSlide } from "@/types";
@@ -23,6 +24,7 @@ interface PresentationViewProps {
   onEnterFullscreen?: () => void;
   showOverviewButton?: boolean;
   showCounter?: boolean;
+  externalDisplayUrl?: string;
 }
 
 const variants = {
@@ -218,6 +220,7 @@ export function PresentationView({
   onEnterFullscreen,
   showOverviewButton = true,
   showCounter = true,
+  externalDisplayUrl,
 }: PresentationViewProps) {
   const directionRef = useRef(1);
   const isTransitioning = useRef(false);
@@ -282,6 +285,10 @@ export function PresentationView({
   const next = useCallback(() => go(activeIndex + 1), [go, activeIndex]);
 
   const activeSlide = slides[activeIndex];
+  const openExternalDisplay = useCallback(() => {
+    if (!externalDisplayUrl) return;
+    window.open(externalDisplayUrl, "llm-intro-display")?.focus();
+  }, [externalDisplayUrl]);
 
   if (!activeSlide) {
     return (
@@ -521,6 +528,18 @@ export function PresentationView({
             >
               <Keyboard size={14} />
             </button>
+
+            {/* External display */}
+            {externalDisplayUrl && (
+              <button
+                onClick={openExternalDisplay}
+                className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+                style={{ color: "var(--color-text-dim)" }}
+                title="Open audience display"
+              >
+                <MonitorUp size={14} />
+              </button>
+            )}
 
             {/* Fullscreen */}
             {onEnterFullscreen && (

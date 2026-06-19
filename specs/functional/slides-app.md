@@ -204,6 +204,9 @@ editing, themed presentation playback, and HTML export.
   `/embed`, and `/shape`.
 - Users can edit text blocks directly on the slide canvas and use the selected
   block menu to edit text, duplicate blocks, move layer order, and delete blocks.
+- Users can multi-select manual slide blocks from the canvas or layer list,
+  drag the selected blocks as a group, duplicate or delete the selection, and
+  nudge selected blocks with the keyboard.
 - Text block editors include markdown formatting controls for headings, bold,
   italic, quotes, and bullet lists while preserving plain markdown storage.
 - The selected block inspector can align blocks left, center, right, top,

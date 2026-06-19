@@ -51,10 +51,13 @@ type DragState = {
   blockId: string;
   startCx: number;
   startCy: number;
-  origX: number;
-  origY: number;
-  origW: number;
-  origH: number;
+  originals: Array<{
+    id: string;
+    origX: number;
+    origY: number;
+    origW: number;
+    origH: number;
+  }>;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -204,6 +207,7 @@ export function SlideEditorPage() {
   const [notes, setNotes] = useState("");
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loading, setLoading] = useState(true);
@@ -229,11 +233,15 @@ export function SlideEditorPage() {
 
   // Current values ref (for keyboard handler)
   const blocksRef = useRef(blocks);
+  const selectedIdsRef = useRef(selectedIds);
   const titleRef = useRef(title);
   const notesRef = useRef(notes);
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
   useEffect(() => {
     titleRef.current = title;
   }, [title]);
@@ -314,39 +322,48 @@ export function SlideEditorPage() {
 
       setBlocks((prev) =>
         prev.map((b) => {
-          if (b.id !== drag.blockId) return b;
-          const bw = b.w ?? 80;
-          const bh = b.h ?? 20;
+          const original = drag.originals.find((entry) => entry.id === b.id);
+          if (!original) return b;
+          const bw = original.origW;
+          const bh = original.origH;
           switch (drag.mode) {
             case "move":
               return {
                 ...b,
-                x: clamp(drag.origX + dx, 0, 100 - bw),
-                y: clamp(drag.origY + dy, 0, 100 - bh),
+                x: clamp(original.origX + dx, 0, 100 - bw),
+                y: clamp(original.origY + dy, 0, 100 - bh),
               };
             case "resize-br":
-              return { ...b, w: Math.max(5, drag.origW + dx), h: Math.max(5, drag.origH + dy) };
-            case "resize-bl":
+              if (b.id !== drag.blockId) return b;
               return {
                 ...b,
-                x: clamp(drag.origX + dx, 0, drag.origX + drag.origW - 5),
-                w: Math.max(5, drag.origW - dx),
-                h: Math.max(5, drag.origH + dy),
+                w: Math.max(5, original.origW + dx),
+                h: Math.max(5, original.origH + dy),
+              };
+            case "resize-bl":
+              if (b.id !== drag.blockId) return b;
+              return {
+                ...b,
+                x: clamp(original.origX + dx, 0, original.origX + original.origW - 5),
+                w: Math.max(5, original.origW - dx),
+                h: Math.max(5, original.origH + dy),
               };
             case "resize-tr":
+              if (b.id !== drag.blockId) return b;
               return {
                 ...b,
-                y: clamp(drag.origY + dy, 0, drag.origY + drag.origH - 5),
-                w: Math.max(5, drag.origW + dx),
-                h: Math.max(5, drag.origH - dy),
+                y: clamp(original.origY + dy, 0, original.origY + original.origH - 5),
+                w: Math.max(5, original.origW + dx),
+                h: Math.max(5, original.origH - dy),
               };
             case "resize-tl":
+              if (b.id !== drag.blockId) return b;
               return {
                 ...b,
-                x: clamp(drag.origX + dx, 0, drag.origX + drag.origW - 5),
-                y: clamp(drag.origY + dy, 0, drag.origY + drag.origH - 5),
-                w: Math.max(5, drag.origW - dx),
-                h: Math.max(5, drag.origH - dy),
+                x: clamp(original.origX + dx, 0, original.origX + original.origW - 5),
+                y: clamp(original.origY + dy, 0, original.origY + original.origH - 5),
+                w: Math.max(5, original.origW - dx),
+                h: Math.max(5, original.origH - dy),
               };
           }
         }),
@@ -412,42 +429,56 @@ export function SlideEditorPage() {
     }
   }, [pid, sid, navigate, updateSlide]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // Cmd/Ctrl+S — save and exit
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        void saveAndExit();
-        return;
-      }
-      // Delete/Backspace — delete selected block (not when editing text inputs)
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
-        const target = e.target as HTMLElement;
-        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
-        e.preventDefault();
-        setBlocks((prev) => prev.filter((b) => b.id !== selectedId));
-        setSelectedId(null);
-      }
-      // Escape — deselect
-      if (e.key === "Escape") setSelectedId(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [saveAndExit, selectedId]);
+  const clearSelection = useCallback(() => {
+    setSelectedId(null);
+    setSelectedIds([]);
+    setEditingTextId(null);
+  }, []);
+
+  const selectOnlyBlock = useCallback((id: string) => {
+    setSelectedId(id);
+    setSelectedIds([id]);
+  }, []);
+
+  const toggleBlockSelection = useCallback((id: string) => {
+    setEditingTextId(null);
+    setSelectedIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id];
+      setSelectedId(next[next.length - 1] ?? null);
+      return next;
+    });
+  }, []);
 
   const startDrag = (e: React.PointerEvent, block: Block, mode: DragMode = "move") => {
     e.stopPropagation();
+    if (mode === "move" && (e.shiftKey || e.metaKey || e.ctrlKey)) {
+      toggleBlockSelection(block.id);
+      dragRef.current = null;
+      return;
+    }
+    const selectedSet =
+      mode === "move" &&
+      selectedIdsRef.current.includes(block.id) &&
+      selectedIdsRef.current.length > 1
+        ? selectedIdsRef.current
+        : [block.id];
     setSelectedId(block.id);
+    setSelectedIds(selectedSet);
+    const originals = blocksRef.current
+      .filter((entry) => selectedSet.includes(entry.id))
+      .map((entry) => ({
+        id: entry.id,
+        origX: entry.x ?? BLOCK_DEFAULTS[entry.type].x,
+        origY: entry.y ?? BLOCK_DEFAULTS[entry.type].y,
+        origW: entry.w ?? BLOCK_DEFAULTS[entry.type].w,
+        origH: entry.h ?? BLOCK_DEFAULTS[entry.type].h,
+      }));
     dragRef.current = {
       mode,
       blockId: block.id,
       startCx: e.clientX,
       startCy: e.clientY,
-      origX: block.x ?? 5,
-      origY: block.y ?? 5,
-      origW: block.w ?? 80,
-      origH: block.h ?? 20,
+      originals,
     };
   };
 
@@ -455,25 +486,38 @@ export function SlideEditorPage() {
     const b = makeBlock(type);
     setBlocks((prev) => [...prev, b]);
     setSelectedId(b.id);
+    setSelectedIds([b.id]);
   }, []);
 
   const addBlocks = useCallback((nextBlocks: Block[]) => {
     setBlocks((prev) => [...prev, ...nextBlocks]);
     setSelectedId(nextBlocks[0]?.id ?? null);
+    setSelectedIds(nextBlocks.map((block) => block.id));
   }, []);
 
   const insertAssetBlock = useCallback((asset: ApiDeckAsset) => {
     const block = makeImageBlockFromAsset(asset);
     setBlocks((prev) => [...prev, block]);
     setSelectedId(block.id);
+    setSelectedIds([block.id]);
     setEditingTextId(null);
   }, []);
 
   const deleteBlock = useCallback((id: string) => {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedId((s) => (s === id ? null : s));
+    setSelectedIds((ids) => ids.filter((entry) => entry !== id));
     setEditingTextId((s) => (s === id ? null : s));
   }, []);
+
+  const deleteSelectedBlocks = useCallback(
+    (ids: string[]) => {
+      const selected = new Set(ids);
+      setBlocks((prev) => prev.filter((block) => !selected.has(block.id)));
+      clearSelection();
+    },
+    [clearSelection],
+  );
 
   const updateBlock = useCallback(<K extends Block>(id: string, patch: Partial<K>) => {
     setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
@@ -488,22 +532,58 @@ export function SlideEditorPage() {
     [selectedId],
   );
 
-  const duplicateBlock = useCallback((id: string) => {
-    const source = blocksRef.current.find((block) => block.id === id);
-    if (!source) return;
-    const copy: Block = {
-      ...source,
-      id: nanoid(),
-      x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
-      y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
-    };
+  const duplicateBlocks = useCallback((ids: string[]) => {
+    const selected = new Set(ids);
+    const copies = blocksRef.current
+      .filter((block) => selected.has(block.id))
+      .map((source) => ({
+        sourceId: source.id,
+        copy: {
+          ...source,
+          id: nanoid(),
+          x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
+          y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
+        } as Block,
+      }));
+    if (copies.length === 0) return;
+    const copiesBySource = new Map(copies.map((entry) => [entry.sourceId, entry.copy]));
     setBlocks((prev) => {
-      const index = prev.findIndex((block) => block.id === id);
-      if (index < 0) return [...prev, copy];
-      return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)];
+      const next: Block[] = [];
+      for (const block of prev) {
+        next.push(block);
+        const copy = copiesBySource.get(block.id);
+        if (copy) next.push(copy);
+      }
+      return next;
     });
-    setSelectedId(copy.id);
+    const nextIds = copies.map((entry) => entry.copy.id);
+    setSelectedIds(nextIds);
+    setSelectedId(nextIds[nextIds.length - 1] ?? null);
     setEditingTextId(null);
+  }, []);
+
+  const duplicateBlock = useCallback(
+    (id: string) => {
+      duplicateBlocks([id]);
+    },
+    [duplicateBlocks],
+  );
+
+  const nudgeBlocks = useCallback((ids: string[], dx: number, dy: number) => {
+    const selected = new Set(ids);
+    setBlocks((prev) =>
+      prev.map((block) => {
+        if (!selected.has(block.id)) return block;
+        const defaults = BLOCK_DEFAULTS[block.type];
+        const w = block.w ?? defaults.w;
+        const h = block.h ?? defaults.h;
+        return {
+          ...block,
+          x: clamp((block.x ?? defaults.x) + dx, 0, 100 - w),
+          y: clamp((block.y ?? defaults.y) + dy, 0, 100 - h),
+        };
+      }),
+    );
   }, []);
 
   const moveBlockLayer = useCallback((id: string, direction: "forward" | "back") => {
@@ -518,7 +598,50 @@ export function SlideEditorPage() {
     });
   }, []);
 
-  const selectedBlock = blocks.find((b) => b.id === selectedId) ?? null;
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const editingField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        void saveAndExit();
+        return;
+      }
+      if (editingField) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedIdsRef.current.length > 0) {
+        e.preventDefault();
+        deleteSelectedBlocks(selectedIdsRef.current);
+        return;
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "d" &&
+        selectedIdsRef.current.length
+      ) {
+        e.preventDefault();
+        duplicateBlocks(selectedIdsRef.current);
+        return;
+      }
+      if (
+        ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) &&
+        selectedIdsRef.current.length
+      ) {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        nudgeBlocks(selectedIdsRef.current, dx, dy);
+        return;
+      }
+      if (e.key === "Escape") clearSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearSelection, deleteSelectedBlocks, duplicateBlocks, nudgeBlocks, saveAndExit]);
+
+  const selectedBlock =
+    selectedIds.length === 1 ? (blocks.find((b) => b.id === selectedIds[0]) ?? null) : null;
 
   const saveStatusLabel =
     saveStatus === "saving"
@@ -710,7 +833,7 @@ export function SlideEditorPage() {
             padding: 28,
             overflow: "hidden",
           }}
-          onClick={() => setSelectedId(null)}
+          onClick={clearSelection}
         >
           <div
             ref={canvasRef}
@@ -745,7 +868,7 @@ export function SlideEditorPage() {
             )}
 
             {blocks.map((block) => {
-              const isSelected = selectedId === block.id;
+              const isSelected = selectedIds.includes(block.id);
               const isInlineEditing = editingTextId === block.id && block.type === "text";
               const x = block.x ?? 5;
               const y = block.y ?? 5;
@@ -758,12 +881,13 @@ export function SlideEditorPage() {
                   onDoubleClick={(e) => {
                     if (block.type !== "text") return;
                     e.stopPropagation();
-                    setSelectedId(block.id);
+                    selectOnlyBlock(block.id);
                     setEditingTextId(block.id);
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedId(block.id);
+                    if (e.shiftKey || e.metaKey || e.ctrlKey) toggleBlockSelection(block.id);
+                    else selectOnlyBlock(block.id);
                   }}
                   style={{
                     position: "absolute",
@@ -1155,6 +1279,12 @@ export function SlideEditorPage() {
                   />
                 )}
               </>
+            ) : selectedIds.length > 1 ? (
+              <MultiSelectionPanel
+                count={selectedIds.length}
+                onDelete={() => deleteSelectedBlocks(selectedIds)}
+                onDuplicate={() => duplicateBlocks(selectedIds)}
+              />
             ) : (
               <div
                 style={{
@@ -1233,7 +1363,11 @@ export function SlideEditorPage() {
               {[...blocks].reverse().map((b) => (
                 <div
                   key={b.id}
-                  onClick={() => setSelectedId(b.id)}
+                  onClick={(event) => {
+                    if (event.shiftKey || event.metaKey || event.ctrlKey)
+                      toggleBlockSelection(b.id);
+                    else selectOnlyBlock(b.id);
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -1242,8 +1376,8 @@ export function SlideEditorPage() {
                     borderRadius: 7,
                     cursor: "pointer",
                     marginBottom: 2,
-                    background: selectedId === b.id ? C.accentSubtle : "transparent",
-                    border: `1px solid ${selectedId === b.id ? C.border : "transparent"}`,
+                    background: selectedIds.includes(b.id) ? C.accentSubtle : "transparent",
+                    border: `1px solid ${selectedIds.includes(b.id) ? C.border : "transparent"}`,
                   }}
                 >
                   <span
@@ -1423,6 +1557,50 @@ const inspectorLabel: React.CSSProperties = {
   textTransform: "uppercase",
   letterSpacing: "0.06em",
 };
+
+function MultiSelectionPanel({
+  count,
+  onDelete,
+  onDuplicate,
+}: {
+  count: number;
+  onDelete: () => void;
+  onDuplicate: () => void;
+}) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${C.border}`,
+        borderRadius: 8,
+        padding: 12,
+        background: C.bg,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 9,
+          fontFamily: "JetBrains Mono, monospace",
+          color: C.muted,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+      >
+        {count} selected
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <button type="button" onClick={onDuplicate} style={arrangeButton}>
+          <Copy size={13} />
+        </button>
+        <button type="button" onClick={onDelete} style={{ ...arrangeButton, color: "#ff8a8a" }}>
+          <Trash2 size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function InspectorField({ children, label }: { children: React.ReactNode; label: string }) {
   return (

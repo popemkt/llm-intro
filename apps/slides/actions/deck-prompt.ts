@@ -7,6 +7,7 @@ import {
   createDisabledLocalDeckModelProvider,
   type LocalDeckModelProvider,
 } from "../server/local-model-provider.js";
+import { getLocalHarnessStatus } from "../server/local-harness-provider.js";
 import { buildNormalSlideBlocks } from "./normal-slide-layouts.js";
 import type { NormalSlideInput } from "./normal-slide-layouts.js";
 import { slideTitle } from "./normal-slide-action.js";
@@ -173,6 +174,22 @@ export function createDeckPromptActions(
           "Report whether the local OpenAI-compatible model harness is available for prompt deck drafting.",
       },
       run: () => localModelProvider.status(),
+    }),
+
+    "get-local-harness-status": defineAction({
+      description:
+        "Report configured local harness HTTP, OpenAPI, and MCP endpoints for App Mode discovery.",
+      schema: z.object({}),
+      http: { method: "GET", path: "get-local-harness-status" },
+      requiresAuth: false,
+      readOnly: true,
+      publicAgent: {
+        ...publicReadAction,
+        title: "Get local harness status",
+        description:
+          "Report configured local harness HTTP, OpenAPI, and MCP endpoints for App Mode discovery.",
+      },
+      run: () => getLocalHarnessStatus(),
     }),
 
     "draft-deck-from-prompt": defineAction({

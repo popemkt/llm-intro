@@ -197,9 +197,16 @@ External local harnesses are discovery-only in this slice. Configure
 `LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, or
 `LOCAL_HARNESS_MCP_URL` (or the matching `AGENT_NATIVE_LOCAL_HARNESS_*` aliases)
 to advertise local harness HTTP, OpenAPI, or MCP transports through
-`local-runtime/protocols`. A configured MCP URL is also listed by
-`GET /_agent-native/mcp/servers`. Actual invocation should be added as a
-separate adapter once the harness contract is known.
+`local-runtime/protocols` and through the read-only `get-local-harness-status`
+action. A configured MCP URL is also listed by `GET /_agent-native/mcp/servers`.
+The local App Mode runtime can answer harness status questions through that
+action, but actual harness invocation should be added as a separate adapter once
+the harness contract is known.
+Use MCP when the harness is primarily a tool/resource server, OpenAPI when the
+harness already publishes REST operations, and direct HTTP only for a known
+single-purpose endpoint. Local model serving is separate: prompt drafting uses
+an OpenAI-compatible endpoint via `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and
+`OPENAI_MODEL`; MCP is not the model transport.
 `GET /_agent-native/env-status` reports the same configured/fallback state with
 redacted secret metadata. Production shell access remains gated by the
 server-side terminal policy.
@@ -302,6 +309,14 @@ existing `demos/.env` harness file as a fallback source. The app runtime does
 not import demo scripts. When the provider is unavailable or generation fails,
 the prompt-deck actions fall back to deterministic local drafting and still
 return typed normal-slide blocks.
+
+Local harnesses and local models are intentionally exposed through different
+boundaries. Harnesses extend App Mode with external tools and context, so they
+belong in action/MCP/OpenAPI discovery. Models generate prompt-deck drafts, so
+they belong behind the local OpenAI-compatible provider. Code Mode can also use
+local authenticated CLIs such as `codex` or `claude`, but that path is for
+trusted self-modification and should not be treated as the product App Mode
+model runtime.
 
 ### Adoption Notes
 

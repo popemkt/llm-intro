@@ -40,6 +40,7 @@ describe("Agent Native app context actions", () => {
       isConsequential: true,
     });
     expectPublicAction(res.body.actions, "get-local-model-status", { readOnly: true });
+    expectPublicAction(res.body.actions, "get-local-harness-status", { readOnly: true });
     expectPublicAction(res.body.actions, "draft-deck-from-prompt", { readOnly: true });
     expectPublicAction(res.body.actions, "create-deck-from-prompt", { readOnly: false });
     expectPublicAction(res.body.actions, "export-deck-json", { readOnly: true });
@@ -351,6 +352,33 @@ describe("Agent Native prompt deck creation", () => {
     });
   });
 
+  it("GET /_agent-native/actions/get-local-harness-status exposes local harness discovery", async () => {
+    const previousMcp = process.env.LOCAL_HARNESS_MCP_URL;
+    process.env.LOCAL_HARNESS_MCP_URL = "http://127.0.0.1:8989/mcp";
+
+    try {
+      const res = await request(app).get("/_agent-native/actions/get-local-harness-status");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        available: true,
+        hosted: false,
+        requiresBuilderAuth: false,
+        invocation: "discovery-only",
+        protocols: expect.arrayContaining([
+          expect.objectContaining({
+            id: "local-harness-mcp",
+            available: true,
+            endpoint: "http://127.0.0.1:8989/mcp",
+          }),
+        ]),
+      });
+    } finally {
+      if (previousMcp === undefined) delete process.env.LOCAL_HARNESS_MCP_URL;
+      else process.env.LOCAL_HARNESS_MCP_URL = previousMcp;
+    }
+  });
+
   it("POST /_agent-native/prompt-deck-stream streams deck and slide creation events", async () => {
     const res = await request(app).post("/_agent-native/prompt-deck-stream").send({
       name: "Stream Deck",
@@ -621,6 +649,19 @@ describe("App agent active deck context runtime", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("Local model harness is not configured");
+  });
+
+  it("POST /_agent-native/app-agent reports local harness status", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "is the local harness configured?",
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Local harness is not configured");
+    expect(res.body.text).toContain("LOCAL_HARNESS_MCP_URL");
   });
 
   it("POST /_agent-native/app-agent renames slides through app actions", async () => {

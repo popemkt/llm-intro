@@ -320,6 +320,31 @@ function responseTextForLocalModelStatus(result: unknown) {
   return `Local model harness is not configured.${reason ? ` ${reason}` : ""}`;
 }
 
+function responseTextForLocalHarnessStatus(result: unknown) {
+  if (!result || typeof result !== "object") {
+    return "I cannot read the local harness status yet.";
+  }
+  const protocols =
+    "protocols" in result && Array.isArray(result.protocols) ? result.protocols : [];
+  const available = protocols.filter(
+    (protocol): protocol is { label?: unknown; endpoint?: unknown } =>
+      Boolean(
+        protocol && typeof protocol === "object" && "available" in protocol && protocol.available,
+      ),
+  );
+  if (available.length === 0) {
+    return "Local harness is not configured. Set LOCAL_HARNESS_MCP_URL, LOCAL_HARNESS_OPENAPI_URL, or LOCAL_HARNESS_HTTP_URL to advertise one.";
+  }
+  const labels = available
+    .map((protocol) => {
+      const label = "label" in protocol ? getText(protocol.label) : "Local harness";
+      const endpoint = "endpoint" in protocol ? getText(protocol.endpoint) : "";
+      return endpoint ? `${label} at ${endpoint}` : label;
+    })
+    .join("; ");
+  return `Local harness is configured for discovery: ${labels}. Invocation remains discovery-only until a harness contract is selected.`;
+}
+
 function responseTextForCreatedGroup(result: unknown) {
   const title =
     result && typeof result === "object" && "title" in result ? getText(result.title) : "";
@@ -664,6 +689,19 @@ async function handleLocalModelPrompt(actions: SlideDeckActions, normalized: str
   return responseTextForLocalModelStatus(result);
 }
 
+async function handleLocalHarnessPrompt(actions: SlideDeckActions, normalized: string) {
+  if (
+    !/\blocal\s+harness\b.*\b(status|available|configured|provider|protocol|mcp|openapi|http)\b/.test(
+      normalized,
+    )
+  ) {
+    return null;
+  }
+
+  const result = await runAction(actions["get-local-harness-status"], {});
+  return responseTextForLocalHarnessStatus(result);
+}
+
 async function handleMarkdownImportPrompt(
   actions: SlideDeckActions,
   prompt: string,
@@ -698,71 +736,102 @@ async function handleDeckCreationPrompt(
   return responseTextForCreatedDeck(result);
 }
 
+type PromptResponseHandler = () => string | null | Promise<string | null>;
+
+async function firstPromptResponse(handlers: PromptResponseHandler[]) {
+  for (const handler of handlers) {
+    const response = await handler();
+    if (response) return response;
+  }
+  return null;
+}
+
+async function handleDeckThemeMutationPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number,
+) {
+  if (!/\b(change|set|update)\b.*\btheme\b/.test(normalized)) return null;
+  const theme = inferTheme(prompt);
+  if (!theme) return `Pick one of these themes: ${THEME_NAMES.join(", ")}.`;
+  await runAction(actions["update-deck"], { id: deckId, theme });
+  return `Changed this deck's theme to ${theme}.`;
+}
+
+async function handleCreateGroupPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number,
+) {
+  if (!/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) return null;
+  const title = inferTitle(prompt, "Group");
+  const group = await runAction(actions["create-group"], { pid: deckId, title });
+  return responseTextForCreatedGroup(group);
+}
+
+async function handleCreateSlidesPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number,
+) {
+  if (!(/\b(create|add|make)\b/.test(normalized) && /\bslides\b/.test(normalized))) return null;
+  const slides = outlineSlides(prompt);
+  if (slides.length === 0) {
+    return "Send a short outline with one slide per line, then I can create the slide sequence.";
+  }
+  const result = await runAction(actions["create-normal-slides"], { pid: deckId, slides });
+  return responseTextForCreatedSlides(result);
+}
+
+async function handleCreateSlidePrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number,
+) {
+  if (!(/\b(create|add|make)\b/.test(normalized) && /\bslide\b/.test(normalized))) return null;
+  const layout = inferLayout(prompt) ?? "bullets";
+  const title = inferTitle(prompt, `${layout} slide`);
+  const result = await runAction(actions["create-normal-slide"], {
+    pid: deckId,
+    layout,
+    title,
+    bullets: layout === "bullets" ? inferBullets(prompt) : undefined,
+  });
+  return responseTextForCreatedSlide(result);
+}
+
 export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
   const normalized = prompt.toLowerCase();
-  const navigationResponse = await handleNavigationPrompt(actions, prompt, normalized, deckId);
-  if (navigationResponse) return navigationResponse;
-
-  const themeResponse = await handleThemePrompt(actions, prompt, normalized, deckId);
-  if (themeResponse) return themeResponse;
-
-  const readResponse = await handleDeckReadPrompt(actions, normalized, deckId);
-  if (readResponse) return readResponse;
-
-  const localModelResponse = await handleLocalModelPrompt(actions, normalized);
-  if (localModelResponse) return localModelResponse;
-
-  const markdownImportResponse = await handleMarkdownImportPrompt(actions, prompt, normalized);
-  if (markdownImportResponse) return markdownImportResponse;
-
-  const deckCreationResponse = await handleDeckCreationPrompt(actions, prompt, normalized);
-  if (deckCreationResponse) return deckCreationResponse;
+  const workspaceResponse = await firstPromptResponse([
+    () => handleNavigationPrompt(actions, prompt, normalized, deckId),
+    () => handleThemePrompt(actions, prompt, normalized, deckId),
+    () => handleDeckReadPrompt(actions, normalized, deckId),
+    () => handleLocalModelPrompt(actions, normalized),
+    () => handleLocalHarnessPrompt(actions, normalized),
+    () => handleMarkdownImportPrompt(actions, prompt, normalized),
+    () => handleDeckCreationPrompt(actions, prompt, normalized),
+  ]);
+  if (workspaceResponse) return workspaceResponse;
 
   if (!deckId) {
     return "Open a deck first, then I can list slides or create normal slides in that deck.";
   }
 
-  if (/\b(change|set|update)\b.*\btheme\b/.test(normalized)) {
-    const theme = inferTheme(prompt);
-    if (!theme) return `Pick one of these themes: ${THEME_NAMES.join(", ")}.`;
-    await runAction(actions["update-deck"], { id: deckId, theme });
-    return `Changed this deck's theme to ${theme}.`;
-  }
-
-  const snapshotResponse = await handleSnapshotPrompt(actions, prompt, normalized, deckId);
-  if (snapshotResponse) return snapshotResponse;
-
-  const slideEditResponse = await handleSlideEditPrompt(actions, prompt, normalized, deckId);
-  if (slideEditResponse) return slideEditResponse;
-
-  if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
-    const title = inferTitle(prompt, "Group");
-    const group = await runAction(actions["create-group"], { pid: deckId, title });
-    return responseTextForCreatedGroup(group);
-  }
-
-  if (/\b(create|add|make)\b/.test(normalized) && /\bslides\b/.test(normalized)) {
-    const slides = outlineSlides(prompt);
-    if (slides.length === 0) {
-      return "Send a short outline with one slide per line, then I can create the slide sequence.";
-    }
-    const result = await runAction(actions["create-normal-slides"], { pid: deckId, slides });
-    return responseTextForCreatedSlides(result);
-  }
-
-  if (/\b(create|add|make)\b/.test(normalized) && /\bslide\b/.test(normalized)) {
-    const layout = inferLayout(prompt) ?? "bullets";
-    const title = inferTitle(prompt, `${layout} slide`);
-    const result = await runAction(actions["create-normal-slide"], {
-      pid: deckId,
-      layout,
-      title,
-      bullets: layout === "bullets" ? inferBullets(prompt) : undefined,
-    });
-    return responseTextForCreatedSlide(result);
-  }
+  const deckResponse = await firstPromptResponse([
+    () => handleDeckThemeMutationPrompt(actions, prompt, normalized, deckId),
+    () => handleSnapshotPrompt(actions, prompt, normalized, deckId),
+    () => handleSlideEditPrompt(actions, prompt, normalized, deckId),
+    () => handleCreateGroupPrompt(actions, prompt, normalized, deckId),
+    () => handleCreateSlidesPrompt(actions, prompt, normalized, deckId),
+    () => handleCreateSlidePrompt(actions, prompt, normalized, deckId),
+  ]);
+  if (deckResponse) return deckResponse;
 
   return [
     "I can work with this deck through app actions.",

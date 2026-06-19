@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import type { AgentTerminalBridge } from "../agent-terminal.js";
 import type { LocalDeckModelProvider, LocalModelStatus } from "../local-model-provider.js";
+import { createLocalHarnessProtocols, localHarnessEnvValue } from "../local-harness-provider.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
 import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
@@ -273,62 +274,6 @@ function createLocalRuntimeProtocols(
       },
     ],
   };
-}
-
-function localHarnessEnvValue(...names: string[]) {
-  for (const name of names) {
-    const value = process.env[name]?.trim();
-    if (value) return value;
-  }
-  return null;
-}
-
-function createLocalHarnessProtocols() {
-  const httpEndpoint = localHarnessEnvValue(
-    "LOCAL_HARNESS_HTTP_URL",
-    "AGENT_NATIVE_LOCAL_HARNESS_HTTP_URL",
-  );
-  const openapiEndpoint = localHarnessEnvValue(
-    "LOCAL_HARNESS_OPENAPI_URL",
-    "AGENT_NATIVE_LOCAL_HARNESS_OPENAPI_URL",
-  );
-  const mcpEndpoint = localHarnessEnvValue(
-    "LOCAL_HARNESS_MCP_URL",
-    "AGENT_NATIVE_LOCAL_HARNESS_MCP_URL",
-  );
-
-  return [
-    {
-      id: "local-harness-http",
-      mode: "app",
-      label: "External local harness HTTP",
-      available: Boolean(httpEndpoint),
-      endpoint: httpEndpoint,
-      hosted: false,
-      toolBoundary: "external-local-harness",
-      description: "Optional local HTTP harness endpoint discovered from environment.",
-    },
-    {
-      id: "local-harness-openapi",
-      mode: "app",
-      label: "External local harness OpenAPI",
-      available: Boolean(openapiEndpoint),
-      endpoint: openapiEndpoint,
-      hosted: false,
-      toolBoundary: "external-local-harness",
-      description: "Optional OpenAPI document for a local harness service.",
-    },
-    {
-      id: "local-harness-mcp",
-      mode: "app",
-      label: "External local harness MCP",
-      available: Boolean(mcpEndpoint),
-      endpoint: mcpEndpoint,
-      hosted: false,
-      toolBoundary: "external-local-harness",
-      description: "Optional local MCP server for harness tools and resources.",
-    },
-  ];
 }
 
 function getLocalProviderStatus(provider?: LocalDeckModelProvider): LocalModelStatus {

@@ -418,6 +418,28 @@ describe("Manual slide actions", () => {
     expect(layered.status).toBe(200);
     expect(layered.body.blocks.at(-1)).toMatchObject({ id: "a" });
   });
+
+  it("inserts reusable manual presets as typed blocks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({ pid, title: "Preset Blocks", blocks: [] })
+    ).body;
+
+    const res = await request(app)
+      .post("/_agent-native/actions/insert-manual-preset")
+      .send({ pid, sid: slide.id, presetId: "comparison" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.blocks).toHaveLength(4);
+    expect(res.body.blocks).toEqual([
+      expect.objectContaining({ type: "shape", label: "Option A" }),
+      expect.objectContaining({ type: "shape", label: "Option B" }),
+      expect.objectContaining({ type: "text", markdown: expect.stringContaining("Current") }),
+      expect.objectContaining({ type: "text", markdown: expect.stringContaining("Target") }),
+    ]);
+    expect(new Set(res.body.blocks.map((block: { id: string }) => block.id)).size).toBe(4);
+  });
 });
 
 describe("Deck asset actions", () => {

@@ -197,6 +197,9 @@ editing, themed presentation playback, and HTML export.
   `arrange-manual-blocks`, `duplicate-manual-blocks`, and
   `move-manual-block-layer`, including multi-block alignment/distribution,
   block duplication with fresh ids, and layer stack changes.
+- Agents can append reusable manual layout presets through
+  `insert-manual-preset`; presets resolve to ordinary typed blocks and can be
+  edited by later block actions.
 - Agents can create full-canvas HTML slides through `create-html-slide` by
   providing authored HTML/CSS/JS source.
 - Users can create a new deck from Home in either blank mode or outline mode.
@@ -212,9 +215,12 @@ editing, themed presentation playback, and HTML export.
 - Users can insert primitive blocks and common content presets in the visual
   slide editor. Presets still write ordinary typed blocks so themes, export, and
   agent actions keep using the same slide model.
+- The manual preset catalog includes title, bullets, quote, metric, two-column,
+  comparison, timeline, image-left, process, and section-divider layouts.
 - Users can insert visual editor blocks from the keyboard with slash commands:
   `/title`, `/bullets`, `/quote`, `/metric`, `/text`, `/image`, `/iframe`,
-  `/embed`, and `/shape`.
+  `/embed`, `/shape`, and preset aliases such as `/comparison`, `/timeline`,
+  `/image-left`, `/process`, and `/section`.
 - Users can edit text blocks directly on the slide canvas and use the selected
   block menu to edit text, duplicate blocks, move layer order, and delete blocks.
 - Users can multi-select manual slide blocks from the canvas or layer list,

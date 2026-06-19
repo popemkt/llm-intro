@@ -10,6 +10,7 @@ import {
   parseSlidePatch,
 } from "../server/validation.js";
 import { AppError } from "../server/errors.js";
+import { buildManualPresetBlocks, MANUAL_PRESET_IDS } from "../shared/manual-presets.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -429,6 +430,31 @@ function createAddManualBlockAction(slidesService: SlidesService) {
   });
 }
 
+function createInsertManualPresetAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Insert a reusable manual slide preset as ordinary typed blocks.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      presetId: z.enum(MANUAL_PRESET_IDS),
+    }),
+    http: { method: "POST", path: "insert-manual-preset" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Insert manual preset",
+      description: "Insert a reusable manual slide preset as ordinary typed blocks.",
+    },
+    run: ({ pid, sid, presetId }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      return updateManualSlideBlocks(slidesService, pid, sid, [
+        ...slide.blocks,
+        ...buildManualPresetBlocks(presetId),
+      ]);
+    },
+  });
+}
+
 function createUpdateManualBlockAction(slidesService: SlidesService) {
   return defineAction({
     description: "Update one typed editable block on a manual slide.",
@@ -679,6 +705,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "update-slide": createUpdateSlideAction(slidesService),
     "delete-slide": createDeleteSlideAction(slidesService),
     "add-manual-block": createAddManualBlockAction(slidesService),
+    "insert-manual-preset": createInsertManualPresetAction(slidesService),
     "update-manual-block": createUpdateManualBlockAction(slidesService),
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),

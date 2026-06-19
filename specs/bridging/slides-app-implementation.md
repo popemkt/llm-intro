@@ -57,6 +57,7 @@ framework boundary.
 | Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields | Vitest/API |
 | Fine-grained manual block actions | `add-manual-block`, `update-manual-block`, `delete-manual-block`, `group-manual-blocks`, and `ungroup-manual-blocks` reuse server block validation and `slidesService.update` so agents can safely edit manual slides incrementally | Vitest/API |
 | Manual block layout actions | `arrange-manual-blocks`, `duplicate-manual-blocks`, and `move-manual-block-layer` mirror visual editor alignment, distribution, duplication, and layer ordering behavior for agents | Vitest/API |
+| Manual preset action | `insert-manual-preset` appends shared preset blocks to a manual slide so agents and the visual editor use the same reusable layouts | Vitest/API |
 | Create HTML slide | `create-html-slide` action persists `kind: "html"` slides with authored HTML source | Vitest/API plus renderer tests |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |
@@ -96,8 +97,8 @@ framework boundary.
 | Functional behavior | Code implementation | Validation |
 |---|---|---|
 | Insert primitive blocks | `SlideBlockInsertPanel` adds text, image, embed, and shape blocks | Browser smoke |
-| Insert content presets | `SlideBlockInsertPanel` adds title, bullets, quote, and metric typed block sets | Browser smoke |
-| Slash insert commands | `SlideBlockInsertPanel` maps `/title`, `/bullets`, `/quote`, `/metric`, and primitive commands to the same typed block creation paths | Browser smoke |
+| Insert content presets | `shared/manual-presets` defines reusable typed block sets; `SlideBlockInsertPanel` renders that catalog for title, bullets, quote, metric, two-column, comparison, timeline, image-left, process, and section-divider layouts | Browser smoke |
+| Slash insert commands | `SlideBlockInsertPanel` maps primitive commands and preset aliases such as `/comparison`, `/timeline`, `/image-left`, `/process`, and `/section` to the same typed block creation paths | Browser smoke |
 | Inline text editing | `InlineTextBlockEditor` edits selected text blocks directly on the canvas and writes markdown back to the typed block | Browser smoke, typecheck |
 | Markdown formatting controls | `MarkdownFormatToolbar` applies headings, bold, italic, quote, and bullet markdown in inline and side-panel text editors | Browser smoke, typecheck |
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |

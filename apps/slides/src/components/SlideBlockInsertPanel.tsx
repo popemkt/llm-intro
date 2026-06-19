@@ -1,18 +1,28 @@
 import { useState } from "react";
-import { BarChart3, Globe, Image as ImageIcon, List, Quote, Square, Type } from "lucide-react";
-import { nanoid } from "nanoid";
+import {
+  BarChart3,
+  Columns2,
+  GitBranch,
+  Globe,
+  Image as ImageIcon,
+  List,
+  Quote,
+  Route,
+  Square,
+  SplitSquareHorizontal,
+  Type,
+} from "lucide-react";
 import type { Block } from "@/types";
 import { C } from "@/design/tokens";
+import {
+  buildManualPresetBlocks,
+  MANUAL_PRESET_META,
+  type ManualPresetIcon,
+} from "../../shared/manual-presets";
 
 type SlideBlockInsertPanelProps = {
   onAddBlock: (type: Block["type"]) => void;
   onAddBlocks: (blocks: Block[]) => void;
-};
-
-type InsertPreset = {
-  label: string;
-  icon: React.ReactNode;
-  blocks: () => Block[];
 };
 
 const primitiveBlocks = [
@@ -29,62 +39,24 @@ const primitiveByCommand = new Map<string, PrimitiveBlockType>([
   ["embed", "iframe"],
 ]);
 
-function textBlock(markdown: string, pos: { x: number; y: number; w: number; h: number }): Block {
-  return { id: nanoid(), type: "text", markdown, ...pos };
-}
-
-function shapeBlock(label: string, pos: { x: number; y: number; w: number; h: number }): Block {
-  return {
-    id: nanoid(),
-    type: "shape",
-    shape: "pill",
-    color: "#25d366",
-    label,
-    ...pos,
-  };
-}
-
-const insertPresets: InsertPreset[] = [
-  {
-    label: "Title",
-    icon: <Type size={12} />,
-    blocks: () => [
-      textBlock("# New slide title\nA concise supporting line.", { x: 8, y: 12, w: 84, h: 30 }),
-    ],
-  },
-  {
-    label: "Bullets",
-    icon: <List size={12} />,
-    blocks: () => [
-      textBlock("## Key points\n- First point\n- Second point\n- Third point", {
-        x: 10,
-        y: 16,
-        w: 78,
-        h: 52,
-      }),
-    ],
-  },
-  {
-    label: "Quote",
-    icon: <Quote size={12} />,
-    blocks: () => [
-      textBlock("> Add a memorable quote here.\n\n-- Attribution", { x: 12, y: 24, w: 76, h: 36 }),
-    ],
-  },
-  {
-    label: "Metric",
-    icon: <BarChart3 size={12} />,
-    blocks: () => [
-      textBlock("# 42%\nMetric label", { x: 12, y: 18, w: 28, h: 28 }),
-      shapeBlock("Signal", { x: 48, y: 22, w: 34, h: 16 }),
-    ],
-  },
-];
+const iconByPreset: Record<ManualPresetIcon, React.ReactNode> = {
+  "bar-chart": <BarChart3 size={12} />,
+  columns: <Columns2 size={12} />,
+  image: <ImageIcon size={12} />,
+  list: <List size={12} />,
+  quote: <Quote size={12} />,
+  route: <Route size={12} />,
+  split: <SplitSquareHorizontal size={12} />,
+  timeline: <GitBranch size={12} />,
+  type: <Type size={12} />,
+};
 
 const presetByCommand = new Map(
-  insertPresets.flatMap((preset) => [
+  MANUAL_PRESET_META.flatMap((preset) => [
+    [preset.id, preset],
     [preset.label.toLowerCase(), preset],
     [preset.label.toLowerCase().replace(/\s+/g, "-"), preset],
+    ...preset.commands.map((command) => [command, preset] as const),
   ]),
 );
 
@@ -119,7 +91,7 @@ export function SlideBlockInsertPanel({ onAddBlock, onAddBlocks }: SlideBlockIns
 
     const preset = presetByCommand.get(value);
     if (preset) {
-      onAddBlocks(preset.blocks());
+      onAddBlocks(buildManualPresetBlocks(preset.id) as Block[]);
       setCommand("");
     }
   }
@@ -178,13 +150,14 @@ export function SlideBlockInsertPanel({ onAddBlock, onAddBlocks }: SlideBlockIns
         Presets
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        {insertPresets.map((preset) => (
+        {MANUAL_PRESET_META.map((preset) => (
           <button
             key={preset.label}
-            onClick={() => onAddBlocks(preset.blocks())}
+            title={preset.description}
+            onClick={() => onAddBlocks(buildManualPresetBlocks(preset.id) as Block[])}
             style={buttonStyle}
           >
-            {preset.icon} {preset.label}
+            {iconByPreset[preset.icon]} {preset.label}
           </button>
         ))}
       </div>

@@ -257,6 +257,10 @@ editing, themed presentation playback, and HTML export.
 - The selected block inspector can edit common appearance, text appearance,
   image fitting/radius, and shape border/label styling using the same typed
   block fields available to agent actions.
+- Users can copy appearance formatting from the selected manual block and paste
+  it onto another selected block. Format paste copies common opacity/rotation
+  and matching block-type appearance fields without copying content, geometry,
+  group membership, lock state, or IDs.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.

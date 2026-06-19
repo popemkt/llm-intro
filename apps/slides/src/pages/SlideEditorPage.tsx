@@ -13,6 +13,7 @@ import {
   ArrowDown,
   ArrowUp,
   Bold,
+  ClipboardPaste,
   Heading1,
   Heading2,
   Italic,
@@ -406,6 +407,7 @@ type MultiBlockArrangeAction =
   | "align-bottom"
   | "distribute-horizontal"
   | "distribute-vertical";
+type BlockFormatClipboard = { patch: Partial<Block>; sourceType: Block["type"] };
 
 type MarkdownFormatResult = {
   value: string;
@@ -517,6 +519,106 @@ function arrangeSelectedBlocks(
   return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
 }
 
+function copyBlockFormat(block: Block): BlockFormatClipboard {
+  const common: Partial<Block> = {
+    opacity: block.opacity,
+    rotation: block.rotation,
+  };
+
+  switch (block.type) {
+    case "text":
+      return {
+        sourceType: block.type,
+        patch: {
+          ...common,
+          align: block.align,
+          background: block.background,
+          color: block.color,
+          fontSize: block.fontSize,
+          padding: block.padding,
+        } as Partial<Block>,
+      };
+    case "image":
+      return {
+        sourceType: block.type,
+        patch: {
+          ...common,
+          borderRadius: block.borderRadius,
+          objectFit: block.objectFit,
+        } as Partial<Block>,
+      };
+    case "iframe":
+      return {
+        sourceType: block.type,
+        patch: common,
+      };
+    case "shape":
+      return {
+        sourceType: block.type,
+        patch: {
+          ...common,
+          borderColor: block.borderColor,
+          borderWidth: block.borderWidth,
+          color: block.color,
+          height: block.height,
+          shape: block.shape,
+          textColor: block.textColor,
+          width: block.width,
+        } as Partial<Block>,
+      };
+    case "line":
+      return {
+        sourceType: block.type,
+        patch: {
+          ...common,
+          color: block.color,
+          dash: block.dash,
+          endArrow: block.endArrow,
+          startArrow: block.startArrow,
+          strokeWidth: block.strokeWidth,
+        } as Partial<Block>,
+      };
+    case "table":
+      return {
+        sourceType: block.type,
+        patch: {
+          ...common,
+          align: block.align,
+          background: block.background,
+          borderColor: block.borderColor,
+          borderWidth: block.borderWidth,
+          cellPadding: block.cellPadding,
+          color: block.color,
+          fontSize: block.fontSize,
+          headerBackground: block.headerBackground,
+          headerRows: block.headerRows,
+        } as Partial<Block>,
+      };
+    case "chart":
+      return {
+        sourceType: block.type,
+        patch: {
+          ...common,
+          axisColor: block.axisColor,
+          background: block.background,
+          labelColor: block.labelColor,
+          series: block.series.map((series) => ({ ...series, values: [...series.values] })),
+          showLegend: block.showLegend,
+          showValues: block.showValues,
+        } as Partial<Block>,
+      };
+  }
+}
+
+function applyBlockFormat(block: Block, clipboard: BlockFormatClipboard): Block {
+  const common = {
+    opacity: clipboard.patch.opacity,
+    rotation: clipboard.patch.rotation,
+  };
+  if (block.type !== clipboard.sourceType) return { ...block, ...common } as Block;
+  return { ...block, ...clipboard.patch } as Block;
+}
+
 export function SlideEditorPage() {
   const { id: pidStr, sid: sidStr } = useParams<{ id: string; sid: string }>();
   const navigate = useNavigate();
@@ -534,6 +636,7 @@ export function SlideEditorPage() {
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [formatClipboard, setFormatClipboard] = useState<BlockFormatClipboard | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [activeGuides, setActiveGuides] = useState<ActiveGuide[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -970,6 +1073,23 @@ export function SlideEditorPage() {
   const updateBlock = useCallback(<K extends Block>(id: string, patch: Partial<K>) => {
     setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
   }, []);
+
+  const copySelectedBlockFormat = useCallback((block: Block) => {
+    setFormatClipboard(copyBlockFormat(block));
+  }, []);
+
+  const pasteSelectedBlockFormat = useCallback(
+    (id: string) => {
+      setBlocks((prev) =>
+        prev.map((block) =>
+          block.id === id && !block.locked && formatClipboard
+            ? applyBlockFormat(block, formatClipboard)
+            : block,
+        ),
+      );
+    },
+    [formatClipboard],
+  );
 
   const arrangeSelectedBlock = useCallback(
     (action: BlockArrangeAction) => {
@@ -1551,24 +1671,58 @@ export function SlideEditorPage() {
                       >
                         {selectedBlock.type}
                       </span>
-                      <button
-                        onClick={() => deleteBlock(selectedBlock.id)}
-                        disabled={selectedBlock.locked}
-                        style={{
-                          color: "#ff6b6b",
-                          background: "none",
-                          border: "none",
-                          cursor: selectedBlock.locked ? "not-allowed" : "pointer",
-                          padding: 4,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: 11,
-                          opacity: selectedBlock.locked ? 0.45 : 1,
-                        }}
-                      >
-                        <Trash2 size={12} /> Delete
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <button
+                          type="button"
+                          title="Copy format"
+                          onClick={() => copySelectedBlockFormat(selectedBlock)}
+                          style={{
+                            ...arrangeButton,
+                            width: 28,
+                            height: 28,
+                            color:
+                              formatClipboard?.sourceType === selectedBlock.type
+                                ? C.accent
+                                : C.textDim,
+                          }}
+                        >
+                          <Copy size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          title="Paste format"
+                          onClick={() => pasteSelectedBlockFormat(selectedBlock.id)}
+                          disabled={!formatClipboard || selectedBlock.locked}
+                          style={{
+                            ...arrangeButton,
+                            width: 28,
+                            height: 28,
+                            cursor:
+                              !formatClipboard || selectedBlock.locked ? "not-allowed" : "pointer",
+                            opacity: !formatClipboard || selectedBlock.locked ? 0.45 : 1,
+                          }}
+                        >
+                          <ClipboardPaste size={12} />
+                        </button>
+                        <button
+                          onClick={() => deleteBlock(selectedBlock.id)}
+                          disabled={selectedBlock.locked}
+                          style={{
+                            color: "#ff6b6b",
+                            background: "none",
+                            border: "none",
+                            cursor: selectedBlock.locked ? "not-allowed" : "pointer",
+                            padding: 4,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: 11,
+                            opacity: selectedBlock.locked ? 0.45 : 1,
+                          }}
+                        >
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      </div>
                     </div>
 
                     {/* Arrange */}

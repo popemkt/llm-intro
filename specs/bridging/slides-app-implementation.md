@@ -67,7 +67,7 @@ framework boundary.
 | Delete slide | `delete-slide` action and service rules | Vitest/API plus browser flow |
 | Reorder slides/groups | `update-deck-layout` action, slide service validation | Vitest/API plus Playwright |
 | Code slide rendering | `apps/slides/src/slides/registry.ts` and `SlideShell` | build, visual inspection when changed |
-| HTML slide rendering | `HtmlSlideRenderer` renders `kind: "html"` slides in a sandboxed full-canvas iframe, reused by presentation, fullscreen, overview, and export viewer paths | Vitest renderer tests, build, browser smoke |
+| HTML slide rendering/editing | `HtmlSlideRenderer` renders `kind: "html"` slides in a sandboxed full-canvas iframe, reused by presentation, fullscreen, overview, export viewer, and the HTML source editor branch in `SlideEditorPage` | Vitest renderer tests, build, browser smoke |
 
 ## Groups
 
@@ -140,9 +140,8 @@ storage kind without changing the user-facing concept.
 
 HTML slides are persisted as first-class `kind: "html"` slides with an `html`
 source field. The first implementation supports action creation, update,
-presentation/fullscreen/overview/export rendering, snapshots, and typed JSON
-round-trips; browser source editing for HTML slides is still a later editor
-slice.
+presentation/fullscreen/overview/export rendering, snapshots, typed JSON
+round-trips, and browser source editing with live preview.
 
 ## Presentation And Editor UI
 

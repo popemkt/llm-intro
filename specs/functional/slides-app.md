@@ -24,6 +24,8 @@ editing, themed presentation playback, and HTML export.
 - HTML slides store authored HTML/CSS/JS source as deck slide content and
   render in a sandboxed full-canvas iframe without requiring a custom React
   module.
+- Users can edit HTML slide source in the browser slide editor with a live
+  full-canvas preview and speaker notes.
 - Manual database-backed slides contain editable block data.
 - Users can create, rename, reorder, edit, and delete manual slides.
 - Reorder operations preserve every slide exactly once.

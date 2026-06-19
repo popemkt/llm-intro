@@ -42,6 +42,7 @@ import { C } from "@/design/tokens";
 import { getReadableTextColor } from "@/lib/color";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { DeckAssetPanel } from "@/components/DeckAssetPanel";
+import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 
 type DragMode = "move" | "resize-tl" | "resize-tr" | "resize-bl" | "resize-br";
@@ -139,6 +140,7 @@ const arrangeButton: React.CSSProperties = {
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+type EditableSlideKind = "db" | "html";
 type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
 type BlockArrangeAction =
   | "align-left"
@@ -280,7 +282,9 @@ export function SlideEditorPage() {
 
   const [title, setTitle] = useState("Untitled");
   const [presName, setPresName] = useState("");
+  const [slideKind, setSlideKind] = useState<EditableSlideKind>("db");
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [html, setHtml] = useState("");
   const [notes, setNotes] = useState("");
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -305,17 +309,25 @@ export function SlideEditorPage() {
   const slidesQuery = useActionQuery<ApiSlide[]>("list-slides", { pid }, { enabled: validRoute });
   const updateSlide = useActionMutation<
     ApiSlide,
-    { pid: number; sid: number; title?: string; blocks?: unknown[]; notes?: string }
+    { pid: number; sid: number; title?: string; blocks?: unknown[]; html?: string; notes?: string }
   >("update-slide", { method: "PUT" });
 
   // Current values ref (for keyboard handler)
   const blocksRef = useRef(blocks);
+  const htmlRef = useRef(html);
   const selectedIdsRef = useRef(selectedIds);
+  const slideKindRef = useRef(slideKind);
   const titleRef = useRef(title);
   const notesRef = useRef(notes);
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
+  useEffect(() => {
+    htmlRef.current = html;
+  }, [html]);
+  useEffect(() => {
+    slideKindRef.current = slideKind;
+  }, [slideKind]);
   useEffect(() => {
     selectedIdsRef.current = selectedIds;
   }, [selectedIds]);
@@ -363,15 +375,17 @@ export function SlideEditorPage() {
       setLoading(false);
       return;
     }
-    if (slide.kind !== "db") {
-      setLoadError("Only custom slides can be edited here");
+    if (slide.kind === "code") {
+      setLoadError("Code-backed slides cannot be edited here");
       setLoading(false);
       return;
     }
 
     setPresName(pres.name);
+    setSlideKind(slide.kind);
     setTitle(slide.title);
     setBlocks(slide.blocks);
+    setHtml(slide.html);
     setNotes(slide.notes ?? "");
     setTheme(pres.theme);
     hasLoadedRef.current = true;
@@ -457,7 +471,7 @@ export function SlideEditorPage() {
     };
   }, []);
 
-  // Auto-save: trigger on blocks/title/notes changes after initial load
+  // Auto-save: trigger on content/title/notes changes after initial load
   useEffect(() => {
     if (!hasLoadedRef.current || loading) return;
     setSaveStatus("idle");
@@ -466,12 +480,16 @@ export function SlideEditorPage() {
       setSaveStatus("saving");
       setSaveError(null);
       try {
+        const content =
+          slideKindRef.current === "html"
+            ? { html: htmlRef.current }
+            : { blocks: blocksRef.current };
         await updateSlide.mutateAsync({
           pid,
           sid,
           title: titleRef.current,
-          blocks: blocksRef.current,
           notes: notesRef.current,
+          ...content,
         });
         setSaveStatus("saved");
         if (savedStatusTimerRef.current) clearTimeout(savedStatusTimerRef.current);
@@ -485,19 +503,21 @@ export function SlideEditorPage() {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, title, notes, pid, sid, loading]);
+  }, [blocks, html, title, notes, pid, sid, loading]);
 
   const saveAndExit = useCallback(async () => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     setSaveStatus("saving");
     setSaveError(null);
     try {
+      const content =
+        slideKindRef.current === "html" ? { html: htmlRef.current } : { blocks: blocksRef.current };
       await updateSlide.mutateAsync({
         pid,
         sid,
         title: titleRef.current,
-        blocks: blocksRef.current,
         notes: notesRef.current,
+        ...content,
       });
       navigate(`/p/${pid}`);
     } catch (err) {
@@ -901,624 +921,763 @@ export function SlideEditorPage() {
         </div>
       )}
 
-      {/* Canvas + right panel */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Canvas area */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#070908",
-            padding: 28,
-            overflow: "hidden",
-          }}
-          onClick={clearSelection}
-        >
-          <div
-            ref={canvasRef}
-            data-theme={theme}
-            style={{
-              position: "relative",
-              width: "100%",
-              maxWidth: "calc((100vh - 140px) * 16 / 9)",
-              aspectRatio: "16 / 9",
-              background: "var(--theme-bg)",
-              overflow: "hidden",
-              boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
-            }}
-          >
-            {blocks.length === 0 && (
+      {slideKind === "html" ? (
+        <HtmlSlideSourceEditor
+          html={html}
+          notes={notes}
+          title={title}
+          onHtml={setHtml}
+          onNotes={setNotes}
+        />
+      ) : (
+        <>
+          {/* Canvas + right panel */}
+          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            {/* Canvas area */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#070908",
+                padding: 28,
+                overflow: "hidden",
+              }}
+              onClick={clearSelection}
+            >
               <div
+                ref={canvasRef}
+                data-theme={theme}
                 style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: 0.18,
-                  fontSize: 12,
-                  color: "var(--theme-text)",
-                  fontFamily: "JetBrains Mono, monospace",
-                  pointerEvents: "none",
+                  position: "relative",
+                  width: "100%",
+                  maxWidth: "calc((100vh - 140px) * 16 / 9)",
+                  aspectRatio: "16 / 9",
+                  background: "var(--theme-bg)",
+                  overflow: "hidden",
+                  boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
                 }}
               >
-                add blocks using the panel →
-              </div>
-            )}
-
-            {blocks.map((block) => {
-              const isSelected = selectedIds.includes(block.id);
-              const isInlineEditing = editingTextId === block.id && block.type === "text";
-              const x = block.x ?? 5;
-              const y = block.y ?? 5;
-              const w = block.w ?? 80;
-              const h = block.h ?? 30;
-              return (
-                <div
-                  key={block.id}
-                  onPointerDown={(e) => startDrag(e, block, "move")}
-                  onDoubleClick={(e) => {
-                    if (block.type !== "text") return;
-                    e.stopPropagation();
-                    selectOnlyBlock(block.id);
-                    setEditingTextId(block.id);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (e.shiftKey || e.metaKey || e.ctrlKey) toggleBlockSelection(block.id);
-                    else selectOnlyBlock(block.id);
-                  }}
-                  style={{
-                    position: "absolute",
-                    left: `${x}%`,
-                    top: `${y}%`,
-                    width: `${w}%`,
-                    height: `${h}%`,
-                    cursor: "move",
-                    transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
-                    opacity: block.opacity,
-                    outline: isSelected
-                      ? "2px solid var(--theme-accent, #25d366)"
-                      : "1px dashed transparent",
-                    outlineOffset: 1,
-                    overflow: isSelected ? "visible" : "hidden",
-                    userSelect: "none",
-                    boxSizing: "border-box",
-                  }}
-                >
+                {blocks.length === 0 && (
                   <div
                     style={{
                       position: "absolute",
                       inset: 0,
-                      overflow: "hidden",
-                      boxSizing: "border-box",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: 0.18,
+                      fontSize: 12,
+                      color: "var(--theme-text)",
+                      fontFamily: "JetBrains Mono, monospace",
+                      pointerEvents: "none",
                     }}
                   >
-                    {isInlineEditing ? (
-                      <InlineTextBlockEditor
-                        block={block}
-                        onChange={(markdown) => updateBlock(block.id, { markdown })}
-                        onDone={() => setEditingTextId(null)}
-                      />
-                    ) : (
-                      <CanvasBlockContent block={block} />
-                    )}
+                    add blocks using the panel →
                   </div>
+                )}
 
-                  {isSelected && (
-                    <>
-                      <BlockBubbleMenu
-                        canEditText={block.type === "text"}
-                        onEditText={() => setEditingTextId(block.id)}
-                        onDuplicate={() => duplicateBlock(block.id)}
-                        onBringForward={() => moveBlockLayer(block.id, "forward")}
-                        onSendBack={() => moveBlockLayer(block.id, "back")}
-                        onDelete={() => deleteBlock(block.id)}
-                        editing={isInlineEditing}
-                      />
-                      {/* Resize handles */}
-                      {(["tl", "tr", "bl", "br"] as const).map((handle) => (
-                        <div
-                          key={handle}
-                          onPointerDown={(e) => startDrag(e, block, `resize-${handle}`)}
-                          style={{
-                            position: "absolute",
-                            width: 9,
-                            height: 9,
-                            background: "var(--theme-accent, #25d366)",
-                            border: "2px solid var(--theme-bg, #0d0f0e)",
-                            borderRadius: 2,
-                            cursor:
-                              handle === "tl" || handle === "br" ? "nwse-resize" : "nesw-resize",
-                            zIndex: 10,
-                            ...(handle === "tl" ? { top: -5, left: -5 } : {}),
-                            ...(handle === "tr" ? { top: -5, right: -5 } : {}),
-                            ...(handle === "bl" ? { bottom: -5, left: -5 } : {}),
-                            ...(handle === "br" ? { bottom: -5, right: -5 } : {}),
-                          }}
+                {blocks.map((block) => {
+                  const isSelected = selectedIds.includes(block.id);
+                  const isInlineEditing = editingTextId === block.id && block.type === "text";
+                  const x = block.x ?? 5;
+                  const y = block.y ?? 5;
+                  const w = block.w ?? 80;
+                  const h = block.h ?? 30;
+                  return (
+                    <div
+                      key={block.id}
+                      onPointerDown={(e) => startDrag(e, block, "move")}
+                      onDoubleClick={(e) => {
+                        if (block.type !== "text") return;
+                        e.stopPropagation();
+                        selectOnlyBlock(block.id);
+                        setEditingTextId(block.id);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (e.shiftKey || e.metaKey || e.ctrlKey) toggleBlockSelection(block.id);
+                        else selectOnlyBlock(block.id);
+                      }}
+                      style={{
+                        position: "absolute",
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        width: `${w}%`,
+                        height: `${h}%`,
+                        cursor: "move",
+                        transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                        opacity: block.opacity,
+                        outline: isSelected
+                          ? "2px solid var(--theme-accent, #25d366)"
+                          : "1px dashed transparent",
+                        outlineOffset: 1,
+                        overflow: isSelected ? "visible" : "hidden",
+                        userSelect: "none",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          overflow: "hidden",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        {isInlineEditing ? (
+                          <InlineTextBlockEditor
+                            block={block}
+                            onChange={(markdown) => updateBlock(block.id, { markdown })}
+                            onDone={() => setEditingTextId(null)}
+                          />
+                        ) : (
+                          <CanvasBlockContent block={block} />
+                        )}
+                      </div>
+
+                      {isSelected && (
+                        <>
+                          <BlockBubbleMenu
+                            canEditText={block.type === "text"}
+                            onEditText={() => setEditingTextId(block.id)}
+                            onDuplicate={() => duplicateBlock(block.id)}
+                            onBringForward={() => moveBlockLayer(block.id, "forward")}
+                            onSendBack={() => moveBlockLayer(block.id, "back")}
+                            onDelete={() => deleteBlock(block.id)}
+                            editing={isInlineEditing}
+                          />
+                          {/* Resize handles */}
+                          {(["tl", "tr", "bl", "br"] as const).map((handle) => (
+                            <div
+                              key={handle}
+                              onPointerDown={(e) => startDrag(e, block, `resize-${handle}`)}
+                              style={{
+                                position: "absolute",
+                                width: 9,
+                                height: 9,
+                                background: "var(--theme-accent, #25d366)",
+                                border: "2px solid var(--theme-bg, #0d0f0e)",
+                                borderRadius: 2,
+                                cursor:
+                                  handle === "tl" || handle === "br"
+                                    ? "nwse-resize"
+                                    : "nesw-resize",
+                                zIndex: 10,
+                                ...(handle === "tl" ? { top: -5, left: -5 } : {}),
+                                ...(handle === "tr" ? { top: -5, right: -5 } : {}),
+                                ...(handle === "bl" ? { bottom: -5, left: -5 } : {}),
+                                ...(handle === "br" ? { bottom: -5, right: -5 } : {}),
+                              }}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right panel */}
+            <div
+              style={{
+                width: 272,
+                borderLeft: `1px solid ${C.border}`,
+                display: "flex",
+                flexDirection: "column",
+                background: C.surface,
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              <SlideBlockInsertPanel onAddBlock={addBlock} onAddBlocks={addBlocks} />
+              <DeckAssetPanel enabled={validRoute} pid={pid} onInsertAsset={insertAssetBlock} />
+
+              {/* Selected block properties */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "14px 16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14,
+                }}
+              >
+                {selectedBlock ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontFamily: "JetBrains Mono, monospace",
+                          color: C.muted,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {selectedBlock.type}
+                      </span>
+                      <button
+                        onClick={() => deleteBlock(selectedBlock.id)}
+                        style={{
+                          color: "#ff6b6b",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 4,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 11,
+                        }}
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+
+                    {/* Arrange */}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 9,
+                          color: C.textDim,
+                          marginBottom: 6,
+                          fontFamily: "JetBrains Mono, monospace",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        Arrange
+                      </div>
+                      <div
+                        style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}
+                      >
+                        <button
+                          type="button"
+                          aria-label="Align left"
+                          title="Align left"
+                          onClick={() => arrangeSelectedBlock("align-left")}
+                          style={arrangeButton}
+                        >
+                          <AlignHorizontalJustifyStart size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Align center"
+                          title="Align center"
+                          onClick={() => arrangeSelectedBlock("align-center")}
+                          style={arrangeButton}
+                        >
+                          <AlignHorizontalJustifyCenter size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Align right"
+                          title="Align right"
+                          onClick={() => arrangeSelectedBlock("align-right")}
+                          style={arrangeButton}
+                        >
+                          <AlignHorizontalJustifyEnd size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Align top"
+                          title="Align top"
+                          onClick={() => arrangeSelectedBlock("align-top")}
+                          style={arrangeButton}
+                        >
+                          <AlignVerticalJustifyStart size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Align middle"
+                          title="Align middle"
+                          onClick={() => arrangeSelectedBlock("align-middle")}
+                          style={arrangeButton}
+                        >
+                          <AlignVerticalJustifyCenter size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Align bottom"
+                          title="Align bottom"
+                          onClick={() => arrangeSelectedBlock("align-bottom")}
+                          style={arrangeButton}
+                        >
+                          <AlignVerticalJustifyEnd size={14} />
+                        </button>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, 1fr)",
+                          gap: 6,
+                          marginTop: 6,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          aria-label="Fit width"
+                          title="Fit width"
+                          onClick={() => arrangeSelectedBlock("fit-width")}
+                          style={arrangeButton}
+                        >
+                          <StretchHorizontal size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Fit height"
+                          title="Fit height"
+                          onClick={() => arrangeSelectedBlock("fit-height")}
+                          style={arrangeButton}
+                        >
+                          <StretchVertical size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Fit slide"
+                          title="Fit slide"
+                          onClick={() => arrangeSelectedBlock("fit-slide")}
+                          style={arrangeButton}
+                        >
+                          <Maximize2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Position & size */}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 9,
+                          color: C.textDim,
+                          marginBottom: 6,
+                          fontFamily: "JetBrains Mono, monospace",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        Position &amp; Size (%)
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                        {(["x", "y", "w", "h"] as const).map((k) => (
+                          <label
+                            key={k}
+                            style={{ display: "flex", flexDirection: "column", gap: 3 }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 9,
+                                color: C.muted,
+                                fontFamily: "JetBrains Mono, monospace",
+                              }}
+                            >
+                              {k === "x"
+                                ? "Left"
+                                : k === "y"
+                                  ? "Top"
+                                  : k === "w"
+                                    ? "Width"
+                                    : "Height"}
+                            </span>
+                            <input
+                              type="number"
+                              value={
+                                Math.round(
+                                  (selectedBlock[k] ?? BLOCK_DEFAULTS[selectedBlock.type][k]) * 10,
+                                ) / 10
+                              }
+                              onChange={(e) =>
+                                updateBlock(selectedBlock.id, { [k]: Number(e.target.value) })
+                              }
+                              min={0}
+                              max={100}
+                              step={0.5}
+                              style={{ ...inp, padding: "4px 8px" }}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <CommonAppearanceEditor
+                      block={selectedBlock}
+                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                    />
+
+                    {/* Type-specific fields */}
+                    {selectedBlock.type === "text" && (
+                      <>
+                        <TextBlockPropertyEditor
+                          block={selectedBlock}
+                          onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
                         />
-                      ))}
-                    </>
-                  )}
+                        <TextAppearanceEditor
+                          block={selectedBlock}
+                          onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                        />
+                      </>
+                    )}
+
+                    {selectedBlock.type === "image" && (
+                      <>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 9,
+                              color: C.textDim,
+                              marginBottom: 4,
+                              fontFamily: "JetBrains Mono, monospace",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.06em",
+                            }}
+                          >
+                            URL
+                          </div>
+                          <input
+                            value={selectedBlock.url}
+                            onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
+                            placeholder="https://…"
+                            style={inp}
+                          />
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 9,
+                              color: C.textDim,
+                              marginBottom: 4,
+                              fontFamily: "JetBrains Mono, monospace",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.06em",
+                            }}
+                          >
+                            Alt text
+                          </div>
+                          <input
+                            value={selectedBlock.alt ?? ""}
+                            onChange={(e) => updateBlock(selectedBlock.id, { alt: e.target.value })}
+                            placeholder="Description"
+                            style={inp}
+                          />
+                        </div>
+                        <ImageAppearanceEditor
+                          block={selectedBlock}
+                          onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                        />
+                      </>
+                    )}
+
+                    {selectedBlock.type === "iframe" && (
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 9,
+                            color: C.textDim,
+                            marginBottom: 4,
+                            fontFamily: "JetBrains Mono, monospace",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                          }}
+                        >
+                          URL
+                        </div>
+                        <input
+                          value={selectedBlock.url}
+                          onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
+                          placeholder="https://…"
+                          style={inp}
+                        />
+                      </div>
+                    )}
+
+                    {selectedBlock.type === "shape" && (
+                      <ShapePropEditor
+                        block={selectedBlock}
+                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                      />
+                    )}
+                  </>
+                ) : selectedIds.length > 1 ? (
+                  <MultiSelectionPanel
+                    count={selectedIds.length}
+                    onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
+                    onDelete={() => deleteSelectedBlocks(selectedIds)}
+                    onDuplicate={() => duplicateBlocks(selectedIds)}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      padding: "24px 0",
+                      textAlign: "center",
+                      fontSize: 11,
+                      color: C.muted,
+                      fontFamily: "JetBrains Mono, monospace",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    click a block
+                    <br />
+                    to select &amp; edit
+                    <br />
+                    <br />
+                    <span style={{ fontSize: 10, opacity: 0.6 }}>
+                      Del · delete selected
+                      <br />
+                      ⌘S · save &amp; exit
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: C.textDim,
+                      marginBottom: 4,
+                      fontFamily: "JetBrains Mono, monospace",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Speaker Notes
+                  </div>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Private presenter notes for this slide..."
+                    rows={5}
+                    style={{
+                      ...inp,
+                      resize: "vertical",
+                      fontFamily: "Inter, sans-serif",
+                      lineHeight: 1.5,
+                    }}
+                  />
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
 
-        {/* Right panel */}
-        <div
-          style={{
-            width: 272,
-            borderLeft: `1px solid ${C.border}`,
-            display: "flex",
-            flexDirection: "column",
-            background: C.surface,
-            overflow: "hidden",
-            flexShrink: 0,
-          }}
-        >
-          <SlideBlockInsertPanel onAddBlock={addBlock} onAddBlocks={addBlocks} />
-          <DeckAssetPanel enabled={validRoute} pid={pid} onInsertAsset={insertAssetBlock} />
-
-          {/* Selected block properties */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-            }}
-          >
-            {selectedBlock ? (
-              <>
+              {/* Layers list */}
+              {blocks.length > 0 && (
                 <div
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                  style={{
+                    borderTop: `1px solid ${C.border}`,
+                    padding: "10px 16px",
+                    maxHeight: 190,
+                    overflowY: "auto",
+                    flexShrink: 0,
+                  }}
                 >
-                  <span
+                  <div
                     style={{
                       fontSize: 9,
                       fontFamily: "JetBrains Mono, monospace",
                       color: C.muted,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
-                    }}
-                  >
-                    {selectedBlock.type}
-                  </span>
-                  <button
-                    onClick={() => deleteBlock(selectedBlock.id)}
-                    style={{
-                      color: "#ff6b6b",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 4,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: 11,
-                    }}
-                  >
-                    <Trash2 size={12} /> Delete
-                  </button>
-                </div>
-
-                {/* Arrange */}
-                <div>
-                  <div
-                    style={{
-                      fontSize: 9,
-                      color: C.textDim,
                       marginBottom: 6,
-                      fontFamily: "JetBrains Mono, monospace",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
                     }}
                   >
-                    Arrange
+                    Layers ({blocks.length})
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-                    <button
-                      type="button"
-                      aria-label="Align left"
-                      title="Align left"
-                      onClick={() => arrangeSelectedBlock("align-left")}
-                      style={arrangeButton}
-                    >
-                      <AlignHorizontalJustifyStart size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Align center"
-                      title="Align center"
-                      onClick={() => arrangeSelectedBlock("align-center")}
-                      style={arrangeButton}
-                    >
-                      <AlignHorizontalJustifyCenter size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Align right"
-                      title="Align right"
-                      onClick={() => arrangeSelectedBlock("align-right")}
-                      style={arrangeButton}
-                    >
-                      <AlignHorizontalJustifyEnd size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Align top"
-                      title="Align top"
-                      onClick={() => arrangeSelectedBlock("align-top")}
-                      style={arrangeButton}
-                    >
-                      <AlignVerticalJustifyStart size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Align middle"
-                      title="Align middle"
-                      onClick={() => arrangeSelectedBlock("align-middle")}
-                      style={arrangeButton}
-                    >
-                      <AlignVerticalJustifyCenter size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Align bottom"
-                      title="Align bottom"
-                      onClick={() => arrangeSelectedBlock("align-bottom")}
-                      style={arrangeButton}
-                    >
-                      <AlignVerticalJustifyEnd size={14} />
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: 6,
-                      marginTop: 6,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      aria-label="Fit width"
-                      title="Fit width"
-                      onClick={() => arrangeSelectedBlock("fit-width")}
-                      style={arrangeButton}
-                    >
-                      <StretchHorizontal size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Fit height"
-                      title="Fit height"
-                      onClick={() => arrangeSelectedBlock("fit-height")}
-                      style={arrangeButton}
-                    >
-                      <StretchVertical size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Fit slide"
-                      title="Fit slide"
-                      onClick={() => arrangeSelectedBlock("fit-slide")}
-                      style={arrangeButton}
-                    >
-                      <Maximize2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Position & size */}
-                <div>
-                  <div
-                    style={{
-                      fontSize: 9,
-                      color: C.textDim,
-                      marginBottom: 6,
-                      fontFamily: "JetBrains Mono, monospace",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    Position &amp; Size (%)
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                    {(["x", "y", "w", "h"] as const).map((k) => (
-                      <label key={k} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        <span
-                          style={{
-                            fontSize: 9,
-                            color: C.muted,
-                            fontFamily: "JetBrains Mono, monospace",
-                          }}
-                        >
-                          {k === "x" ? "Left" : k === "y" ? "Top" : k === "w" ? "Width" : "Height"}
-                        </span>
-                        <input
-                          type="number"
-                          value={
-                            Math.round(
-                              (selectedBlock[k] ?? BLOCK_DEFAULTS[selectedBlock.type][k]) * 10,
-                            ) / 10
-                          }
-                          onChange={(e) =>
-                            updateBlock(selectedBlock.id, { [k]: Number(e.target.value) })
-                          }
-                          min={0}
-                          max={100}
-                          step={0.5}
-                          style={{ ...inp, padding: "4px 8px" }}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <CommonAppearanceEditor
-                  block={selectedBlock}
-                  onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                />
-
-                {/* Type-specific fields */}
-                {selectedBlock.type === "text" && (
-                  <>
-                    <TextBlockPropertyEditor
-                      block={selectedBlock}
-                      onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
-                    />
-                    <TextAppearanceEditor
-                      block={selectedBlock}
-                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                    />
-                  </>
-                )}
-
-                {selectedBlock.type === "image" && (
-                  <>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: C.textDim,
-                          marginBottom: 4,
-                          fontFamily: "JetBrains Mono, monospace",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        URL
-                      </div>
-                      <input
-                        value={selectedBlock.url}
-                        onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
-                        placeholder="https://…"
-                        style={inp}
-                      />
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: C.textDim,
-                          marginBottom: 4,
-                          fontFamily: "JetBrains Mono, monospace",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        Alt text
-                      </div>
-                      <input
-                        value={selectedBlock.alt ?? ""}
-                        onChange={(e) => updateBlock(selectedBlock.id, { alt: e.target.value })}
-                        placeholder="Description"
-                        style={inp}
-                      />
-                    </div>
-                    <ImageAppearanceEditor
-                      block={selectedBlock}
-                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                    />
-                  </>
-                )}
-
-                {selectedBlock.type === "iframe" && (
-                  <div>
+                  {[...blocks].reverse().map((b) => (
                     <div
+                      key={b.id}
+                      onClick={(event) => {
+                        if (event.shiftKey || event.metaKey || event.ctrlKey)
+                          toggleBlockSelection(b.id);
+                        else selectOnlyBlock(b.id);
+                      }}
                       style={{
-                        fontSize: 9,
-                        color: C.textDim,
-                        marginBottom: 4,
-                        fontFamily: "JetBrains Mono, monospace",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "5px 8px",
+                        borderRadius: 7,
+                        cursor: "pointer",
+                        marginBottom: 2,
+                        background: selectedIds.includes(b.id) ? C.accentSubtle : "transparent",
+                        border: `1px solid ${selectedIds.includes(b.id) ? C.border : "transparent"}`,
                       }}
                     >
-                      URL
+                      <span
+                        style={{
+                          fontSize: 9,
+                          color: C.accent,
+                          fontFamily: "JetBrains Mono, monospace",
+                          minWidth: 32,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {b.type}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: C.textDim,
+                          flex: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {b.type === "text"
+                          ? b.markdown.slice(0, 22) || "(empty)"
+                          : b.type === "image"
+                            ? b.url.slice(0, 22) || "(no url)"
+                            : b.type === "iframe"
+                              ? b.url.slice(0, 22) || "(no url)"
+                              : `${b.shape} ${b.color}`}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteBlock(b.id);
+                        }}
+                        style={{
+                          color: C.muted,
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 2,
+                          display: "flex",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Trash2 size={11} />
+                      </button>
                     </div>
-                    <input
-                      value={selectedBlock.url}
-                      onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
-                      placeholder="https://…"
-                      style={inp}
-                    />
-                  </div>
-                )}
-
-                {selectedBlock.type === "shape" && (
-                  <ShapePropEditor
-                    block={selectedBlock}
-                    onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                  />
-                )}
-              </>
-            ) : selectedIds.length > 1 ? (
-              <MultiSelectionPanel
-                count={selectedIds.length}
-                onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
-                onDelete={() => deleteSelectedBlocks(selectedIds)}
-                onDuplicate={() => duplicateBlocks(selectedIds)}
-              />
-            ) : (
-              <div
-                style={{
-                  padding: "24px 0",
-                  textAlign: "center",
-                  fontSize: 11,
-                  color: C.muted,
-                  fontFamily: "JetBrains Mono, monospace",
-                  lineHeight: 1.6,
-                }}
-              >
-                click a block
-                <br />
-                to select &amp; edit
-                <br />
-                <br />
-                <span style={{ fontSize: 10, opacity: 0.6 }}>
-                  Del · delete selected
-                  <br />
-                  ⌘S · save &amp; exit
-                </span>
-              </div>
-            )}
-
-            <div>
-              <div
-                style={{
-                  fontSize: 9,
-                  color: C.textDim,
-                  marginBottom: 4,
-                  fontFamily: "JetBrains Mono, monospace",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                Speaker Notes
-              </div>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Private presenter notes for this slide..."
-                rows={5}
-                style={{
-                  ...inp,
-                  resize: "vertical",
-                  fontFamily: "Inter, sans-serif",
-                  lineHeight: 1.5,
-                }}
-              />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Layers list */}
-          {blocks.length > 0 && (
-            <div
-              style={{
-                borderTop: `1px solid ${C.border}`,
-                padding: "10px 16px",
-                maxHeight: 190,
-                overflowY: "auto",
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 9,
-                  fontFamily: "JetBrains Mono, monospace",
-                  color: C.muted,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  marginBottom: 6,
-                }}
-              >
-                Layers ({blocks.length})
-              </div>
-              {[...blocks].reverse().map((b) => (
-                <div
-                  key={b.id}
-                  onClick={(event) => {
-                    if (event.shiftKey || event.metaKey || event.ctrlKey)
-                      toggleBlockSelection(b.id);
-                    else selectOnlyBlock(b.id);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "5px 8px",
-                    borderRadius: 7,
-                    cursor: "pointer",
-                    marginBottom: 2,
-                    background: selectedIds.includes(b.id) ? C.accentSubtle : "transparent",
-                    border: `1px solid ${selectedIds.includes(b.id) ? C.border : "transparent"}`,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: C.accent,
-                      fontFamily: "JetBrains Mono, monospace",
-                      minWidth: 32,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {b.type}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: C.textDim,
-                      flex: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {b.type === "text"
-                      ? b.markdown.slice(0, 22) || "(empty)"
-                      : b.type === "image"
-                        ? b.url.slice(0, 22) || "(no url)"
-                        : b.type === "iframe"
-                          ? b.url.slice(0, 22) || "(no url)"
-                          : `${b.shape} ${b.color}`}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteBlock(b.id);
-                    }}
-                    style={{
-                      color: C.muted,
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 2,
-                      display: "flex",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
 // ─── Canvas block content (WYSIWYG preview) ─────────────────────────────────
+
+function HtmlSlideSourceEditor({
+  html,
+  notes,
+  onHtml,
+  onNotes,
+  title,
+}: {
+  html: string;
+  notes: string;
+  onHtml: (html: string) => void;
+  onNotes: (notes: string) => void;
+  title: string;
+}) {
+  return (
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#070908",
+          padding: 28,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "calc((100vh - 140px) * 16 / 9)",
+            aspectRatio: "16 / 9",
+            overflow: "hidden",
+            boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
+            background: C.bg,
+          }}
+        >
+          <HtmlSlideRenderer html={html} title={title || "HTML slide preview"} />
+        </div>
+      </div>
+      <div
+        style={{
+          width: 420,
+          borderLeft: `1px solid ${C.border}`,
+          display: "flex",
+          flexDirection: "column",
+          background: C.surface,
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontFamily: "JetBrains Mono, monospace",
+              color: C.muted,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            HTML Source
+          </div>
+          <textarea
+            value={html}
+            onChange={(event) => onHtml(event.target.value)}
+            spellCheck={false}
+            style={{
+              ...inp,
+              height: 430,
+              resize: "vertical",
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: 11,
+              lineHeight: 1.5,
+              whiteSpace: "pre",
+              overflowWrap: "normal",
+              overflowX: "auto",
+            }}
+          />
+        </div>
+        <div style={{ padding: 16 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: C.textDim,
+              marginBottom: 4,
+              fontFamily: "JetBrains Mono, monospace",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
+            Speaker Notes
+          </div>
+          <textarea
+            value={notes}
+            onChange={(event) => onNotes(event.target.value)}
+            rows={5}
+            style={{
+              ...inp,
+              resize: "vertical",
+              fontFamily: "Inter, sans-serif",
+              lineHeight: 1.5,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function applyMarkdownFormat(
   value: string,

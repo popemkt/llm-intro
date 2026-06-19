@@ -249,7 +249,7 @@ function ThumbnailCell({
               )}
             </>
           )}
-          {slide.kind === "db" && !isRenaming && (
+          {slide.kind !== "code" && !isRenaming && (
             <span
               className="text-[9px] font-mono px-1.5 py-0.5 rounded"
               style={{
@@ -258,7 +258,7 @@ function ThumbnailCell({
                 flexShrink: 0,
               }}
             >
-              db
+              {slide.kind}
             </span>
           )}
         </div>
@@ -280,8 +280,8 @@ function ThumbnailCell({
         </div>
       )}
 
-      {/* Edit + delete buttons — visible on hover, db slides only */}
-      {!selectMode && sortableEnabled && slide.kind === "db" && !isRenaming && (
+      {/* Edit + delete buttons — visible on hover for editable slides */}
+      {!selectMode && sortableEnabled && slide.kind !== "code" && !isRenaming && (
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {

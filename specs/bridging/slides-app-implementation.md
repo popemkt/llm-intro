@@ -54,6 +54,7 @@ framework boundary.
 |---|---|---|
 | List slides | `list-slides` action, slide service | Vitest API tests |
 | Create slide | `create-slide` action, `PresentationPage` handlers | Vitest/API plus browser flow |
+| Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields | Vitest/API |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
@@ -96,6 +97,7 @@ framework boundary.
 | Markdown formatting controls | `MarkdownFormatToolbar` applies headings, bold, italic, quote, and bullet markdown in inline and side-panel text editors | Browser smoke, typecheck |
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
 | Inspector arrange controls | `SlideEditorPage` aligns selected blocks and fits them to slide width/height through the same typed percentage geometry used by drag, resize, and numeric fields | Browser smoke, typecheck |
+| Inspector appearance controls | `SlideEditorPage` edits typed block appearance fields: rotation, opacity, text size/color/background/alignment/padding, image fit/radius, and shape border/text color | Vitest/API, renderer tests, typecheck |
 | Deck asset manager | `DeckAssetPanel` searches SVGL, imports deck-local SVG assets, lists imported assets with content, deletes assets, and inserts SVG assets into the manual slide canvas as image blocks | Vitest/API, browser smoke, typecheck |
 | Edit speaker notes | `slides.notes`, `update-slide`, and `SlideEditorPage` notes field | Vitest/API plus browser smoke |
 | Display speaker notes | `PresentationView` renders active slide notes above controls outside fullscreen | Browser smoke |
@@ -118,6 +120,20 @@ first visible asset workflow therefore inserts SVG assets as local data URLs so
 presenter, fullscreen, and HTML export can render without remote hotlinks. A
 later contract slice should add explicit `assetId` references to image blocks,
 then have render/export paths resolve deck assets directly.
+
+## Manual Block Contract
+
+| Contract field area | Code implementation |
+|---|---|
+| Shared typed block fields | `libs/api-contract/src/index.ts` |
+| Server validation and action persistence | `apps/slides/server/validation.ts`, `create-manual-slide`, `create-slide`, `update-slide` |
+| Presentation/export rendering | `apps/slides/src/components/DbSlideRenderer.tsx` and export viewer reuse of DB slide rendering |
+| Editor preview and controls | `apps/slides/src/pages/SlideEditorPage.tsx` |
+
+Manual slide blocks are still persisted as DB-backed `kind: "db"` slides. The
+product language now treats them as manual slides because their data model is a
+PowerPoint-style editable canvas. A later schema slice can rename or alias the
+storage kind without changing the user-facing concept.
 
 ## Presentation And Editor UI
 

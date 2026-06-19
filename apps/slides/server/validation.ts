@@ -7,6 +7,8 @@ type BlockPosition = {
   y?: number;
   w?: number;
   h?: number;
+  rotation?: number;
+  opacity?: number;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -55,10 +57,46 @@ function parsePosition(value: unknown, field: string) {
   return value;
 }
 
+function parseBoundedNumber(
+  value: unknown,
+  field: string,
+  { max, min }: { max: number; min: number },
+) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
+    throw new AppError(400, `${field} must be a number between ${min} and ${max}`);
+  }
+  return value;
+}
+
 function parseShapeDimension(value: unknown, field: string) {
   if (value === undefined) return undefined;
   if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
   return value;
+}
+
+function parseOptionalColor(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value.trim()) {
+    throw new AppError(400, `${field} must be a non-empty string`);
+  }
+  return value;
+}
+
+function parseTextAlign(value: unknown) {
+  if (value === undefined) return undefined;
+  if (!["left", "center", "right"].includes(String(value))) {
+    throw new AppError(400, "text block align is invalid");
+  }
+  return value as "left" | "center" | "right";
+}
+
+function parseObjectFit(value: unknown) {
+  if (value === undefined) return undefined;
+  if (!["contain", "cover", "fill"].includes(String(value))) {
+    throw new AppError(400, "image block objectFit is invalid");
+  }
+  return value as "contain" | "cover" | "fill";
 }
 
 function parseBlockIdentity(value: JsonRecord) {
@@ -73,6 +111,8 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     y: parsePosition(value.y, "block.y"),
     w: parsePosition(value.w, "block.w"),
     h: parsePosition(value.h, "block.h"),
+    rotation: parseBoundedNumber(value.rotation, "block.rotation", { min: -360, max: 360 }),
+    opacity: parseBoundedNumber(value.opacity, "block.opacity", { min: 0, max: 1 }),
   };
 }
 
@@ -80,7 +120,17 @@ function validateTextBlock(id: string, value: JsonRecord, position: BlockPositio
   if (typeof value.markdown !== "string") {
     throw new AppError(400, "text block markdown must be a string");
   }
-  return { id, type: "text", markdown: value.markdown, ...position };
+  return {
+    id,
+    type: "text",
+    markdown: value.markdown,
+    fontSize: parseBoundedNumber(value.fontSize, "text block fontSize", { min: 8, max: 180 }),
+    color: parseOptionalColor(value.color, "text block color"),
+    background: parseOptionalColor(value.background, "text block background"),
+    align: parseTextAlign(value.align),
+    padding: parseBoundedNumber(value.padding, "text block padding", { min: 0, max: 80 }),
+    ...position,
+  };
 }
 
 function validateImageBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
@@ -90,7 +140,18 @@ function validateImageBlock(id: string, value: JsonRecord, position: BlockPositi
   if (value.alt !== undefined && typeof value.alt !== "string") {
     throw new AppError(400, "image block alt must be a string");
   }
-  return { id, type: "image", url: value.url, alt: value.alt, ...position };
+  return {
+    id,
+    type: "image",
+    url: value.url,
+    alt: value.alt,
+    objectFit: parseObjectFit(value.objectFit),
+    borderRadius: parseBoundedNumber(value.borderRadius, "image block borderRadius", {
+      min: 0,
+      max: 120,
+    }),
+    ...position,
+  };
 }
 
 function validateIframeBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
@@ -122,6 +183,12 @@ function validateShapeBlock(id: string, value: JsonRecord, position: BlockPositi
     shape: value.shape as "rect" | "pill" | "circle",
     color: value.color,
     label: value.label as string | undefined,
+    textColor: parseOptionalColor(value.textColor, "shape block textColor"),
+    borderColor: parseOptionalColor(value.borderColor, "shape block borderColor"),
+    borderWidth: parseBoundedNumber(value.borderWidth, "shape block borderWidth", {
+      min: 0,
+      max: 24,
+    }),
     width: parseShapeDimension(value.width, "shape block width"),
     height: parseShapeDimension(value.height, "shape block height"),
     ...position,

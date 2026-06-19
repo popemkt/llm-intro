@@ -98,6 +98,7 @@ file download/export behavior.
 | create slide | `create-slide` mutating action, mounted and used by client |
 | create normal slide | `create-normal-slide` mutating action translating reference layouts to typed blocks |
 | create normal slide sequence | `create-normal-slides` mutating action translating a structured outline into multiple typed DB slides |
+| create manual slide | `create-manual-slide` mutating action accepting typed editable blocks with geometry and appearance fields |
 | create deck from outline | `create-deck-from-outline` mutating action creating a deck plus typed normal slides |
 | create deck from prompt | `draft-deck-from-prompt` and `create-deck-from-prompt` actions generating typed normal-slide drafts from a freeform prompt |
 | patch slide | `update-slide` mutating action, mounted and used by client |

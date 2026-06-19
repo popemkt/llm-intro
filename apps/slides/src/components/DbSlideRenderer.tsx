@@ -65,6 +65,8 @@ export function DbSlideRenderer({ blocks, theme }: Props) {
                 width: `${block.w}%`,
                 height: `${block.h}%`,
                 overflow: "hidden",
+                transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                opacity: block.opacity,
               }}
             >
               <BlockView block={block} canvas />
@@ -78,106 +80,158 @@ export function DbSlideRenderer({ blocks, theme }: Props) {
 function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {
   switch (block.type) {
     case "text":
-      return (
-        <div
-          style={{
-            fontSize: "clamp(0.85rem, 1.5vw, 1.05rem)",
-            lineHeight: 1.7,
-            color: "var(--theme-text)",
-            ...(canvas
-              ? {
-                  width: "100%",
-                  height: "100%",
-                  padding: "6px 10px",
-                  overflow: "auto",
-                  boxSizing: "border-box",
-                }
-              : {}),
-          }}
-          className="prose-block"
-        >
-          <ReactMarkdown>{block.markdown}</ReactMarkdown>
-        </div>
-      );
+      return <TextBlockView block={block} canvas={canvas} />;
 
     case "image":
-      return (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            ...(canvas ? { width: "100%", height: "100%" } : {}),
-          }}
-        >
-          <img
-            src={block.url}
-            alt={block.alt ?? ""}
-            style={
-              canvas
-                ? { width: "100%", height: "100%", objectFit: "contain" }
-                : { maxWidth: "100%", maxHeight: 360, objectFit: "contain", borderRadius: 8 }
-            }
-          />
-        </div>
-      );
+      return <ImageBlockView block={block} canvas={canvas} />;
 
     case "iframe":
-      return (
-        <iframe
-          src={block.url}
-          title="embedded"
-          style={{
-            width: "100%",
-            height: canvas ? "100%" : (block.height ?? 300),
-            border: "1px solid var(--theme-border)",
-            borderRadius: 8,
-            background: "var(--theme-surface)",
-            display: "block",
-          }}
-          sandbox="allow-scripts allow-same-origin"
-        />
-      );
+      return <IframeBlockView block={block} canvas={canvas} />;
 
-    case "shape": {
-      const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 10;
-      const isCircle = block.shape === "circle";
-      return (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            ...(canvas ? { width: "100%", height: "100%", alignItems: "center" } : {}),
-          }}
-        >
-          <div
+    case "shape":
+      return <ShapeBlockView block={block} canvas={canvas} />;
+  }
+}
+
+function TextBlockView({
+  block,
+  canvas,
+}: {
+  block: Extract<Block, { type: "text" }>;
+  canvas?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        fontSize: block.fontSize ? `${block.fontSize}px` : "clamp(0.85rem, 1.5vw, 1.05rem)",
+        lineHeight: 1.7,
+        color: block.color ?? "var(--theme-text)",
+        background: block.background,
+        textAlign: block.align,
+        ...(canvas
+          ? {
+              width: "100%",
+              height: "100%",
+              padding: block.padding ?? "6px 10px",
+              overflow: "auto",
+              boxSizing: "border-box",
+            }
+          : {}),
+      }}
+      className="prose-block"
+    >
+      <ReactMarkdown>{block.markdown}</ReactMarkdown>
+    </div>
+  );
+}
+
+function ImageBlockView({
+  block,
+  canvas,
+}: {
+  block: Extract<Block, { type: "image" }>;
+  canvas?: boolean;
+}) {
+  const imgStyle: React.CSSProperties = canvas
+    ? {
+        width: "100%",
+        height: "100%",
+        objectFit: block.objectFit ?? "contain",
+        borderRadius: block.borderRadius,
+      }
+    : {
+        maxWidth: "100%",
+        maxHeight: 360,
+        objectFit: block.objectFit ?? "contain",
+        borderRadius: block.borderRadius ?? 8,
+      };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        ...(canvas ? { width: "100%", height: "100%" } : {}),
+      }}
+    >
+      <img src={block.url} alt={block.alt ?? ""} style={imgStyle} />
+    </div>
+  );
+}
+
+function IframeBlockView({
+  block,
+  canvas,
+}: {
+  block: Extract<Block, { type: "iframe" }>;
+  canvas?: boolean;
+}) {
+  return (
+    <iframe
+      src={block.url}
+      title="embedded"
+      style={{
+        width: "100%",
+        height: canvas ? "100%" : (block.height ?? 300),
+        border: "1px solid var(--theme-border)",
+        borderRadius: 8,
+        background: "var(--theme-surface)",
+        display: "block",
+      }}
+      sandbox="allow-scripts allow-same-origin"
+    />
+  );
+}
+
+function ShapeBlockView({
+  block,
+  canvas,
+}: {
+  block: Extract<Block, { type: "shape" }>;
+  canvas?: boolean;
+}) {
+  const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 10;
+  const isCircle = block.shape === "circle";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        ...(canvas ? { width: "100%", height: "100%", alignItems: "center" } : {}),
+      }}
+    >
+      <div
+        style={{
+          background: block.color,
+          borderRadius: radius,
+          border:
+            block.borderWidth && block.borderWidth > 0
+              ? `${block.borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`
+              : undefined,
+          width: block.width ?? (isCircle ? 120 : "100%"),
+          height: block.height ?? (isCircle ? 120 : canvas ? "100%" : "auto"),
+          padding: isCircle || canvas ? 0 : "14px 28px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: isCircle && !canvas ? 120 : undefined,
+          boxShadow: `0 2px 12px ${block.color}44`,
+        }}
+      >
+        {block.label && (
+          <span
             style={{
-              background: block.color,
-              borderRadius: radius,
-              width: block.width ?? (isCircle ? 120 : "100%"),
-              height: block.height ?? (isCircle ? 120 : canvas ? "100%" : "auto"),
-              padding: isCircle || canvas ? 0 : "14px 28px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: isCircle && !canvas ? 120 : undefined,
-              boxShadow: `0 2px 12px ${block.color}44`,
+              fontSize: 15,
+              fontWeight: 700,
+              color: block.textColor ?? getReadableTextColor(block.color),
+              fontFamily: "Inter, sans-serif",
             }}
           >
-            {block.label && (
-              <span
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: getReadableTextColor(block.color),
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                {block.label}
-              </span>
-            )}
-          </div>
-        </div>
-      );
-    }
-  }
+            {block.label}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }

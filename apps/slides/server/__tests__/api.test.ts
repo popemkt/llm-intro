@@ -105,6 +105,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Create normal slide",
         }),
         expect.objectContaining({
+          id: "create-manual-slide",
+          name: "Create manual slide",
+        }),
+        expect.objectContaining({
           id: "create-normal-slides",
           name: "Create normal slides",
         }),
@@ -193,6 +197,98 @@ describe("Normal slide actions", () => {
         }),
       ]),
     );
+  });
+});
+
+describe("Manual slide actions", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+    pid = (await request(app).post("/api/presentations").send({ name: "Manual Pres" })).body.id;
+  });
+
+  it("POST /_agent-native/actions/create-manual-slide preserves styled manual blocks", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/create-manual-slide")
+      .send({
+        pid,
+        title: "Styled Manual",
+        notes: "Speaker note",
+        blocks: [
+          {
+            id: "headline",
+            type: "text",
+            markdown: "# Hello",
+            x: 8,
+            y: 10,
+            w: 72,
+            h: 24,
+            rotation: -2,
+            opacity: 0.85,
+            fontSize: 42,
+            color: "#ffffff",
+            background: "#123456",
+            align: "center",
+            padding: 16,
+          },
+          {
+            id: "logo",
+            type: "image",
+            url: "data:image/svg+xml,%3Csvg%2F%3E",
+            alt: "Logo",
+            objectFit: "cover",
+            borderRadius: 18,
+            x: 80,
+            y: 10,
+            w: 12,
+            h: 12,
+          },
+          {
+            id: "badge",
+            type: "shape",
+            shape: "pill",
+            color: "#25d366",
+            label: "Ready",
+            textColor: "#0d0f0e",
+            borderColor: "#ffffff",
+            borderWidth: 2,
+            x: 10,
+            y: 72,
+            w: 24,
+            h: 10,
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      title: "Styled Manual",
+      kind: "db",
+      notes: "Speaker note",
+      blocks: [
+        expect.objectContaining({
+          id: "headline",
+          fontSize: 42,
+          background: "#123456",
+          align: "center",
+          rotation: -2,
+          opacity: 0.85,
+        }),
+        expect.objectContaining({
+          id: "logo",
+          objectFit: "cover",
+          borderRadius: 18,
+        }),
+        expect.objectContaining({
+          id: "badge",
+          textColor: "#0d0f0e",
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        }),
+      ],
+    });
   });
 });
 

@@ -48,4 +48,53 @@ describe("DbSlideRenderer", () => {
     expect(screen.getByText("First block")).toBeInTheDocument();
     expect(screen.getByText("Second block")).toBeInTheDocument();
   });
+
+  it("applies manual block appearance fields", () => {
+    const blocks: Block[] = [
+      {
+        id: "1",
+        type: "text",
+        markdown: "Styled text",
+        x: 10,
+        y: 10,
+        w: 50,
+        h: 20,
+        rotation: 6,
+        opacity: 0.7,
+        fontSize: 36,
+        color: "#ffffff",
+        background: "#123456",
+        align: "center",
+        padding: 18,
+      },
+      {
+        id: "2",
+        type: "shape",
+        shape: "pill",
+        color: "#25d366",
+        label: "Badge",
+        borderColor: "#ffffff",
+        borderWidth: 2,
+        textColor: "#0d0f0e",
+        x: 10,
+        y: 40,
+        w: 20,
+        h: 10,
+      },
+    ];
+    const { container } = render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
+
+    const wrapper = container.querySelector('[style*="rotate(6deg)"]') as HTMLElement;
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper.style.opacity).toBe("0.7");
+
+    const text = screen.getByText("Styled text").closest(".prose-block") as HTMLElement;
+    expect(text.style.fontSize).toBe("36px");
+    expect(text.style.background).toBe("rgb(18, 52, 86)");
+    expect(text.style.textAlign).toBe("center");
+
+    const badge = screen.getByText("Badge").parentElement as HTMLElement;
+    expect(badge.style.border).toBe("2px solid rgb(255, 255, 255)");
+    expect(screen.getByText("Badge")).toHaveStyle({ color: "rgb(13, 15, 14)" });
+  });
 });

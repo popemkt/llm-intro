@@ -23,10 +23,28 @@ type BlockPos = {
   y?: number;
   w?: number;
   h?: number;
+  rotation?: number;
+  opacity?: number;
 };
 
-export type TextBlock = { id: string; type: "text"; markdown: string } & BlockPos;
-export type ImageBlock = { id: string; type: "image"; url: string; alt?: string } & BlockPos;
+export type TextBlock = {
+  id: string;
+  type: "text";
+  markdown: string;
+  fontSize?: number;
+  color?: string;
+  background?: string;
+  align?: "left" | "center" | "right";
+  padding?: number;
+} & BlockPos;
+export type ImageBlock = {
+  id: string;
+  type: "image";
+  url: string;
+  alt?: string;
+  objectFit?: "contain" | "cover" | "fill";
+  borderRadius?: number;
+} & BlockPos;
 export type IframeBlock = { id: string; type: "iframe"; url: string; height?: number } & BlockPos;
 export type ShapeBlock = {
   id: string;
@@ -34,6 +52,9 @@ export type ShapeBlock = {
   shape: "rect" | "pill" | "circle";
   color: string;
   label?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
   width?: string;
   height?: string;
 } & BlockPos;

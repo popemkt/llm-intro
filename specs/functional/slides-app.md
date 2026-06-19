@@ -48,6 +48,10 @@ editing, themed presentation playback, and HTML export.
 - Users can edit database-backed slide titles and blocks.
 - Supported block types are text, image, iframe, and shape.
 - Blocks can be positioned and resized on a fixed 16:9 slide canvas.
+- Blocks support typed appearance fields that persist through app actions:
+  common rotation and opacity; text font size, color, background, alignment,
+  and padding; image fit and corner radius; shape border, label color, and fill
+  styling.
 - Users can search SVGL logo candidates, import them into the deck asset
   library, and insert imported SVG assets into manual slides from the visual
   editor.
@@ -179,6 +183,9 @@ editing, themed presentation playback, and HTML export.
   and closing.
 - Agents can create a sequence of standard DB-backed slides from a structured
   outline through `create-normal-slides`.
+- Agents can create fully manual, PowerPoint-style editable slides through
+  `create-manual-slide` by providing typed text, image, iframe, and shape
+  blocks with geometry and appearance fields.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.
@@ -202,6 +209,9 @@ editing, themed presentation playback, and HTML export.
 - The selected block inspector can align blocks left, center, right, top,
   middle, and bottom, and can fit blocks to slide width, height, or both while
   preserving typed percentage geometry.
+- The selected block inspector can edit common appearance, text appearance,
+  image fitting/radius, and shape border/label styling using the same typed
+  block fields available to agent actions.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
@@ -231,7 +241,8 @@ editing, themed presentation playback, and HTML export.
   action-backed and can use the local OpenAI-compatible model harness when
   configured, with deterministic fallback when no local model is available.
 - Additional visual editor refinements beyond formatting, arrange controls, and
-  initial asset insertion.
+  initial asset insertion, including multi-select, guides, snapping, grouping,
+  transitions UI, masters/templates, and first-class HTML slide authoring.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,

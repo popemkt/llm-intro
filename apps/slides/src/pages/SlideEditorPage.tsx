@@ -4,6 +4,9 @@ import {
   AlignHorizontalJustifyCenter,
   AlignHorizontalJustifyEnd,
   AlignHorizontalJustifyStart,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
@@ -769,6 +772,8 @@ export function SlideEditorPage() {
                     width: `${w}%`,
                     height: `${h}%`,
                     cursor: "move",
+                    transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                    opacity: block.opacity,
                     outline: isSelected
                       ? "2px solid var(--theme-accent, #25d366)"
                       : "1px dashed transparent",
@@ -1052,12 +1057,23 @@ export function SlideEditorPage() {
                   </div>
                 </div>
 
+                <CommonAppearanceEditor
+                  block={selectedBlock}
+                  onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                />
+
                 {/* Type-specific fields */}
                 {selectedBlock.type === "text" && (
-                  <TextBlockPropertyEditor
-                    block={selectedBlock}
-                    onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
-                  />
+                  <>
+                    <TextBlockPropertyEditor
+                      block={selectedBlock}
+                      onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
+                    />
+                    <TextAppearanceEditor
+                      block={selectedBlock}
+                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                    />
+                  </>
                 )}
 
                 {selectedBlock.type === "image" && (
@@ -1102,6 +1118,10 @@ export function SlideEditorPage() {
                         style={inp}
                       />
                     </div>
+                    <ImageAppearanceEditor
+                      block={selectedBlock}
+                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                    />
                   </>
                 )}
 
@@ -1395,6 +1415,123 @@ function MarkdownFormatToolbar({
   );
 }
 
+const inspectorLabel: React.CSSProperties = {
+  fontSize: 9,
+  color: C.textDim,
+  marginBottom: 4,
+  fontFamily: "JetBrains Mono, monospace",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+};
+
+function InspectorField({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <div>
+      <div style={inspectorLabel}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function ColorInput({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: string | undefined) => void;
+  value: string | undefined;
+}) {
+  return (
+    <InspectorField label={label}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value || undefined)}
+          placeholder="theme"
+          style={inp}
+        />
+        <input
+          aria-label={label}
+          type="color"
+          value={value && value.startsWith("#") ? value : "#ffffff"}
+          onChange={(event) => onChange(event.target.value)}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            border: `1px solid ${C.border}`,
+            padding: 0,
+            cursor: "pointer",
+            background: "none",
+            flexShrink: 0,
+          }}
+        />
+      </div>
+    </InspectorField>
+  );
+}
+
+function NumberInput({
+  label,
+  max,
+  min,
+  onChange,
+  step = 1,
+  value,
+}: {
+  label: string;
+  max: number;
+  min: number;
+  onChange: (value: number | undefined) => void;
+  step?: number;
+  value: number | undefined;
+}) {
+  return (
+    <InspectorField label={label}>
+      <input
+        type="number"
+        value={value ?? ""}
+        onChange={(event) =>
+          onChange(event.target.value === "" ? undefined : Number(event.target.value))
+        }
+        min={min}
+        max={max}
+        step={step}
+        style={inp}
+      />
+    </InspectorField>
+  );
+}
+
+function CommonAppearanceEditor({
+  block,
+  onUpdate,
+}: {
+  block: Block;
+  onUpdate: (patch: Partial<Block>) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      <NumberInput
+        label="Rotate"
+        min={-360}
+        max={360}
+        value={block.rotation}
+        onChange={(rotation) => onUpdate({ rotation } as Partial<Block>)}
+      />
+      <NumberInput
+        label="Opacity"
+        min={0}
+        max={1}
+        step={0.05}
+        value={block.opacity}
+        onChange={(opacity) => onUpdate({ opacity } as Partial<Block>)}
+      />
+    </div>
+  );
+}
+
 function TextBlockPropertyEditor({
   block,
   onUpdate,
@@ -1437,6 +1574,106 @@ function TextBlockPropertyEditor({
           fontFamily: "JetBrains Mono, monospace",
           fontSize: 11,
         }}
+      />
+    </div>
+  );
+}
+
+function TextAppearanceEditor({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "text" }>;
+  onUpdate: (patch: Partial<Extract<Block, { type: "text" }>>) => void;
+}) {
+  const alignButton = (align: "left" | "center" | "right", icon: React.ReactNode) => (
+    <button
+      key={align}
+      type="button"
+      aria-label={`Align ${align}`}
+      title={`Align ${align}`}
+      onClick={() => onUpdate({ align })}
+      style={{
+        ...arrangeButton,
+        background: block.align === align ? C.accentSubtle : C.bg,
+        color: block.align === align ? C.accent : C.text,
+      }}
+    >
+      {icon}
+    </button>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <NumberInput
+          label="Font size"
+          min={8}
+          max={180}
+          value={block.fontSize}
+          onChange={(fontSize) => onUpdate({ fontSize })}
+        />
+        <NumberInput
+          label="Padding"
+          min={0}
+          max={80}
+          value={block.padding}
+          onChange={(padding) => onUpdate({ padding })}
+        />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {alignButton("left", <AlignLeft size={14} />)}
+        {alignButton("center", <AlignCenter size={14} />)}
+        {alignButton("right", <AlignRight size={14} />)}
+      </div>
+      <ColorInput
+        label="Text color"
+        value={block.color}
+        onChange={(color) => onUpdate({ color })}
+      />
+      <ColorInput
+        label="Background"
+        value={block.background}
+        onChange={(background) => onUpdate({ background })}
+      />
+    </div>
+  );
+}
+
+function ImageAppearanceEditor({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "image" }>;
+  onUpdate: (patch: Partial<Extract<Block, { type: "image" }>>) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <InspectorField label="Fit">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+          {(["contain", "cover", "fill"] as const).map((objectFit) => (
+            <button
+              key={objectFit}
+              type="button"
+              onClick={() => onUpdate({ objectFit })}
+              style={{
+                ...arrangeButton,
+                fontSize: 10,
+                background: (block.objectFit ?? "contain") === objectFit ? C.accentSubtle : C.bg,
+                color: (block.objectFit ?? "contain") === objectFit ? C.accent : C.text,
+              }}
+            >
+              {objectFit}
+            </button>
+          ))}
+        </div>
+      </InspectorField>
+      <NumberInput
+        label="Radius"
+        min={0}
+        max={120}
+        value={block.borderRadius}
+        onChange={(borderRadius) => onUpdate({ borderRadius })}
       />
     </div>
   );
@@ -1600,136 +1837,196 @@ function InlineTextBlockEditor({
 function CanvasBlockContent({ block }: { block: Block }) {
   switch (block.type) {
     case "text":
-      return (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            padding: "6px 10px",
-            overflow: "hidden",
-            boxSizing: "border-box",
-            fontSize: "clamp(0.6rem, 0.9vw, 0.85rem)",
-            lineHeight: 1.55,
-            color: "var(--theme-text)",
-          }}
-          className="prose-block"
-        >
-          {block.markdown ? (
-            <ReactMarkdown>{block.markdown}</ReactMarkdown>
-          ) : (
-            <span
-              style={{ opacity: 0.25, fontFamily: "JetBrains Mono, monospace", fontSize: "0.7em" }}
-            >
-              empty text
-            </span>
-          )}
-        </div>
-      );
+      return <CanvasTextBlock block={block} />;
 
     case "image":
-      return block.url ? (
-        <img
-          src={block.url}
-          alt={block.alt ?? ""}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-        />
-      ) : (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            color: "var(--theme-text-dim)",
-            fontSize: 11,
-            opacity: 0.5,
-          }}
-        >
-          <ImageIcon size={14} /> no image
-        </div>
-      );
+      return <CanvasImageBlock block={block} />;
 
     case "iframe":
-      return (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            background: "var(--theme-surface)",
-            border: "1px solid var(--theme-border)",
-            color: "var(--theme-text-dim)",
-            fontSize: 11,
-          }}
-        >
-          <Globe size={16} style={{ opacity: 0.5 }} />
+      return <CanvasIframeBlock block={block} />;
+
+    case "shape":
+      return <CanvasShapeBlock block={block} />;
+  }
+}
+
+function CanvasTextBlock({ block }: { block: Extract<Block, { type: "text" }> }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        fontSize: "clamp(0.6rem, 0.9vw, 0.85rem)",
+        lineHeight: 1.55,
+        color: block.color ?? "var(--theme-text)",
+        background: block.background,
+        textAlign: block.align,
+        padding: block.padding ?? "6px 10px",
+      }}
+      className="prose-block"
+    >
+      {block.markdown ? (
+        <ReactMarkdown>{block.markdown}</ReactMarkdown>
+      ) : (
+        <span style={{ opacity: 0.25, fontFamily: "JetBrains Mono, monospace", fontSize: "0.7em" }}>
+          empty text
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CanvasImageBlock({ block }: { block: Extract<Block, { type: "image" }> }) {
+  return block.url ? (
+    <img
+      src={block.url}
+      alt={block.alt ?? ""}
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: block.objectFit ?? "contain",
+        borderRadius: block.borderRadius,
+        display: "block",
+      }}
+    />
+  ) : (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        color: "var(--theme-text-dim)",
+        fontSize: 11,
+        opacity: 0.5,
+      }}
+    >
+      <ImageIcon size={14} /> no image
+    </div>
+  );
+}
+
+function CanvasIframeBlock({ block }: { block: Extract<Block, { type: "iframe" }> }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        background: "var(--theme-surface)",
+        border: "1px solid var(--theme-border)",
+        color: "var(--theme-text-dim)",
+        fontSize: 11,
+      }}
+    >
+      <Globe size={16} style={{ opacity: 0.5 }} />
+      <span
+        style={{
+          maxWidth: "80%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          opacity: 0.6,
+        }}
+      >
+        {block.url || "(no URL)"}
+      </span>
+    </div>
+  );
+}
+
+function CanvasShapeBlock({ block }: { block: Extract<Block, { type: "shape" }> }) {
+  const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 8;
+  const isCircle = block.shape === "circle";
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          background: block.color,
+          borderRadius: radius,
+          border:
+            block.borderWidth && block.borderWidth > 0
+              ? `${block.borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`
+              : undefined,
+          width: block.width ?? (isCircle ? "70%" : "100%"),
+          height: block.height ?? (isCircle ? "70%" : "100%"),
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: `0 2px 12px ${block.color}44`,
+        }}
+      >
+        {block.label && (
           <span
             style={{
-              maxWidth: "80%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              opacity: 0.6,
+              fontSize: 13,
+              fontWeight: 700,
+              color: block.textColor ?? getReadableTextColor(block.color),
+              fontFamily: "Inter, sans-serif",
             }}
           >
-            {block.url || "(no URL)"}
+            {block.label}
           </span>
-        </div>
-      );
-
-    case "shape": {
-      const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 8;
-      const isCircle = block.shape === "circle";
-      return (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            style={{
-              background: block.color,
-              borderRadius: radius,
-              width: block.width ?? (isCircle ? "70%" : "100%"),
-              height: block.height ?? (isCircle ? "70%" : "100%"),
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: `0 2px 12px ${block.color}44`,
-            }}
-          >
-            {block.label && (
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: getReadableTextColor(block.color),
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                {block.label}
-              </span>
-            )}
-          </div>
-        </div>
-      );
-    }
-  }
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Shape property editor ────────────────────────────────────────────────────
 
 function ShapePropEditor({
+  block,
+  onUpdate,
+}: {
+  block: ShapeBlock;
+  onUpdate: (p: Partial<ShapeBlock>) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <ShapeTypeControls block={block} onUpdate={onUpdate} />
+      <ShapeFillControls block={block} onUpdate={onUpdate} />
+      <ShapeLabelControls block={block} onUpdate={onUpdate} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <NumberInput
+          label="Border"
+          min={0}
+          max={24}
+          value={block.borderWidth}
+          onChange={(borderWidth) => onUpdate({ borderWidth })}
+        />
+        <ColorInput
+          label="Border color"
+          value={block.borderColor}
+          onChange={(borderColor) => onUpdate({ borderColor })}
+        />
+      </div>
+      <ColorInput
+        label="Text color"
+        value={block.textColor}
+        onChange={(textColor) => onUpdate({ textColor })}
+      />
+    </div>
+  );
+}
+
+function ShapeTypeControls({
   block,
   onUpdate,
 }: {
@@ -1750,95 +2047,113 @@ function ShapePropEditor({
     fontWeight: 600,
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", gap: 6 }}>
-        {[
-          { value: "rect" as const, icon: <Square size={12} />, label: "Rect" },
-          { value: "pill" as const, icon: <Pill size={12} />, label: "Pill" },
-          { value: "circle" as const, icon: <Circle size={12} />, label: "Circle" },
-        ].map(({ value, icon, label }) => (
-          <button
-            key={value}
-            onClick={() => onUpdate({ shape: value })}
-            style={{
-              ...btnInp,
-              border: `1.5px solid ${block.shape === value ? C.accent : C.border}`,
-              background: block.shape === value ? C.accentSubtle : C.bg,
-              color: block.shape === value ? C.accent : C.textDim,
-            }}
-          >
-            {icon} {label}
-          </button>
-        ))}
-      </div>
-
-      <div>
-        <div
+    <div style={{ display: "flex", gap: 6 }}>
+      {[
+        { value: "rect" as const, icon: <Square size={12} />, label: "Rect" },
+        { value: "pill" as const, icon: <Pill size={12} />, label: "Pill" },
+        { value: "circle" as const, icon: <Circle size={12} />, label: "Circle" },
+      ].map(({ value, icon, label }) => (
+        <button
+          key={value}
+          onClick={() => onUpdate({ shape: value })}
           style={{
-            fontSize: 9,
-            color: C.textDim,
-            marginBottom: 6,
-            fontFamily: "JetBrains Mono, monospace",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
+            ...btnInp,
+            border: `1.5px solid ${block.shape === value ? C.accent : C.border}`,
+            background: block.shape === value ? C.accentSubtle : C.bg,
+            color: block.shape === value ? C.accent : C.textDim,
           }}
         >
-          Color
-        </div>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {SHAPE_COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => onUpdate({ color: c })}
-              title={c}
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 5,
-                background: c,
-                cursor: "pointer",
-                padding: 0,
-                border: block.color === c ? `2.5px solid ${C.highlight}` : `1px solid ${C.border}`,
-              }}
-            />
-          ))}
-          <input
-            type="color"
-            value={block.color}
-            onChange={(e) => onUpdate({ color: e.target.value })}
+          {icon} {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ShapeFillControls({
+  block,
+  onUpdate,
+}: {
+  block: ShapeBlock;
+  onUpdate: (p: Partial<ShapeBlock>) => void;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 9,
+          color: C.textDim,
+          marginBottom: 6,
+          fontFamily: "JetBrains Mono, monospace",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        Color
+      </div>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {SHAPE_COLORS.map((c) => (
+          <button
+            key={c}
+            onClick={() => onUpdate({ color: c })}
+            title={c}
             style={{
               width: 20,
               height: 20,
               borderRadius: 5,
-              border: `1px solid ${C.border}`,
-              padding: 0,
+              background: c,
               cursor: "pointer",
-              background: "none",
+              padding: 0,
+              border: block.color === c ? `2.5px solid ${C.highlight}` : `1px solid ${C.border}`,
             }}
           />
-        </div>
-      </div>
-
-      <div>
-        <div
-          style={{
-            fontSize: 9,
-            color: C.textDim,
-            marginBottom: 4,
-            fontFamily: "JetBrains Mono, monospace",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}
-        >
-          Label
-        </div>
+        ))}
         <input
-          value={block.label ?? ""}
-          onChange={(e) => onUpdate({ label: e.target.value })}
-          placeholder="Label text"
-          style={inp}
+          type="color"
+          value={block.color}
+          onChange={(e) => onUpdate({ color: e.target.value })}
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 5,
+            border: `1px solid ${C.border}`,
+            padding: 0,
+            cursor: "pointer",
+            background: "none",
+          }}
         />
       </div>
+    </div>
+  );
+}
+
+function ShapeLabelControls({
+  block,
+  onUpdate,
+}: {
+  block: ShapeBlock;
+  onUpdate: (p: Partial<ShapeBlock>) => void;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 9,
+          color: C.textDim,
+          marginBottom: 4,
+          fontFamily: "JetBrains Mono, monospace",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        Label
+      </div>
+      <input
+        value={block.label ?? ""}
+        onChange={(e) => onUpdate({ label: e.target.value })}
+        placeholder="Label text"
+        style={inp}
+      />
     </div>
   );
 }

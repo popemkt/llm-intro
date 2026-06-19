@@ -194,6 +194,13 @@ MCP-compatible action tools, optional OpenAI-compatible local prompt drafting,
 and trusted local terminal Code Mode. App/action/MCP/model entries stay inside
 the product-action boundary; terminal Code Mode is the only repo-modifying
 path.
+External local harnesses are discovery-only in this slice. Configure
+`LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, or
+`LOCAL_HARNESS_MCP_URL` (or the matching `AGENT_NATIVE_LOCAL_HARNESS_*` aliases)
+to advertise local harness HTTP, OpenAPI, or MCP transports through
+`local-runtime/protocols`. A configured MCP URL is also listed by
+`GET /_agent-native/mcp/servers`. Actual invocation should be added as a
+separate adapter once the harness contract is known.
 `GET /_agent-native/env-status` reports the same configured/fallback state with
 redacted secret metadata. Production shell access remains gated by the
 server-side terminal policy.

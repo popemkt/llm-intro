@@ -61,6 +61,11 @@ Reference documentation:
 - A local runtime protocol probe at `/_agent-native/local-runtime/protocols`
   describes the non-hosted App Mode, action HTTP, MCP, local model harness, and
   trusted terminal Code Mode paths in one place.
+- External local harnesses can be advertised without hosted infrastructure by
+  setting `LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, or
+  `LOCAL_HARNESS_MCP_URL` (or the `AGENT_NATIVE_LOCAL_HARNESS_*` aliases). The
+  protocol probe reports these as external local harness transports; configured
+  MCP harnesses also appear in `/_agent-native/mcp/servers`.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -207,6 +212,11 @@ Taken now:
   `/_agent-native/local-runtime/protocols`, making the app/action/MCP/model
   App Mode paths and trusted terminal Code Mode path explicit for framework
   shells.
+- External local harness protocol discovery through
+  `LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, and
+  `LOCAL_HARNESS_MCP_URL`. These are discovery-only until a concrete harness
+  invocation adapter is added; the app does not silently grant arbitrary local
+  tools product-action privileges.
 
 Translated rather than copied:
 

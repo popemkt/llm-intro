@@ -4,6 +4,14 @@ import { createTestContext } from "./test-context.js";
 
 const { app } = createTestContext({ seedSystemPresentation: false });
 
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
+}
+
 describe("Agent Native framework health routes", () => {
   it("GET /_agent-native/poll and /demo/status provide no-op framework core routes", async () => {
     const pollRes = await request(app).get("/_agent-native/poll?since=0");
@@ -125,6 +133,13 @@ describe("Agent Native framework runtime protocol routes", () => {
               toolBoundary: "prompt-drafting-only",
             }),
             expect.objectContaining({
+              id: "local-harness-mcp",
+              mode: "app",
+              available: false,
+              hosted: false,
+              toolBoundary: "external-local-harness",
+            }),
+            expect.objectContaining({
               id: "local-terminal-code-mode",
               mode: "code",
               hosted: false,
@@ -134,6 +149,70 @@ describe("Agent Native framework runtime protocol routes", () => {
         },
       },
     );
+  });
+
+  it("GET local-runtime/protocols includes configured external local harness endpoints", async () => {
+    const previousHttp = process.env.LOCAL_HARNESS_HTTP_URL;
+    const previousOpenapi = process.env.LOCAL_HARNESS_OPENAPI_URL;
+    const previousMcp = process.env.LOCAL_HARNESS_MCP_URL;
+
+    process.env.LOCAL_HARNESS_HTTP_URL = "http://127.0.0.1:8989/actions";
+    process.env.LOCAL_HARNESS_OPENAPI_URL = "http://127.0.0.1:8989/openapi.json";
+    process.env.LOCAL_HARNESS_MCP_URL = "http://127.0.0.1:8989/mcp";
+
+    try {
+      await expect(
+        request(app).get("/_agent-native/local-runtime/protocols"),
+      ).resolves.toMatchObject({
+        status: 200,
+        body: {
+          protocols: expect.arrayContaining([
+            expect.objectContaining({
+              id: "local-harness-http",
+              available: true,
+              endpoint: "http://127.0.0.1:8989/actions",
+            }),
+            expect.objectContaining({
+              id: "local-harness-openapi",
+              available: true,
+              endpoint: "http://127.0.0.1:8989/openapi.json",
+            }),
+            expect.objectContaining({
+              id: "local-harness-mcp",
+              available: true,
+              endpoint: "http://127.0.0.1:8989/mcp",
+            }),
+          ]),
+        },
+      });
+    } finally {
+      restoreEnv("LOCAL_HARNESS_HTTP_URL", previousHttp);
+      restoreEnv("LOCAL_HARNESS_OPENAPI_URL", previousOpenapi);
+      restoreEnv("LOCAL_HARNESS_MCP_URL", previousMcp);
+    }
+  });
+
+  it("GET /_agent-native/mcp/servers advertises configured external local harness MCP", async () => {
+    const previousMcp = process.env.LOCAL_HARNESS_MCP_URL;
+    process.env.LOCAL_HARNESS_MCP_URL = "http://127.0.0.1:8989/mcp";
+
+    try {
+      await expect(request(app).get("/_agent-native/mcp/servers")).resolves.toMatchObject({
+        status: 200,
+        body: {
+          servers: expect.arrayContaining([
+            expect.objectContaining({
+              id: "local-harness",
+              url: "http://127.0.0.1:8989/mcp",
+              hosted: false,
+              toolBoundary: "external-local-harness",
+            }),
+          ]),
+        },
+      });
+    } finally {
+      restoreEnv("LOCAL_HARNESS_MCP_URL", previousMcp);
+    }
   });
 });
 

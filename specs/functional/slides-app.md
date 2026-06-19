@@ -134,6 +134,9 @@ editing, themed presentation playback, and HTML export.
 - Framework local-runtime protocol discovery lists the available local app,
   action, MCP, model-harness, and terminal paths so shells can choose App Mode
   or trusted Code Mode without assuming hosted infrastructure.
+- Optional external local harness endpoints can be advertised as HTTP, OpenAPI,
+  and MCP transports. These endpoints are discovery-only until a concrete
+  harness adapter grants specific invocation rights.
 - Framework environment status exposes local model configured/fallback state
   without returning secret values.
 - Local App Mode exposes a manifest and compact capabilities endpoint so shells

@@ -27,7 +27,7 @@ Reference documentation:
   actions expose the theme catalog plus a queued app-shell-theme command.
 - The root is wrapped in a local `AppShell` that ports the useful shell shape
   from the Agent-Native Slides app: left product rail, agent toggle, App mode
-  `AssistantChat`, and Code mode `AgentPanel`. The panel starts closed; local
+  `AssistantChat`, and Code mode `AgentTerminal`. The panel starts closed; local
   `/_agent-native/agent-chat` compatibility is action-backed with process-local
   thread probes, while full hosted chat remains out of scope for the local
   adoption path.
@@ -44,7 +44,7 @@ Reference documentation:
 - The shell publishes selected browser text into `pending-selection-context`,
   so app agents can inspect what the user highlighted without filesystem or
   shell access.
-- The embedded `AgentPanel` has a local App Mode runtime at
+- The embedded agent surface has a local App Mode runtime at
   `/_agent-native/app-agent`. It receives the current deck scope and maps simple
   product prompts to the same action registry used by the UI: slide/group
   listing, normal slide creation, multi-slide outline creation, group creation,
@@ -130,7 +130,7 @@ file download/export behavior.
 
 Taken now:
 
-- Product shell pattern: left navigation rail plus right `AgentPanel`.
+- Product shell pattern: left navigation rail plus right agent surface.
 - Agent sidebar prompt suggestions scoped to deck creation/editing.
 - Local App Mode chat runtime that can list deck slides and create normal
   slides, groups, multi-slide outlines, and theme changes through product

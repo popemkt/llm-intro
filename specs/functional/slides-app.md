@@ -104,7 +104,8 @@ editing, themed presentation playback, and HTML export.
   product, especially advanced slide creation and stronger shell/agent UX.
 - The app shell includes an Agent-Native-style product rail and a real
   agent toggle. The panel starts closed, uses Agent-Native `AssistantChat` for
-  deck-scoped App Mode prompts, and keeps `AgentPanel` for local Code Mode.
+  deck-scoped App Mode prompts, and uses Agent-Native `AgentTerminal` for local
+  Code Mode.
 - In App Mode, agents can use product-safe deck actions without shell or
   filesystem access. The current local runtime can list slides and create
   standard normal slides, multi-slide outlines, slide groups, and deck theme

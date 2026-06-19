@@ -20,7 +20,7 @@ framework boundary.
 | Functional behavior | Agent-Native/action bridge | Current code |
 |---|---|---|
 | App providers and query cache | `AppProviders`, `createAgentNativeQueryClient()` | `apps/slides/src/main.tsx` |
-| App shell | Local shell with `AgentPanel`, local toggle, and product rail | `apps/slides/src/components/AppShell.tsx` |
+| App shell | Local shell with Agent-Native `AssistantChat`, `AgentTerminal`, local toggle, and product rail | `apps/slides/src/components/AppShell.tsx` |
 | Application state | Minimal route for sidebar URL/app-state sync | `apps/slides/server/routes/application-state.ts` |
 | Route state and navigation | Local React Router bridge writes `__url__`/`navigation` and consumes `navigate` commands | `apps/slides/src/components/AppShell.tsx`, `apps/slides/actions/app-context.ts` |
 | Browser selection context | Shell writes selected browser text to `pending-selection-context` for app-context reads | `apps/slides/src/components/AppShell.tsx` |

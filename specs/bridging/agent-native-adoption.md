@@ -28,8 +28,9 @@ Reference documentation:
 - The root is wrapped in a local `AppShell` that ports the useful shell shape
   from the Agent-Native Slides app: left product rail, agent toggle, App mode
   `AssistantChat`, and Code mode `AgentPanel`. The panel starts closed; local
-  `/_agent-native/agent-chat` compatibility is action-backed, while full hosted
-  chat remains pending.
+  `/_agent-native/agent-chat` compatibility is action-backed with process-local
+  thread probes, while full hosted chat remains out of scope for the local
+  adoption path.
 - A minimal `/_agent-native/application-state/:key` route supports the
   framework sidebar's URL/application-state polling. It is intentionally narrow
   and in-memory until the full Agent-Native server plugin is adopted.
@@ -49,6 +50,14 @@ Reference documentation:
   listing, normal slide creation, multi-slide outline creation, group creation,
   deck theme changes, theme catalog/app-shell changes, HTML export links,
   active deck summaries, and deck snapshot capture/listing/restore.
+- Local App Mode exposes a shared capability manifest through
+  `/_agent-native/app-agent` and `/_agent-native/app-agent/capabilities`. The
+  shell imports the same manifest for starter suggestions, so the UI and
+  protocol surface describe the same prompt families and local-only tool
+  boundary.
+- Framework compatibility probes expose local model/provider status, product
+  deck resources, a local `slides-actions` MCP server, and the same public
+  action tools available through `/_agent-native/actions/mcp`, OpenAPI, and A2A.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -177,6 +186,18 @@ Taken now:
   fullscreen stays audience-only.
 - Local CLI discovery and PTY terminal endpoint shape used by the Agent-Native
   terminal surface.
+- Local model/provider discovery through `get-local-model-status`,
+  `/_agent-native/agent-model-defaults`, and
+  `/_agent-native/actions/manage-agent-engine`, all reporting local
+  OpenAI-compatible provider state without implying hosted requirements.
+- Local App Mode capability discovery through `/_agent-native/app-agent` and
+  `/_agent-native/app-agent/capabilities`.
+- Product-safe deck resource discovery through `/_agent-native/resources` and
+  `/_agent-native/resources/tree`, using `slides://deck/:id` URIs and action
+  URLs rather than filesystem paths.
+- Local action MCP discovery through `/_agent-native/mcp/servers` and
+  `/_agent-native/mcp/builtin`, backed by the same public action registry as
+  `/_agent-native/actions/mcp`.
 
 Translated rather than copied:
 
@@ -197,11 +218,11 @@ Translated rather than copied:
 
 ## Current Slice
 
-Port the reference Slides shell and normal-slide creation shape without
-wholesale replacement: `AppShell`, minimal application-state routing, and
-`create-normal-slide` are adopted while raw-HTML slides, design systems,
-comments, collaboration, and hosted production chat remain separate slices. The
-local App Mode runtime is now action-backed for deck prompts, and
-`/_agent-native/agent-chat` has a local compatibility adapter with process-local
-thread probes, but this is not yet the full hosted Agent-Native chat runtime
-with hosted model streaming, durable memory, approvals, or team collaboration.
+Port the reference Slides shell, normal-slide creation shape, local App Mode,
+local Code Mode, and framework discovery probes without wholesale replacement:
+`AppShell`, application-state routing, action-backed deck/slide/group
+operations, prompt deck creation, local model provider discovery, local chat
+compatibility threads, deck resource probes, MCP/A2A/OpenAPI discovery, and
+local terminal bridging are adopted. Raw-HTML slide storage, comments,
+collaboration, durable hosted chat memory, hosted model streaming, approvals,
+and team collaboration remain separate non-local adoption slices.

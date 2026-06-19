@@ -81,7 +81,22 @@ function registerFrameworkStatusRoutes(
   options: { terminalBridge?: AgentTerminalBridge; localModelProvider?: LocalDeckModelProvider },
 ) {
   router.get("/env-status", (_req, res) => {
-    res.json([]);
+    const status = getLocalProviderStatus(options.localModelProvider);
+    res.json([
+      {
+        id: "local-openai-compatible",
+        label: "Local OpenAI-compatible model",
+        configured: status.available,
+        hosted: false,
+        source: status.source,
+        model: status.model ?? null,
+        baseURL: status.baseURL ?? null,
+        reason: status.reason ?? null,
+        secrets: {
+          OPENAI_API_KEY: status.available && !status.baseURL ? "configured" : "not-required",
+        },
+      },
+    ]);
   });
 
   router.get("/builder/status", (_req, res) => {

@@ -126,6 +126,8 @@ editing, themed presentation playback, and HTML export.
 - Framework model/provider probes expose the same local model harness status so
   Agent-Native shells can distinguish local App Mode and local Code Mode from a
   hosted provider requirement.
+- Framework environment status exposes local model configured/fallback state
+  without returning secret values.
 - Local App Mode exposes a manifest and compact capabilities endpoint so shells
   can discover prompt families, starter suggestions, local-only tool boundaries,
   and action protocol URLs without relying on hard-coded UI copy.

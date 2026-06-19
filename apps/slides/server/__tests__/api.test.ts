@@ -409,7 +409,14 @@ describe("Agent Native framework core routes", () => {
   it("GET framework status probes return disabled local defaults", async () => {
     await expect(request(app).get("/_agent-native/env-status")).resolves.toMatchObject({
       status: 200,
-      body: [],
+      body: [
+        expect.objectContaining({
+          id: "local-openai-compatible",
+          configured: false,
+          hosted: false,
+          secrets: { OPENAI_API_KEY: "not-required" },
+        }),
+      ],
     });
     await expect(request(app).get("/_agent-native/builder/status")).resolves.toMatchObject({
       status: 200,

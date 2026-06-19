@@ -181,8 +181,10 @@ same `appMode` metadata for automation. The framework model probes
 `GET /_agent-native/agent-model-defaults` and
 `POST /_agent-native/actions/manage-agent-engine` report the same local
 OpenAI-compatible provider status as `get-local-model-status`; this is provider
-discovery for local prompt drafting, not a hosted engine dependency. Production
-shell access remains gated by the server-side terminal policy.
+discovery for local prompt drafting, not a hosted engine dependency.
+`GET /_agent-native/env-status` reports the same configured/fallback state with
+redacted secret metadata. Production shell access remains gated by the
+server-side terminal policy.
 `GET /_agent-native/app-agent` exposes the full local App Mode manifest, and
 `GET /_agent-native/app-agent/capabilities` exposes a compact view of the same
 capabilities for framework shells. The frontend imports the same shared

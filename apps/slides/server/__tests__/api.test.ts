@@ -518,11 +518,22 @@ describe("Agent Native chat shell probes", () => {
   it("GET chat shell probes return empty runtime defaults", async () => {
     await expect(request(app).get("/_agent-native/auth/session")).resolves.toMatchObject({
       status: 200,
-      body: { error: "not_authenticated" },
+      body: {
+        authenticated: true,
+        provider: "local",
+        hosted: false,
+        requiresBuilderAuth: false,
+        user: { id: "local-user" },
+        org: { id: "local-workspace" },
+      },
     });
     await expect(request(app).get("/_agent-native/org/me")).resolves.toMatchObject({
       status: 200,
-      body: { org: null, user: null },
+      body: {
+        org: { id: "local-workspace", hosted: false },
+        user: { id: "local-user" },
+        auth: { provider: "local", requiresBuilderAuth: false },
+      },
     });
     await expect(request(app).get("/_agent-native/agent-chat/mode")).resolves.toMatchObject({
       status: 200,

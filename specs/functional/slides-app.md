@@ -116,6 +116,8 @@ editing, themed presentation playback, and HTML export.
   hosted model provider. The shell should show this as runtime status so users
   do not confuse product-safe App Mode with hosted Code Mode or provider-backed
   chat.
+- Framework auth/org probes expose a local non-hosted session so local App Mode
+  does not prompt for Builder.io login.
 - The local `agent-chat` compatibility adapter keeps process-local chat threads
   so the framework thread probes can list and inspect recent local App Mode
   exchanges. This is not hosted memory and does not survive a server restart.

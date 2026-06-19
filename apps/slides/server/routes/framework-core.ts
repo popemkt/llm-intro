@@ -337,11 +337,40 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
   const threads = new Map<string, LocalAgentChatThread>();
 
   router.get("/auth/session", (_req, res) => {
-    res.json({ error: "not_authenticated" });
+    res.json({
+      authenticated: true,
+      provider: "local",
+      hosted: false,
+      requiresBuilderAuth: false,
+      user: {
+        id: "local-user",
+        email: null,
+        name: "Local User",
+      },
+      org: {
+        id: "local-workspace",
+        name: "Local Workspace",
+      },
+    });
   });
 
   router.get("/org/me", (_req, res) => {
-    res.json({ org: null, user: null });
+    res.json({
+      org: {
+        id: "local-workspace",
+        name: "Local Workspace",
+        hosted: false,
+      },
+      user: {
+        id: "local-user",
+        email: null,
+        name: "Local User",
+      },
+      auth: {
+        provider: "local",
+        requiresBuilderAuth: false,
+      },
+    });
   });
 
   router.get("/agent-chat/mode", (_req, res) => {

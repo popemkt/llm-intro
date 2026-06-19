@@ -168,6 +168,9 @@ trusted local coding CLIs are available without Builder.io auth. For the same
 router-context reason, route-state sync is implemented locally while preserving
 the framework application-state keys: the shell writes `__url__` and
 `navigation`, and consumes one-shot `navigate` commands.
+`GET /_agent-native/auth/session` and `GET /_agent-native/org/me` return local,
+non-hosted identity metadata so framework shells do not prompt for Builder.io
+login during local App Mode use.
 `POST /_agent-native/agent-chat` is mounted as a local compatibility adapter
 over the same App Mode prompt handler. It supports JSON responses, a one-shot
 event-stream response, and process-local threads through

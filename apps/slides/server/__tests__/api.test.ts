@@ -245,6 +245,15 @@ describe("Deck asset actions", () => {
     ]);
     expect(listed.body[0]).not.toHaveProperty("content");
 
+    const listedWithContent = await request(app)
+      .get("/_agent-native/actions/list-deck-assets")
+      .query({ pid, includeContent: "true" });
+    expect(listedWithContent.status).toBe(200);
+    expect(listedWithContent.body[0]).toMatchObject({
+      id: imported.body.id,
+      content: expect.stringContaining("<svg"),
+    });
+
     const updated = await request(app)
       .put("/_agent-native/actions/update-deck-asset-metadata")
       .send({

@@ -96,9 +96,28 @@ framework boundary.
 | Markdown formatting controls | `MarkdownFormatToolbar` applies headings, bold, italic, quote, and bullet markdown in inline and side-panel text editors | Browser smoke, typecheck |
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
 | Inspector arrange controls | `SlideEditorPage` aligns selected blocks and fits them to slide width/height through the same typed percentage geometry used by drag, resize, and numeric fields | Browser smoke, typecheck |
+| Deck asset manager | `DeckAssetPanel` searches SVGL, imports deck-local SVG assets, lists imported assets with content, deletes assets, and inserts SVG assets into the manual slide canvas as image blocks | Vitest/API, browser smoke, typecheck |
 | Edit speaker notes | `slides.notes`, `update-slide`, and `SlideEditorPage` notes field | Vitest/API plus browser smoke |
 | Display speaker notes | `PresentationView` renders active slide notes above controls outside fullscreen | Browser smoke |
 | Presenter timer and next preview | `PresentationView` renders elapsed time and a compact next-slide preview in presenter mode only | Browser smoke |
+
+## Asset Bridge
+
+| Functional behavior | Code implementation |
+|---|---|
+| Deck asset persistence | `deck_assets` migration plus `apps/slides/server/repositories/assets.ts` and `apps/slides/server/services/assets.ts` |
+| Logo search | `search-logo-assets` action reads SVGL candidates from `https://api.svgl.app` |
+| Import asset | `import-deck-asset` stores inline or fetched SVG content with source/license/usage metadata |
+| List assets | `list-deck-assets` returns metadata by default and accepts `includeContent=true` for editor insertion flows |
+| Manage assets | `update-deck-asset-metadata` and `delete-deck-asset` actions |
+| Editor insertion | `DeckAssetPanel` in `SlideEditorPage` converts imported SVG content into a local `data:image/svg+xml` image block |
+| Agent resources | Framework resource routes expose deck assets as `slides://deck/:deckId/asset/:assetId` |
+
+The current manual slide block contract stores image references as URLs. The
+first visible asset workflow therefore inserts SVG assets as local data URLs so
+presenter, fullscreen, and HTML export can render without remote hotlinks. A
+later contract slice should add explicit `assetId` references to image blocks,
+then have render/export paths resolve deck assets directly.
 
 ## Presentation And Editor UI
 

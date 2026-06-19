@@ -33,10 +33,12 @@ import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
 import type { ApiPresentation, ApiSlide, Block, ShapeBlock, ThemeName } from "@/types";
+import type { ApiDeckAsset } from "@/types";
 import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
 import { getReadableTextColor } from "@/lib/color";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 
 type DragMode = "move" | "resize-tl" | "resize-tr" | "resize-bl" | "resize-br";
@@ -74,6 +76,20 @@ function makeBlock(type: Block["type"]): Block {
     case "shape":
       return { id, type, shape: "rect", color: "#25d366", label: "", ...pos };
   }
+}
+
+function makeImageBlockFromAsset(asset: ApiDeckAsset): Block {
+  const pos = BLOCK_DEFAULTS.image;
+  return {
+    id: nanoid(),
+    type: "image",
+    url:
+      asset.mime_type === "image/svg+xml"
+        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.content)}`
+        : (asset.source_url ?? ""),
+    alt: asset.name,
+    ...pos,
+  };
 }
 
 const SHAPE_COLORS = [
@@ -441,6 +457,13 @@ export function SlideEditorPage() {
   const addBlocks = useCallback((nextBlocks: Block[]) => {
     setBlocks((prev) => [...prev, ...nextBlocks]);
     setSelectedId(nextBlocks[0]?.id ?? null);
+  }, []);
+
+  const insertAssetBlock = useCallback((asset: ApiDeckAsset) => {
+    const block = makeImageBlockFromAsset(asset);
+    setBlocks((prev) => [...prev, block]);
+    setSelectedId(block.id);
+    setEditingTextId(null);
   }, []);
 
   const deleteBlock = useCallback((id: string) => {
@@ -828,6 +851,7 @@ export function SlideEditorPage() {
           }}
         >
           <SlideBlockInsertPanel onAddBlock={addBlock} onAddBlocks={addBlocks} />
+          <DeckAssetPanel enabled={validRoute} pid={pid} onInsertAsset={insertAssetBlock} />
 
           {/* Selected block properties */}
           <div

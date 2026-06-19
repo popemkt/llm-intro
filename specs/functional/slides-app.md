@@ -18,11 +18,13 @@ editing, themed presentation playback, and HTML export.
 ## Slides
 
 - A deck contains ordered slides.
-- Slides can be code-backed or database-backed.
+- Slides can be code-backed or manual database-backed today.
+- HTML slides are a planned third slide kind for authored HTML/CSS/JS slides
+  that should not require a custom React module.
 - Code-backed slides render registered React modules and can be renamed or
   reordered, but their content cannot be edited in the browser slide editor.
-- Database-backed slides contain editable block data.
-- Users can create, rename, reorder, edit, and delete database-backed slides.
+- Manual database-backed slides contain editable block data.
+- Users can create, rename, reorder, edit, and delete manual slides.
 - Reorder operations preserve every slide exactly once.
 
 ## Groups And Overview
@@ -46,6 +48,11 @@ editing, themed presentation playback, and HTML export.
 - Users can edit database-backed slide titles and blocks.
 - Supported block types are text, image, iframe, and shape.
 - Blocks can be positioned and resized on a fixed 16:9 slide canvas.
+- Users can search SVGL logo candidates, import them into the deck asset
+  library, and insert imported SVG assets into manual slides from the visual
+  editor.
+- Imported visual assets are deck-scoped and keep source, license, usage, and
+  metadata for agent and export workflows.
 - The editor auto-saves after changes and supports explicit save-and-exit.
 - The editor preserves slide theme rendering while editing.
 
@@ -160,6 +167,10 @@ editing, themed presentation playback, and HTML export.
   product actions. Imported assets store local content plus source, license,
   usage, and metadata, and appear in framework resources as
   `slides://deck/:deckId/asset/:assetId`.
+- The manual slide editor exposes a visible deck asset manager backed by those
+  same actions. Selecting an imported SVG inserts it as a local image block,
+  currently using a `data:image/svg+xml` URL for export-stable rendering until
+  slide blocks grow first-class asset references.
 - Framework MCP probes advertise the local slides action server and its
   product-safe tools while keeping invocation on the existing
   `/_agent-native/actions/mcp` route.
@@ -219,7 +230,8 @@ editing, themed presentation playback, and HTML export.
 - Hosted LLM-backed prompt-to-deck streaming. The current local stream is
   action-backed and can use the local OpenAI-compatible model harness when
   configured, with deterministic fallback when no local model is available.
-- Additional visual editor refinements beyond formatting and arrange controls.
+- Additional visual editor refinements beyond formatting, arrange controls, and
+  initial asset insertion.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,

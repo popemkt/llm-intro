@@ -15,6 +15,11 @@ const publicWriteAction = {
 };
 
 type SvglThemeOptions = { dark?: string; light?: string };
+const booleanish = z
+  .union([z.boolean(), z.enum(["true", "false"])])
+  .default(false)
+  .transform((value) => value === true || value === "true");
+
 type SvglLogo = {
   id: number;
   title: string;
@@ -139,7 +144,7 @@ function createListDeckAssetsAction(assetsService: AssetsService) {
     description: "List deck-local assets and their source/license metadata.",
     schema: z.object({
       pid: z.coerce.number().int().positive(),
-      includeContent: z.boolean().default(false),
+      includeContent: booleanish,
     }),
     http: { method: "GET", path: "list-deck-assets" },
     requiresAuth: false,

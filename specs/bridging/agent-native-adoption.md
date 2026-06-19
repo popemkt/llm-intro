@@ -58,6 +58,9 @@ Reference documentation:
 - Framework compatibility probes expose local model/provider status, product
   deck resources, a local `slides-actions` MCP server, and the same public
   action tools available through `/_agent-native/actions/mcp`, OpenAPI, and A2A.
+- A local runtime protocol probe at `/_agent-native/local-runtime/protocols`
+  describes the non-hosted App Mode, action HTTP, MCP, local model harness, and
+  trusted terminal Code Mode paths in one place.
 - Local Code Mode can use Agent-Native's terminal protocol with local,
   authenticated CLIs. The Express server exposes `/_agent-native/available-clis`
   and `/_agent-native/agent-terminal-info`; in development it starts a PTY
@@ -200,6 +203,10 @@ Taken now:
 - Local action MCP discovery through `/_agent-native/mcp/servers` and
   `/_agent-native/mcp/builtin`, backed by the same public action registry as
   `/_agent-native/actions/mcp`.
+- Local runtime protocol discovery through
+  `/_agent-native/local-runtime/protocols`, making the app/action/MCP/model
+  App Mode paths and trusted terminal Code Mode path explicit for framework
+  shells.
 
 Translated rather than copied:
 

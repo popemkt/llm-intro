@@ -131,6 +131,9 @@ editing, themed presentation playback, and HTML export.
   hosted provider requirement.
 - Framework engine/status probes expose local App Mode and local Code Mode
   availability even when Builder.io cloud auth is not configured.
+- Framework local-runtime protocol discovery lists the available local app,
+  action, MCP, model-harness, and terminal paths so shells can choose App Mode
+  or trusted Code Mode without assuming hosted infrastructure.
 - Framework environment status exposes local model configured/fallback state
   without returning secret values.
 - Local App Mode exposes a manifest and compact capabilities endpoint so shells

@@ -189,6 +189,12 @@ discovery for local prompt drafting, not a hosted engine dependency.
 availability, while `GET /_agent-native/builder/status` keeps hosted Builder
 cloud auth explicitly unconfigured. This prevents local shells from mistaking
 missing Builder auth for missing local runtime.
+`GET /_agent-native/local-runtime/protocols` consolidates the local adoption
+paths into one discovery document: App Mode HTTP, direct action HTTP,
+MCP-compatible action tools, optional OpenAI-compatible local prompt drafting,
+and trusted local terminal Code Mode. App/action/MCP/model entries stay inside
+the product-action boundary; terminal Code Mode is the only repo-modifying
+path.
 `GET /_agent-native/env-status` reports the same configured/fallback state with
 redacted secret metadata. Production shell access remains gated by the
 server-side terminal policy.

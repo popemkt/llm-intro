@@ -472,6 +472,47 @@ describe("Agent Native framework core routes", () => {
         persistence: "process-local",
       },
     });
+    await expect(request(app).get("/_agent-native/local-runtime/protocols")).resolves.toMatchObject(
+      {
+        status: 200,
+        body: {
+          hosted: false,
+          requiresBuilderAuth: false,
+          defaultMode: "app",
+          protocols: expect.arrayContaining([
+            expect.objectContaining({
+              id: "app-agent-http",
+              mode: "app",
+              available: true,
+              endpoint: "/_agent-native/app-agent",
+              hosted: false,
+              toolBoundary: "product-actions",
+            }),
+            expect.objectContaining({
+              id: "actions-mcp",
+              mode: "app",
+              available: true,
+              endpoint: "/_agent-native/actions/mcp",
+              hosted: false,
+              toolBoundary: "product-actions",
+            }),
+            expect.objectContaining({
+              id: "local-openai-compatible-model",
+              mode: "app",
+              available: false,
+              hosted: false,
+              toolBoundary: "prompt-drafting-only",
+            }),
+            expect.objectContaining({
+              id: "local-terminal-code-mode",
+              mode: "code",
+              hosted: false,
+              toolBoundary: "trusted-local-cli",
+            }),
+          ]),
+        },
+      },
+    );
     await expect(request(app).get("/_agent-native/agent-model-defaults")).resolves.toMatchObject({
       status: 200,
       body: {
@@ -515,7 +556,7 @@ describe("Agent Native framework core routes", () => {
 describe("Agent Native chat shell probes", () => {
   const { app } = createTestContext({ seedSystemPresentation: false });
 
-  it("GET chat shell probes return empty runtime defaults", async () => {
+  it("GET auth shell probes return local identity defaults", async () => {
     await expect(request(app).get("/_agent-native/auth/session")).resolves.toMatchObject({
       status: 200,
       body: {
@@ -535,6 +576,9 @@ describe("Agent Native chat shell probes", () => {
         auth: { provider: "local", requiresBuilderAuth: false },
       },
     });
+  });
+
+  it("GET agent-chat mode reports local App and Code mode", async () => {
     await expect(request(app).get("/_agent-native/agent-chat/mode")).resolves.toMatchObject({
       status: 200,
       body: {
@@ -557,6 +601,9 @@ describe("Agent Native chat shell probes", () => {
         },
       },
     });
+  });
+
+  it("GET chat thread and run probes return empty runtime defaults", async () => {
     await expect(request(app).get("/_agent-native/agent-chat/threads")).resolves.toMatchObject({
       status: 200,
       body: { threads: [] },

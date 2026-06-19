@@ -78,7 +78,11 @@ function registerFrameworkHealthRoutes(router: Router) {
 
 function registerFrameworkStatusRoutes(
   router: Router,
-  options: { terminalBridge?: AgentTerminalBridge; localModelProvider?: LocalDeckModelProvider },
+  options: {
+    actions?: SlideDeckActions;
+    terminalBridge?: AgentTerminalBridge;
+    localModelProvider?: LocalDeckModelProvider;
+  },
 ) {
   router.get("/env-status", (_req, res) => {
     const status = getLocalProviderStatus(options.localModelProvider);
@@ -153,6 +157,69 @@ function registerFrameworkStatusRoutes(
     });
   });
 
+  router.get("/local-runtime/protocols", (_req, res) => {
+    const status = getLocalProviderStatus(options.localModelProvider);
+    res.json({
+      hosted: false,
+      requiresBuilderAuth: false,
+      defaultMode: "app",
+      protocols: [
+        {
+          id: "app-agent-http",
+          mode: "app",
+          label: "Local App Mode HTTP runtime",
+          available: true,
+          endpoint: "/_agent-native/app-agent",
+          hosted: false,
+          toolBoundary: "product-actions",
+          description: "Deck-scoped product prompts routed through slide/deck/group actions.",
+        },
+        {
+          id: "actions-http",
+          mode: "app",
+          label: "Agent-Native action HTTP",
+          available: Boolean(options.actions),
+          endpoint: "/_agent-native/actions/:name",
+          hosted: false,
+          toolBoundary: "product-actions",
+          description: "Direct invocation of validated product actions.",
+        },
+        {
+          id: "actions-mcp",
+          mode: "app",
+          label: "MCP-compatible action tools",
+          available: Boolean(options.actions),
+          endpoint: "/_agent-native/actions/mcp",
+          hosted: false,
+          toolBoundary: "product-actions",
+          description: "MCP-shaped tool discovery and calls over the same action registry.",
+        },
+        {
+          id: "local-openai-compatible-model",
+          mode: "app",
+          label: "Local OpenAI-compatible model harness",
+          available: status.available,
+          endpoint: status.baseURL ?? null,
+          hosted: false,
+          toolBoundary: "prompt-drafting-only",
+          model: status.model ?? null,
+          reason: status.reason ?? null,
+          description: "Optional local model used by prompt deck drafting actions.",
+        },
+        {
+          id: "local-terminal-code-mode",
+          mode: "code",
+          label: "Local terminal Code Mode",
+          available: localCodeModeEnabled(),
+          endpoint: getTerminalEndpoint(options.terminalBridge),
+          hosted: false,
+          toolBoundary: "trusted-local-cli",
+          description: "Trusted local CLI bridge for repository self-modification.",
+        },
+      ],
+    });
+  });
+
   router.get("/agent-model-defaults", (_req, res) => {
     const status = getLocalProviderStatus(options.localModelProvider);
     res.json({
@@ -218,6 +285,12 @@ function createLocalProviderDescriptor(status: LocalModelStatus) {
     baseURL: status.baseURL ?? null,
     reason: status.reason ?? null,
   };
+}
+
+function getTerminalEndpoint(terminalBridge?: AgentTerminalBridge) {
+  const info = terminalBridge?.getTerminalInfo();
+  if (!info?.available) return null;
+  return `ws://127.0.0.1:${info.wsPort}/ws`;
 }
 
 function getPromptFromAgentChatBody(body: unknown) {

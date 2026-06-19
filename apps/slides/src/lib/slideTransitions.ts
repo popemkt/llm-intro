@@ -1,23 +1,11 @@
-export type SlideTransitionEngine = "waapi" | "css" | "motion" | "three" | "custom";
+import type {
+  ApiSlideTransition,
+  SlideTransitionEngine,
+  SlideTransitionPhase,
+} from "@llm-intro/api-contract";
 
-export type SlideTransitionPreset = "slide" | "fade" | "scale" | "none";
-
-export interface SlideTransitionPhase {
-  keyframes: Keyframe[] | PropertyIndexedKeyframes;
-  duration?: number;
-  easing?: string;
-  delay?: number;
-}
-
-export interface SlideTransition {
-  engine?: SlideTransitionEngine;
-  name?: SlideTransitionPreset | string;
-  duration: number;
-  easing?: string;
-  enter?: SlideTransitionPhase;
-  exit?: SlideTransitionPhase;
-  params?: Record<string, unknown>;
-}
+export type SlideTransition = ApiSlideTransition;
+export type { SlideTransitionPhase };
 
 export interface ResolvedSlideTransition {
   engine: SlideTransitionEngine;

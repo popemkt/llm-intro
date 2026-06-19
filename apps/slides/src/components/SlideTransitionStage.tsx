@@ -57,7 +57,10 @@ function runWaapiPhase(
     return () => window.clearTimeout(timeout);
   }
 
-  const animation = el.animate(phase.keyframes, getTransitionPhaseTiming(resolved, phase));
+  const animation = el.animate(
+    phase.keyframes as Keyframe[],
+    getTransitionPhaseTiming(resolved, phase),
+  );
   animation.finished.then(onDone).catch(() => {});
   return () => animation.cancel();
 }

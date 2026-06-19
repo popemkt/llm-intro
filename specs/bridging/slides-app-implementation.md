@@ -68,6 +68,7 @@ framework boundary.
 | Reorder slides/groups | `update-deck-layout` action, slide service validation | Vitest/API plus Playwright |
 | Code slide rendering | `apps/slides/src/slides/registry.ts` and `SlideShell` | build, visual inspection when changed |
 | HTML slide rendering/editing | `HtmlSlideRenderer` renders `kind: "html"` slides in a sandboxed full-canvas iframe, reused by presentation, fullscreen, overview, export viewer, and the HTML source editor branch in `SlideEditorPage` | Vitest renderer tests, build, browser smoke |
+| Per-slide transitions | `slides.transition_json`, `ApiSlide.transition`, `update-slide` action, `SlideTransitionEditor`, and `SlideTransitionStage` in presentation/fullscreen/export paths | Vitest/API, typed JSON round-trip, browser smoke |
 
 ## Groups
 

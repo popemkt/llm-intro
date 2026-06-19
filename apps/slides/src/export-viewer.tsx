@@ -48,6 +48,7 @@ function resolve(
       groupId,
       title: apiSlide.title,
       notes: apiSlide.notes,
+      transition: apiSlide.transition,
       component: registry[apiSlide.code_id],
     };
   }
@@ -58,6 +59,7 @@ function resolve(
       groupId,
       title: apiSlide.title,
       notes: apiSlide.notes,
+      transition: apiSlide.transition,
       html: apiSlide.html,
     };
   }
@@ -68,6 +70,7 @@ function resolve(
     groupId,
     title: apiSlide.title,
     notes: apiSlide.notes,
+    transition: apiSlide.transition,
     blocks: apiSlide.blocks,
     theme: pres.theme,
   };

@@ -12,6 +12,7 @@ import { z } from "zod";
 type SlidesService = ReturnType<typeof createSlidesService>;
 
 const blockInput = z.record(z.string(), z.unknown());
+const transitionInput = z.record(z.string(), z.unknown()).nullable();
 const publicReadAction = { expose: true, readOnly: true, requiresAuth: false };
 const publicWriteAction = {
   expose: true,
@@ -49,6 +50,7 @@ function createRawSlideAction(slidesService: SlidesService) {
       title: z.string().optional(),
       blocks: z.array(blockInput).optional(),
       notes: z.string().optional(),
+      transition: transitionInput.optional(),
     }),
     http: {
       method: "POST",
@@ -72,6 +74,7 @@ function createManualSlideAction(slidesService: SlidesService) {
       title: z.string().optional(),
       blocks: z.array(blockInput).default([]),
       notes: z.string().optional(),
+      transition: transitionInput.optional(),
     }),
     http: {
       method: "POST",
@@ -96,6 +99,7 @@ function createHtmlSlideAction(slidesService: SlidesService) {
       title: z.string().optional(),
       html: z.string(),
       notes: z.string().optional(),
+      transition: transitionInput.optional(),
     }),
     http: {
       method: "POST",
@@ -113,7 +117,7 @@ function createHtmlSlideAction(slidesService: SlidesService) {
 
 function createUpdateSlideAction(slidesService: SlidesService) {
   return defineAction({
-    description: "Update slide title, speaker notes, blocks, or HTML source.",
+    description: "Update slide title, speaker notes, blocks, HTML source, or transition.",
     schema: z.object({
       pid: z.coerce.number().int().positive(),
       sid: z.coerce.number().int().positive(),
@@ -121,6 +125,7 @@ function createUpdateSlideAction(slidesService: SlidesService) {
       blocks: z.array(blockInput).optional(),
       html: z.string().optional(),
       notes: z.string().optional(),
+      transition: transitionInput.optional(),
     }),
     http: {
       method: "PUT",
@@ -130,7 +135,7 @@ function createUpdateSlideAction(slidesService: SlidesService) {
     publicAgent: {
       ...publicWriteAction,
       title: "Update slide",
-      description: "Update slide title, speaker notes, blocks, or HTML source.",
+      description: "Update slide title, speaker notes, blocks, HTML source, or transition.",
     },
     run: ({ pid, sid, ...patch }) => slidesService.update(pid, sid, parseSlidePatch(patch)),
   });

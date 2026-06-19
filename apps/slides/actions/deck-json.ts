@@ -1,5 +1,10 @@
 import { defineAction } from "@agent-native/core";
-import { THEME_NAMES, type Block, type ThemeName } from "@llm-intro/api-contract";
+import {
+  THEME_NAMES,
+  type ApiSlideTransition,
+  type Block,
+  type ThemeName,
+} from "@llm-intro/api-contract";
 import { z } from "zod";
 import type { createPresentationsService } from "../server/services/presentations.js";
 import type { createSlidesService } from "../server/services/slides.js";
@@ -18,6 +23,7 @@ const publicWriteAction = {
 };
 
 const blockInput = z.record(z.string(), z.unknown());
+const transitionInput = z.record(z.string(), z.unknown()).nullable();
 const portableThemeSchema = z.enum(THEME_NAMES as [ThemeName, ...ThemeName[]]);
 
 const importDeckSchema = z.object({
@@ -47,6 +53,7 @@ const importDeckSchema = z.object({
       blocks: z.array(blockInput).default([]),
       html: z.string().optional(),
       notes: z.string().optional(),
+      transition: transitionInput.optional(),
     }),
   ),
 });
@@ -87,6 +94,7 @@ function exportDeckJson(services: DeckJsonServices, id: number) {
       blocks: slide.blocks,
       html: slide.html,
       notes: slide.notes,
+      transition: slide.transition,
     })),
   };
 }
@@ -119,6 +127,7 @@ function importDeckSlides(services: DeckJsonServices, deckId: number, source: Im
             title: slide.title,
             html: slide.html ?? "",
             notes: slide.notes ?? "",
+            transition: slide.transition as ApiSlideTransition | null | undefined,
           }),
         };
       }
@@ -128,6 +137,7 @@ function importDeckSlides(services: DeckJsonServices, deckId: number, source: Im
           title: slide.title,
           blocks: slide.blocks as Block[],
           notes: slide.notes ?? "",
+          transition: slide.transition as ApiSlideTransition | null | undefined,
         }),
       };
     })

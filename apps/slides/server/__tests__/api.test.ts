@@ -608,6 +608,31 @@ describe("Slides API", () => {
     });
   });
 
+  it("persists slide transition metadata through create and update actions", async () => {
+    const created = await request(app)
+      .post("/_agent-native/actions/create-manual-slide")
+      .send({
+        pid,
+        title: "Transition Demo",
+        blocks: [],
+        transition: { engine: "waapi", name: "fade", duration: 250, easing: "ease-out" },
+      });
+
+    expect(created.status).toBe(200);
+    expect(created.body.transition).toMatchObject({ name: "fade", duration: 250 });
+
+    const updated = await request(app)
+      .put("/_agent-native/actions/update-slide")
+      .send({
+        pid,
+        sid: created.body.id,
+        transition: { engine: "waapi", name: "scale", duration: 450, easing: "ease-in-out" },
+      });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.transition).toMatchObject({ name: "scale", duration: 450 });
+  });
+
   it("PUT /_agent-native/actions/update-slide updates HTML source on HTML slides", async () => {
     const slide = (
       await request(app)

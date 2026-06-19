@@ -134,6 +134,7 @@ export function FullscreenView({
             activeKey={activeIndex}
             item={slide}
             direction={directionRef.current}
+            transition={slide.transition ?? undefined}
             onTransitionEnd={() => {
               transitioning.current = false;
             }}

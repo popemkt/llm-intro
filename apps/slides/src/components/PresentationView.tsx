@@ -388,6 +388,7 @@ export function PresentationView({
               activeKey={activeIndex}
               item={activeSlide}
               direction={directionRef.current}
+              transition={activeSlide.transition ?? undefined}
               onTransitionEnd={() => {
                 isTransitioning.current = false;
               }}

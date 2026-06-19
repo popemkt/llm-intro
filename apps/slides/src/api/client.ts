@@ -1,5 +1,12 @@
 import { callAction } from "@agent-native/core/client";
-import type { ApiPresentation, ApiSlide, ApiSlideGroup, LayoutInput, ThemeName } from "@/types";
+import type {
+  ApiPresentation,
+  ApiSlide,
+  ApiSlideGroup,
+  ApiSlideTransition,
+  LayoutInput,
+  ThemeName,
+} from "@/types";
 
 export class ApiError extends Error {
   status: number;
@@ -34,7 +41,13 @@ export const api = {
     update: (
       pid: number,
       sid: number,
-      patch: { title?: string; blocks?: unknown[]; html?: string; notes?: string },
+      patch: {
+        title?: string;
+        blocks?: unknown[];
+        html?: string;
+        notes?: string;
+        transition?: ApiSlideTransition | null;
+      },
     ) => callAction<ApiSlide>("update-slide", { pid, sid, ...patch }, { method: "PUT" }),
     delete: async (pid: number, sid: number) => {
       await callAction<null>("delete-slide", { pid, sid }, { method: "DELETE" });

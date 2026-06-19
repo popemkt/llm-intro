@@ -1,15 +1,28 @@
 import type Database from "better-sqlite3";
-import type { ApiSlide, Block, LayoutInput } from "@llm-intro/api-contract";
+import type { ApiSlide, ApiSlideTransition, Block, LayoutInput } from "@llm-intro/api-contract";
 
 export type SlideCreateInput =
-  | { kind?: "db"; title: string; blocks: Block[]; notes?: string }
-  | { kind: "html"; title: string; html: string; notes?: string };
+  | {
+      kind?: "db";
+      title: string;
+      blocks: Block[];
+      notes?: string;
+      transition?: ApiSlideTransition | null;
+    }
+  | {
+      kind: "html";
+      title: string;
+      html: string;
+      notes?: string;
+      transition?: ApiSlideTransition | null;
+    };
 
 export type SlideUpdateInput = {
   title: string;
   blocks: Block[];
   html: string;
   notes: string;
+  transition: ApiSlideTransition | null;
 };
 
 type SlideRow = {
@@ -23,15 +36,26 @@ type SlideRow = {
   blocks: string;
   html: string;
   notes: string;
+  transition_json: string | null;
   created_at: string;
   updated_at: string;
 };
 
+function parseTransition(value: string | null): ApiSlideTransition | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as ApiSlideTransition | null;
+  } catch {
+    return null;
+  }
+}
+
 function mapSlide(row: SlideRow): ApiSlide {
-  const { blocks, ...rest } = row;
+  const { blocks, transition_json, ...rest } = row;
   return {
     ...rest,
     blocks: JSON.parse(blocks) as Block[],
+    transition: parseTransition(transition_json),
   };
 }
 
@@ -87,11 +111,13 @@ export function createSlidesRepository(db: Database.Database) {
   const maxUngroupedPositionStmt = db.prepare(
     "SELECT MAX(position) as max_position FROM slides WHERE presentation_id=? AND group_id IS NULL",
   );
-  const insertStmt = db.prepare(
-    "INSERT INTO slides (presentation_id, position, kind, title, blocks, html, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  );
+  const insertStmt = db.prepare(`
+    INSERT INTO slides
+      (presentation_id, position, kind, title, blocks, html, notes, transition_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
   const updateStmt = db.prepare(
-    "UPDATE slides SET title=?, blocks=?, html=?, notes=?, updated_at=datetime('now') WHERE id=?",
+    "UPDATE slides SET title=?, blocks=?, html=?, notes=?, transition_json=?, updated_at=datetime('now') WHERE id=?",
   );
   const deleteStmt = db.prepare("DELETE FROM slides WHERE id=? AND presentation_id=?");
   const setPositionAndGroupStmt = db.prepare(
@@ -127,12 +153,20 @@ export function createSlidesRepository(db: Database.Database) {
         JSON.stringify(blocks),
         html,
         input.notes ?? "",
+        input.transition ? JSON.stringify(input.transition) : null,
       );
       return this.getById(presentationId, Number(lastInsertRowid))!;
     },
 
     update(presentationId: number, slideId: number, input: SlideUpdateInput): ApiSlide {
-      updateStmt.run(input.title, JSON.stringify(input.blocks), input.html, input.notes, slideId);
+      updateStmt.run(
+        input.title,
+        JSON.stringify(input.blocks),
+        input.html,
+        input.notes,
+        input.transition ? JSON.stringify(input.transition) : null,
+        slideId,
+      );
       return this.getById(presentationId, slideId)!;
     },
 

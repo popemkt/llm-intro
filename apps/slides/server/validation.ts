@@ -1,4 +1,12 @@
-import { THEME_NAMES, type Block, type ThemeName } from "@llm-intro/api-contract";
+import {
+  THEME_NAMES,
+  type ApiSlideTransition,
+  type Block,
+  type SlideTransitionEngine,
+  type SlideTransitionPhase,
+  type SlideTransitionPreset,
+  type ThemeName,
+} from "@llm-intro/api-contract";
 import { AppError } from "./errors.js";
 
 type JsonRecord = Record<string, unknown>;
@@ -220,6 +228,93 @@ function parseBlocks(value: unknown) {
   return value.map(validateBlock);
 }
 
+function parseTransitionEngine(value: unknown): SlideTransitionEngine | undefined {
+  if (value === undefined) return undefined;
+  if (!["waapi", "css", "motion", "three", "custom"].includes(String(value))) {
+    throw new AppError(400, "transition.engine is invalid");
+  }
+  return value as SlideTransitionEngine;
+}
+
+function parseTransitionName(value: unknown): SlideTransitionPreset | string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value.trim()) {
+    throw new AppError(400, "transition.name must be a non-empty string");
+  }
+  return value.trim();
+}
+
+function parseTransitionEasing(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value.trim()) {
+    throw new AppError(400, `${field} must be a non-empty string`);
+  }
+  return value.trim();
+}
+
+function parseTransitionDuration(value: unknown, field: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 5000) {
+    throw new AppError(400, `${field} must be a number between 0 and 5000`);
+  }
+  return value;
+}
+
+function parseOptionalTransitionDuration(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  return parseTransitionDuration(value, field);
+}
+
+function parseTransitionKeyframe(value: unknown, field: string) {
+  const frame = asRecord(value);
+  const parsed: Record<string, string | number | boolean | null> = {};
+  for (const [key, entry] of Object.entries(frame)) {
+    if (
+      typeof entry !== "string" &&
+      typeof entry !== "number" &&
+      typeof entry !== "boolean" &&
+      entry !== null
+    ) {
+      throw new AppError(400, `${field}.${key} must be a string, number, boolean, or null`);
+    }
+    parsed[key] = entry;
+  }
+  return parsed;
+}
+
+function parseTransitionPhase(value: unknown, field: string): SlideTransitionPhase | undefined {
+  if (value === undefined) return undefined;
+  const phase = asRecord(value);
+  if (!Array.isArray(phase.keyframes) || phase.keyframes.length === 0) {
+    throw new AppError(400, `${field}.keyframes must be a non-empty array`);
+  }
+  return {
+    keyframes: phase.keyframes.map((frame, index) =>
+      parseTransitionKeyframe(frame, `${field}.keyframes[${index}]`),
+    ),
+    duration: parseOptionalTransitionDuration(phase.duration, `${field}.duration`),
+    easing: parseTransitionEasing(phase.easing, `${field}.easing`),
+    delay: parseOptionalTransitionDuration(phase.delay, `${field}.delay`),
+  };
+}
+
+function parseTransition(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const transition = asRecord(value);
+  return {
+    engine: parseTransitionEngine(transition.engine),
+    name: parseTransitionName(transition.name),
+    duration: parseTransitionDuration(transition.duration, "transition.duration"),
+    easing: parseTransitionEasing(transition.easing, "transition.easing"),
+    enter: parseTransitionPhase(transition.enter, "transition.enter"),
+    exit: parseTransitionPhase(transition.exit, "transition.exit"),
+    params:
+      transition.params === undefined
+        ? undefined
+        : (asRecord(transition.params) as Record<string, unknown>),
+  } satisfies ApiSlideTransition;
+}
+
 export function parsePresentationCreate(input: unknown) {
   const body = asRecord(input);
   return {
@@ -249,6 +344,7 @@ export function parseSlideCreate(input: unknown) {
     title: parseOptionalTrimmedString(body.title, "title") ?? "New slide",
     blocks: parseBlocks(body.blocks) ?? [],
     notes: parseOptionalString(body.notes, "notes") ?? "",
+    transition: parseTransition(body.transition),
   };
 }
 
@@ -259,6 +355,7 @@ export function parseHtmlSlideCreate(input: unknown) {
     title: parseOptionalTrimmedString(body.title, "title") ?? "New HTML slide",
     html: parseNonEmptyString(body.html, "html"),
     notes: parseOptionalString(body.notes, "notes") ?? "",
+    transition: parseTransition(body.transition),
   };
 }
 
@@ -269,13 +366,15 @@ export function parseSlidePatch(input: unknown) {
     blocks: parseBlocks(body.blocks),
     html: parseOptionalString(body.html, "html"),
     notes: parseOptionalString(body.notes, "notes"),
+    transition: parseTransition(body.transition),
   };
 
   if (
     patch.title === undefined &&
     patch.blocks === undefined &&
     patch.html === undefined &&
-    patch.notes === undefined
+    patch.notes === undefined &&
+    patch.transition === undefined
   ) {
     throw new AppError(400, "at least one field is required");
   }

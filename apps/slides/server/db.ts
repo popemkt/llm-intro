@@ -170,6 +170,11 @@ function migrate(db: Database.Database) {
     migrateHtmlSlides(db);
     db.pragma("user_version = 10");
   }
+
+  if (version < 11) {
+    migrateSlideTransitions(db);
+    db.pragma("user_version = 11");
+  }
 }
 
 function migrateDeckSnapshots(db: Database.Database) {
@@ -222,6 +227,14 @@ function migrateDeckAssets(db: Database.Database) {
 function migrateHtmlSlides(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE slides ADD COLUMN html TEXT NOT NULL DEFAULT ''`);
+  } catch {
+    // Column already exists.
+  }
+}
+
+function migrateSlideTransitions(db: Database.Database) {
+  try {
+    db.exec(`ALTER TABLE slides ADD COLUMN transition_json TEXT`);
   } catch {
     // Column already exists.
   }

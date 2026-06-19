@@ -485,6 +485,7 @@ describe("Agent Native deck export action", () => {
         pid: deck.id,
         title: "Portable Slide",
         notes: "Presenter note",
+        transition: { engine: "waapi", name: "fade", duration: 300, easing: "ease-out" },
         blocks: [{ id: "portable", type: "text", markdown: "# Portable" }],
       });
     const htmlSlideRes = await request(app).post("/_agent-native/actions/create-html-slide").send({
@@ -510,7 +511,11 @@ describe("Agent Native deck export action", () => {
       deck: { name: "Portable Deck", theme: "ocean" },
       groups: [expect.objectContaining({ title: "Portable Group", collapsed: true })],
       slides: [
-        expect.objectContaining({ title: "Portable Slide", notes: "Presenter note" }),
+        expect.objectContaining({
+          title: "Portable Slide",
+          notes: "Presenter note",
+          transition: expect.objectContaining({ name: "fade", duration: 300 }),
+        }),
         expect.objectContaining({ title: "Portable HTML", kind: "html" }),
       ],
     });
@@ -529,6 +534,7 @@ describe("Agent Native deck export action", () => {
         title: "Portable Slide",
         notes: "Presenter note",
         group_id: imported.body.groups[0].id,
+        transition: expect.objectContaining({ name: "fade", duration: 300 }),
         blocks: [expect.objectContaining({ markdown: "# Portable" })],
       }),
       expect.objectContaining({

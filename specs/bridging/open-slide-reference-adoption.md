@@ -157,11 +157,20 @@ First runtime slice:
 - `apps/slides/src/components/SlideTransitionStage.tsx` renders outgoing and incoming slide layers and runs enter/exit phases through WAAPI.
 - `PresentationView` and `FullscreenView` now use the shared transition stage instead of duplicated Framer Motion page-swipe variants.
 
+Persistence and product controls slice:
+
+- `slides.transition_json` stores optional per-slide transition metadata.
+- `create-slide`, `create-manual-slide`, `create-html-slide`, and
+  `update-slide` accept transition data, so product agents can set transitions
+  through the same action surface as UI edits.
+- `SlideEditorPage` exposes preset and duration controls for editable manual
+  and HTML slides.
+- Typed JSON export/import and deck snapshots preserve slide transition data.
+
 Still future work:
 
-- persist per-deck or per-slide transition choices;
-- expose transition resources/actions to the product agent;
-- add UI controls for choosing presets and timings;
+- per-deck default transition choices;
+- richer custom transition authoring UI beyond preset/timing fields;
 - implement non-WAAPI engines, including a `three` overlay path for 3D transitions.
 
 ## Reference Project

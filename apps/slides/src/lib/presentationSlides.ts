@@ -13,6 +13,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
         groupId,
         title: slide.title,
         notes: slide.notes,
+        transition: slide.transition,
         blocks: [],
         theme,
       };
@@ -23,6 +24,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
       groupId,
       title: slide.title,
       notes: slide.notes,
+      transition: slide.transition,
       component,
     };
   }
@@ -33,6 +35,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
       groupId,
       title: slide.title,
       notes: slide.notes,
+      transition: slide.transition,
       html: slide.html,
     };
   }
@@ -42,6 +45,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
     groupId,
     title: slide.title,
     notes: slide.notes,
+    transition: slide.transition,
     blocks: slide.blocks,
     theme,
   };

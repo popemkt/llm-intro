@@ -35,7 +35,14 @@ import {
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
-import type { ApiPresentation, ApiSlide, Block, ShapeBlock, ThemeName } from "@/types";
+import type {
+  ApiPresentation,
+  ApiSlide,
+  ApiSlideTransition,
+  Block,
+  ShapeBlock,
+  ThemeName,
+} from "@/types";
 import type { ApiDeckAsset } from "@/types";
 import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
@@ -286,6 +293,7 @@ export function SlideEditorPage() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [html, setHtml] = useState("");
   const [notes, setNotes] = useState("");
+  const [transition, setTransition] = useState<ApiSlideTransition | null>(null);
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -309,12 +317,21 @@ export function SlideEditorPage() {
   const slidesQuery = useActionQuery<ApiSlide[]>("list-slides", { pid }, { enabled: validRoute });
   const updateSlide = useActionMutation<
     ApiSlide,
-    { pid: number; sid: number; title?: string; blocks?: unknown[]; html?: string; notes?: string }
+    {
+      pid: number;
+      sid: number;
+      title?: string;
+      blocks?: unknown[];
+      html?: string;
+      notes?: string;
+      transition?: ApiSlideTransition | null;
+    }
   >("update-slide", { method: "PUT" });
 
   // Current values ref (for keyboard handler)
   const blocksRef = useRef(blocks);
   const htmlRef = useRef(html);
+  const transitionRef = useRef(transition);
   const selectedIdsRef = useRef(selectedIds);
   const slideKindRef = useRef(slideKind);
   const titleRef = useRef(title);
@@ -325,6 +342,9 @@ export function SlideEditorPage() {
   useEffect(() => {
     htmlRef.current = html;
   }, [html]);
+  useEffect(() => {
+    transitionRef.current = transition;
+  }, [transition]);
   useEffect(() => {
     slideKindRef.current = slideKind;
   }, [slideKind]);
@@ -387,6 +407,7 @@ export function SlideEditorPage() {
     setBlocks(slide.blocks);
     setHtml(slide.html);
     setNotes(slide.notes ?? "");
+    setTransition(slide.transition);
     setTheme(pres.theme);
     hasLoadedRef.current = true;
     setLoading(false);
@@ -489,6 +510,7 @@ export function SlideEditorPage() {
           sid,
           title: titleRef.current,
           notes: notesRef.current,
+          transition: transitionRef.current,
           ...content,
         });
         setSaveStatus("saved");
@@ -503,7 +525,7 @@ export function SlideEditorPage() {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, html, title, notes, pid, sid, loading]);
+  }, [blocks, html, title, notes, transition, pid, sid, loading]);
 
   const saveAndExit = useCallback(async () => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -517,6 +539,7 @@ export function SlideEditorPage() {
         sid,
         title: titleRef.current,
         notes: notesRef.current,
+        transition: transitionRef.current,
         ...content,
       });
       navigate(`/p/${pid}`);
@@ -925,9 +948,11 @@ export function SlideEditorPage() {
         <HtmlSlideSourceEditor
           html={html}
           notes={notes}
+          transition={transition}
           title={title}
           onHtml={setHtml}
           onNotes={setNotes}
+          onTransition={setTransition}
         />
       ) : (
         <>
@@ -1438,6 +1463,8 @@ export function SlideEditorPage() {
                   </div>
                 )}
 
+                <SlideTransitionEditor transition={transition} onTransition={setTransition} />
+
                 <div>
                   <div
                     style={{
@@ -1569,17 +1596,95 @@ export function SlideEditorPage() {
 
 // ─── Canvas block content (WYSIWYG preview) ─────────────────────────────────
 
+const TRANSITION_PRESETS = [
+  { value: "default", label: "Default slide" },
+  { value: "slide", label: "Slide" },
+  { value: "fade", label: "Fade" },
+  { value: "scale", label: "Scale" },
+  { value: "none", label: "None" },
+] as const;
+
+function makePresetTransition(name: string, duration: number): ApiSlideTransition | null {
+  if (name === "default") return null;
+  return {
+    engine: "waapi",
+    name,
+    duration: Math.max(0, Math.min(5000, Math.round(duration))),
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+  };
+}
+
+function SlideTransitionEditor({
+  transition,
+  onTransition,
+}: {
+  transition: ApiSlideTransition | null;
+  onTransition: (transition: ApiSlideTransition | null) => void;
+}) {
+  const selectedName = transition?.name ?? "default";
+  const duration = transition?.duration ?? 350;
+
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 9,
+          color: C.textDim,
+          marginBottom: 6,
+          fontFamily: "JetBrains Mono, monospace",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        Transition
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 92px", gap: 8 }}>
+        <select
+          value={selectedName}
+          onChange={(event) => onTransition(makePresetTransition(event.target.value, duration))}
+          style={inp}
+        >
+          {TRANSITION_PRESETS.map((preset) => (
+            <option key={preset.value} value={preset.value}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          max={5000}
+          step={50}
+          value={duration}
+          disabled={selectedName === "default"}
+          onChange={(event) => {
+            const nextDuration = Number(event.target.value);
+            if (!Number.isFinite(nextDuration)) return;
+            onTransition(makePresetTransition(selectedName, nextDuration));
+          }}
+          style={{ ...inp, opacity: selectedName === "default" ? 0.55 : 1 }}
+          aria-label="Transition duration"
+        />
+      </div>
+    </div>
+  );
+}
+
 function HtmlSlideSourceEditor({
   html,
   notes,
+  transition,
   onHtml,
   onNotes,
+  onTransition,
   title,
 }: {
   html: string;
   notes: string;
+  transition: ApiSlideTransition | null;
   onHtml: (html: string) => void;
   onNotes: (notes: string) => void;
+  onTransition: (transition: ApiSlideTransition | null) => void;
   title: string;
 }) {
   return (
@@ -1648,6 +1753,9 @@ function HtmlSlideSourceEditor({
               overflowX: "auto",
             }}
           />
+        </div>
+        <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
+          <SlideTransitionEditor transition={transition} onTransition={onTransition} />
         </div>
         <div style={{ padding: 16 }}>
           <div

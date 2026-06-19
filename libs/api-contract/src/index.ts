@@ -61,6 +61,28 @@ export type ShapeBlock = {
 
 export type Block = TextBlock | ImageBlock | IframeBlock | ShapeBlock;
 
+export type SlideTransitionEngine = "waapi" | "css" | "motion" | "three" | "custom";
+export type SlideTransitionPreset = "slide" | "fade" | "scale" | "none";
+
+export type SlideTransitionKeyframe = Record<string, string | number | boolean | null>;
+
+export interface SlideTransitionPhase {
+  keyframes: SlideTransitionKeyframe[];
+  duration?: number;
+  easing?: string;
+  delay?: number;
+}
+
+export interface ApiSlideTransition {
+  engine?: SlideTransitionEngine;
+  name?: SlideTransitionPreset | string;
+  duration: number;
+  easing?: string;
+  enter?: SlideTransitionPhase;
+  exit?: SlideTransitionPhase;
+  params?: Record<string, unknown>;
+}
+
 export interface ApiPresentation {
   id: number;
   name: string;
@@ -80,6 +102,7 @@ export interface ApiSlide {
   blocks: Block[];
   html: string;
   notes: string;
+  transition: ApiSlideTransition | null;
   created_at: string;
   updated_at: string;
 }

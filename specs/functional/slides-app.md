@@ -226,6 +226,11 @@ editing, themed presentation playback, and HTML export.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
+- Users and agents can set per-slide transition metadata. The editor exposes
+  slide, fade, scale, none, and default presets with timing controls; actions
+  accept the same transition field for manual, HTML, and code-backed slide
+  metadata, and presentation/fullscreen/export playback uses it through the
+  shared transition stage.
 - Users and agents can export and import readable Markdown through
   `export-deck-markdown` and `import-deck-markdown`. The export includes deck
   metadata, slide titles, text blocks, image/embed references, shape labels,
@@ -251,9 +256,10 @@ editing, themed presentation playback, and HTML export.
 - Hosted LLM-backed prompt-to-deck streaming. The current local stream is
   action-backed and can use the local OpenAI-compatible model harness when
   configured, with deterministic fallback when no local model is available.
-- Additional visual editor refinements beyond formatting, arrange controls, and
-  initial asset insertion, including multi-select, guides, snapping, grouping,
-  transitions UI, masters/templates, and first-class HTML slide authoring.
+- Additional visual editor refinements beyond formatting, arrange controls,
+  multi-select, initial asset insertion, transition presets, and first-class
+  HTML slide authoring, including guides, snapping, grouping, masters/templates,
+  and custom transition authoring.
 - Additional non-JSON import/export formats beyond HTML, typed JSON, and
   readable Markdown.
 - Full production agent chat wiring. The current app has the shell surface,

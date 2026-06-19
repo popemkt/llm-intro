@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { Block, ThemeName } from "@llm-intro/api-contract";
+import type { ApiSlideTransition, Block, ThemeName } from "@llm-intro/api-contract";
 
 export type {
   ApiPresentation,
@@ -10,6 +10,7 @@ export type {
   ApiSlideGroup,
   ApiDeckAsset,
   ApiLogoAssetCandidate,
+  ApiSlideTransition,
   Block,
   DeckAssetKind,
   LayoutInput,
@@ -30,6 +31,7 @@ export type UnifiedSlide =
       groupId: number | null;
       title: string;
       notes: string;
+      transition: ApiSlideTransition | null;
       component: ComponentType<SlideProps>;
     }
   | {
@@ -38,6 +40,7 @@ export type UnifiedSlide =
       groupId: number | null;
       title: string;
       notes: string;
+      transition: ApiSlideTransition | null;
       blocks: Block[];
       theme: ThemeName;
     }
@@ -47,5 +50,6 @@ export type UnifiedSlide =
       groupId: number | null;
       title: string;
       notes: string;
+      transition: ApiSlideTransition | null;
       html: string;
     };

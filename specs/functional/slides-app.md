@@ -123,6 +123,9 @@ editing, themed presentation playback, and HTML export.
   the existing action, MCP-shaped, and A2A-discovered action surfaces. Code Mode
   can still run raw demo scripts and CLIs, but product prompt generation should
   go through app actions.
+- Framework model/provider probes expose the same local model harness status so
+  Agent-Native shells can distinguish local App Mode and local Code Mode from a
+  hosted provider requirement.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

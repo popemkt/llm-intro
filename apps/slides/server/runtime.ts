@@ -33,12 +33,13 @@ export function buildRuntime(
     groupsService,
     snapshotsRepo,
   );
+  const localModelProvider = options.localModelProvider ?? createLocalDeckModelProvider();
   const actions = createSlideDeckActions({
     presentationsService,
     slidesService,
     groupsService,
     snapshotsService,
-    localModelProvider: options.localModelProvider ?? createLocalDeckModelProvider(),
+    localModelProvider,
   });
   const agentTerminalBridge = createAgentTerminalBridge({ appDir: process.cwd() });
 
@@ -49,6 +50,7 @@ export function buildRuntime(
       groupsService,
       actions,
       agentTerminalBridge,
+      localModelProvider,
     }),
     agentTerminalBridge,
   };

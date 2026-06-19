@@ -430,6 +430,43 @@ describe("Agent Native framework core routes", () => {
       status: 200,
       body: { available: false },
     });
+    await expect(request(app).get("/_agent-native/agent-model-defaults")).resolves.toMatchObject({
+      status: 200,
+      body: {
+        provider: "local-openai-compatible",
+        configured: false,
+        hosted: false,
+        requiresHostedModel: false,
+        providers: [
+          expect.objectContaining({
+            id: "local-openai-compatible",
+            hosted: false,
+            configured: false,
+          }),
+        ],
+      },
+    });
+    await expect(
+      request(app).post("/_agent-native/actions/manage-agent-engine"),
+    ).resolves.toMatchObject({
+      status: 200,
+      body: {
+        configured: false,
+        hosted: false,
+        requiresHostedModel: false,
+        engines: expect.arrayContaining([
+          expect.objectContaining({ id: "local-app-agent", hosted: false }),
+          expect.objectContaining({ id: "local-code-mode", hosted: false }),
+        ]),
+        providers: [
+          expect.objectContaining({
+            id: "local-openai-compatible",
+            hosted: false,
+            configured: false,
+          }),
+        ],
+      },
+    });
   });
 });
 

@@ -18,6 +18,7 @@ import type { createPresentationsService } from "./services/presentations.js";
 import type { createSlidesService } from "./services/slides.js";
 import type { createGroupsService } from "./services/groups.js";
 import type { AgentTerminalBridge } from "./agent-terminal.js";
+import type { LocalDeckModelProvider } from "./local-model-provider.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
@@ -29,6 +30,7 @@ export function createApp(services: {
   groupsService: GroupsService;
   actions: SlideDeckActions;
   agentTerminalBridge?: AgentTerminalBridge;
+  localModelProvider?: LocalDeckModelProvider;
 }) {
   const app = express();
 
@@ -43,6 +45,7 @@ export function createApp(services: {
     createFrameworkCoreRouter({
       actions: services.actions,
       terminalBridge: services.agentTerminalBridge,
+      localModelProvider: services.localModelProvider,
     }),
   );
   app.use("/_agent-native/application-state", createApplicationStateRouter());

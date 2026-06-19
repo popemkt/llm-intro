@@ -176,8 +176,12 @@ runtime compatibility state, not hosted memory or durable chat persistence.
 Hosted chat persistence, approvals, memory, and hosted model streaming remain
 separate adoption slices. The shell displays App Mode as local actions with no
 hosted model requirement, and `GET /_agent-native/agent-chat/mode` exposes the
-same `appMode` metadata for automation. Production shell access remains gated
-by the server-side terminal policy.
+same `appMode` metadata for automation. The framework model probes
+`GET /_agent-native/agent-model-defaults` and
+`POST /_agent-native/actions/manage-agent-engine` report the same local
+OpenAI-compatible provider status as `get-local-model-status`; this is provider
+discovery for local prompt drafting, not a hosted engine dependency. Production
+shell access remains gated by the server-side terminal policy.
 
 ### App Mode And Code Mode
 

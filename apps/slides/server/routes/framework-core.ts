@@ -1,5 +1,6 @@
 import { Router, type Request } from "express";
 import type { AgentTerminalBridge } from "../agent-terminal.js";
+import type { LocalDeckModelProvider, LocalModelStatus } from "../local-model-provider.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
 
@@ -26,7 +27,11 @@ function localCodeModeEnabled() {
 }
 
 export function createFrameworkCoreRouter(
-  options: { actions?: SlideDeckActions; terminalBridge?: AgentTerminalBridge } = {},
+  options: {
+    actions?: SlideDeckActions;
+    terminalBridge?: AgentTerminalBridge;
+    localModelProvider?: LocalDeckModelProvider;
+  } = {},
 ) {
   const router = Router();
 
@@ -72,7 +77,7 @@ function registerFrameworkHealthRoutes(router: Router) {
 
 function registerFrameworkStatusRoutes(
   router: Router,
-  options: { terminalBridge?: AgentTerminalBridge },
+  options: { terminalBridge?: AgentTerminalBridge; localModelProvider?: LocalDeckModelProvider },
 ) {
   router.get("/env-status", (_req, res) => {
     res.json([]);
@@ -107,16 +112,70 @@ function registerFrameworkStatusRoutes(
   });
 
   router.get("/agent-model-defaults", (_req, res) => {
-    res.json({});
+    const status = getLocalProviderStatus(options.localModelProvider);
+    res.json({
+      provider: "local-openai-compatible",
+      model: status.model ?? null,
+      baseURL: status.baseURL ?? null,
+      configured: status.available,
+      hosted: false,
+      requiresHostedModel: false,
+      providers: [createLocalProviderDescriptor(status)],
+    });
   });
 
   router.post("/actions/manage-agent-engine", (_req, res) => {
+    const status = getLocalProviderStatus(options.localModelProvider);
     res.json({
-      engines: [],
-      providers: [],
-      configured: false,
+      engines: [
+        {
+          id: "local-app-agent",
+          label: "Local App Agent",
+          runtime: "local-app-agent",
+          hosted: false,
+          configured: true,
+        },
+        {
+          id: "local-code-mode",
+          label: "Local Code Mode",
+          runtime: "local-terminal",
+          hosted: false,
+          configured: localCodeModeEnabled(),
+        },
+      ],
+      providers: [createLocalProviderDescriptor(status)],
+      configured: status.available,
+      hosted: false,
+      requiresHostedModel: false,
     });
   });
+}
+
+function getLocalProviderStatus(provider?: LocalDeckModelProvider): LocalModelStatus {
+  return (
+    provider?.status() ?? {
+      available: false,
+      provider: "openai-compatible",
+      hosted: false,
+      source: "local-env",
+      reason: "Local model provider is not configured.",
+    }
+  );
+}
+
+function createLocalProviderDescriptor(status: LocalModelStatus) {
+  return {
+    id: "local-openai-compatible",
+    label: "Local OpenAI-compatible",
+    provider: status.provider,
+    source: status.source,
+    hosted: false,
+    configured: status.available,
+    available: status.available,
+    model: status.model ?? null,
+    baseURL: status.baseURL ?? null,
+    reason: status.reason ?? null,
+  };
 }
 
 function getPromptFromAgentChatBody(body: unknown) {

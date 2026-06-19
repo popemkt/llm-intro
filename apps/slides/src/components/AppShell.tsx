@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  AgentTerminal,
-  AssistantChat,
-  agentNativePath,
-  callAction,
-} from "@agent-native/core/client";
+import { AgentTerminal, AssistantChat, agentNativePath } from "@agent-native/core/client";
 import type { AgentChatRuntime } from "@agent-native/core/client/chat";
 import {
   LayoutDashboard,
@@ -37,11 +32,17 @@ type AgentTerminalInfo =
       error?: string;
     };
 
-type LocalModelStatus = {
+type LocalRuntimeProtocol = {
+  id: string;
   available: boolean;
+  endpoint?: string | null;
   model?: string;
   baseURL?: string;
   reason?: string;
+};
+
+type LocalRuntimeStatus = {
+  protocols: LocalRuntimeProtocol[];
 };
 
 type SlidesNavigationState =
@@ -281,20 +282,18 @@ function SlidesAppModePanel({
   runtime: AgentChatRuntime;
   suggestions: string[];
 }) {
-  const [localModelStatus, setLocalModelStatus] = useState<LocalModelStatus | null>(null);
+  const [localRuntimeStatus, setLocalRuntimeStatus] = useState<LocalRuntimeStatus | null>(null);
 
   useEffect(() => {
     let active = true;
-    void callAction<LocalModelStatus>("get-local-model-status", {}, { method: "GET" })
+    void fetch(agentNativePath("/_agent-native/local-runtime/protocols"))
+      .then((response) => response.json() as Promise<LocalRuntimeStatus>)
       .then((status) => {
-        if (active) setLocalModelStatus(status);
+        if (active) setLocalRuntimeStatus(status);
       })
       .catch(() => {
         if (active) {
-          setLocalModelStatus({
-            available: false,
-            reason: "Local model status unavailable",
-          });
+          setLocalRuntimeStatus({ protocols: [] });
         }
       });
 
@@ -303,13 +302,25 @@ function SlidesAppModePanel({
     };
   }, []);
 
+  const actionProtocol = localRuntimeStatus?.protocols.find(
+    (protocol) => protocol.id === "actions-http",
+  );
+  const mcpProtocol = localRuntimeStatus?.protocols.find(
+    (protocol) => protocol.id === "actions-mcp",
+  );
+  const modelProtocol = localRuntimeStatus?.protocols.find(
+    (protocol) => protocol.id === "local-openai-compatible-model",
+  );
+  const actionLabel =
+    actionProtocol?.available && mcpProtocol?.available ? "Actions + MCP" : "Local actions";
+
   return (
     <div className="slides-agent-surface__app">
       <div className="slides-agent-surface__app-status" aria-label="App mode status">
-        <span>Local actions</span>
-        <span title={localModelStatus?.baseURL || localModelStatus?.reason}>
-          {localModelStatus?.available
-            ? `Local model${localModelStatus.model ? `: ${localModelStatus.model}` : ""}`
+        <span>{actionLabel}</span>
+        <span title={modelProtocol?.endpoint || modelProtocol?.baseURL || modelProtocol?.reason}>
+          {modelProtocol?.available
+            ? `Model${modelProtocol.model ? `: ${modelProtocol.model}` : ""}`
             : "Deterministic fallback"}
         </span>
       </div>

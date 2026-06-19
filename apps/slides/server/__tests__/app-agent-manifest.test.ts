@@ -47,7 +47,7 @@ describe("Agent Native app-agent manifest", () => {
         hosted: false,
         requiresHostedModel: false,
         chat: expect.objectContaining({ streaming: false }),
-        promptFamilies: expect.arrayContaining(["markdown-import"]),
+        promptFamilies: expect.arrayContaining(["markdown-import", "slide-editing"]),
         suggestions: expect.arrayContaining(["Export this deck as HTML"]),
       },
     });

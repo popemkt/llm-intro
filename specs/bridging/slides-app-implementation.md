@@ -263,8 +263,9 @@ runtime. It accepts a deck scope from the shell, maps simple prompts to existing
 app actions, and returns plain chat text. Current supported prompt families
 include listing slides, listing groups, creating one normal slide, creating a
 multi-slide normal outline, creating a group, changing the deck theme,
-preparing HTML export links, typed JSON export summaries, readable Markdown
-export summaries, and pasted Markdown deck imports. It can also summarize the active deck through
+renaming a slide, updating slide speaker notes, preparing HTML export links,
+typed JSON export summaries, readable Markdown export summaries, and pasted
+Markdown deck imports. It can also summarize the active deck through
 `get-active-deck-context`, list theme metadata through `get-theme-catalog`, and
 queue app-shell theme changes through `set-app-theme`. It can list and apply
 built-in design systems through `list-design-systems` and `apply-design-system`.
@@ -285,9 +286,9 @@ return typed normal-slide blocks.
 
 ### Adoption Notes
 
-- Do not treat the mounted sidebar shell as complete App mode. The panel should
-  become the primary agent surface only when connected to real App mode
-  chat/tool transport.
+- Treat the mounted sidebar shell as the local App Mode surface only while it
+  stays connected to product-safe chat/tool transport. Full hosted chat memory,
+  approvals, and team collaboration are separate hosted-runtime concerns.
 - Do not expose Code mode as plain app actions. Code mode needs a trusted
   local terminal, frame, desktop, or cloud runner because it can read and modify
   the repository.

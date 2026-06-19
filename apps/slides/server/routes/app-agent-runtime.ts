@@ -271,6 +271,12 @@ function responseTextForCreatedSlide(result: unknown) {
   return `Created ${title ? `"${title}"` : "a normal slide"}.`;
 }
 
+function responseTextForUpdatedSlide(result: unknown, change: "title" | "notes") {
+  const title =
+    result && typeof result === "object" && "title" in result ? getText(result.title) : "";
+  return `Updated ${title ? `"${title}"` : "the slide"} ${change}.`;
+}
+
 function responseTextForCreatedSlides(result: unknown) {
   if (!Array.isArray(result)) return "Created the slide sequence.";
   return `Created ${result.length} normal slides.`;
@@ -577,6 +583,74 @@ async function handleSnapshotPrompt(
   return null;
 }
 
+function inferSlideNumber(prompt: string) {
+  const value = Number(prompt.match(/\bslide\s+(?:id\s+)?(\d+)\b/i)?.[1]);
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function inferRenameTitle(prompt: string) {
+  const quoted = prompt.match(/\b(?:rename|retitle|title)\b.*?\bslide\b.*?["“](.+?)["”]/i)?.[1];
+  if (quoted?.trim()) return quoted.trim();
+
+  const trailing = prompt
+    .match(/\b(?:rename|retitle|title)\b.*?\bslide\b.*?\b(?:to|as)\s+(.+)$/i)?.[1]
+    ?.trim();
+  return trailing ? trailing.replace(/[.!?]+$/, "") : null;
+}
+
+function inferNotesText(prompt: string) {
+  const quoted = prompt.match(/\bnotes?\b.*?["“](.+?)["”]/i)?.[1];
+  if (quoted?.trim()) return quoted.trim();
+
+  const trailing = prompt
+    .match(/\b(?:notes?|speaker notes?)\b.*?\b(?:to|as)\s+(.+)$/i)?.[1]
+    ?.trim();
+  return trailing ? trailing.replace(/[.!?]+$/, "") : null;
+}
+
+function resolveSlideForPrompt(slides: unknown, slideNumber: number) {
+  if (!Array.isArray(slides)) return null;
+  const byId = slides.find(
+    (slide) =>
+      slide && typeof slide === "object" && "id" in slide && Number(slide.id) === slideNumber,
+  );
+  if (byId) return byId;
+  return slides[slideNumber - 1] ?? null;
+}
+
+async function handleSlideEditPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+  deckId: number,
+) {
+  const isRename = /\b(rename|retitle|title)\b.*\bslide\b/.test(normalized);
+  const isNotes = /\b(add|set|update|change|write)\b.*\b(notes?|speaker notes?)\b/.test(normalized);
+  if (!isRename && !isNotes) return null;
+
+  const slideNumber = inferSlideNumber(prompt);
+  if (!slideNumber) return "Tell me which slide to update, for example: rename slide 3 to Roadmap.";
+
+  const slides = await runAction(actions["list-slides"], { pid: deckId });
+  const slide = resolveSlideForPrompt(slides, slideNumber);
+  if (!slide || typeof slide !== "object" || !("id" in slide)) {
+    return `I could not find slide ${slideNumber} in this deck.`;
+  }
+
+  const sid = Number(slide.id);
+  if (isRename) {
+    const title = inferRenameTitle(prompt);
+    if (!title) return "Tell me the new slide title.";
+    const updated = await runAction(actions["update-slide"], { pid: deckId, sid, title });
+    return responseTextForUpdatedSlide(updated, "title");
+  }
+
+  const notes = inferNotesText(prompt);
+  if (!notes) return "Tell me the speaker notes to write.";
+  const updated = await runAction(actions["update-slide"], { pid: deckId, sid, notes });
+  return responseTextForUpdatedSlide(updated, "notes");
+}
+
 async function handleLocalModelPrompt(actions: SlideDeckActions, normalized: string) {
   if (
     !/\b(local\s+)?models?\b.*\b(status|available|configured|provider|harness)\b/.test(normalized)
@@ -658,6 +732,9 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
   const snapshotResponse = await handleSnapshotPrompt(actions, prompt, normalized, deckId);
   if (snapshotResponse) return snapshotResponse;
 
+  const slideEditResponse = await handleSlideEditPrompt(actions, prompt, normalized, deckId);
+  if (slideEditResponse) return slideEditResponse;
+
   if (/\b(create|add|make)\b.*\bgroups?\b/.test(normalized)) {
     const title = inferTitle(prompt, "Group");
     const group = await runAction(actions["create-group"], { pid: deckId, title });
@@ -693,6 +770,8 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
     "- list available themes",
     "- save a snapshot of this deck",
     "- list slides",
+    "- rename slide 2 to Roadmap",
+    '- set slide 2 notes to "Pause for questions"',
     '- create a title slide called "Roadmap"',
     "- create a bullets slide with a short outline",
     "- export this deck as HTML",

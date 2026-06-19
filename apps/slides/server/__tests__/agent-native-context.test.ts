@@ -622,6 +622,36 @@ describe("App agent active deck context runtime", () => {
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("Local model harness is not configured");
   });
+
+  it("POST /_agent-native/app-agent renames slides through app actions", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "rename slide 1 to Runtime Renamed",
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Runtime Renamed");
+
+    const slides = await request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`);
+    expect(slides.body[0]).toMatchObject({ title: "Runtime Renamed" });
+  });
+
+  it("POST /_agent-native/app-agent updates speaker notes through app actions", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: 'set slide 1 notes to "Pause for questions"',
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("notes");
+
+    const slides = await request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`);
+    expect(slides.body[0]).toMatchObject({ notes: "Pause for questions" });
+  });
 });
 
 describe("App agent theme runtime", () => {

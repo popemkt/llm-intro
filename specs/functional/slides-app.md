@@ -108,9 +108,10 @@ editing, themed presentation playback, and HTML export.
 - In App Mode, agents can use product-safe deck actions without shell or
   filesystem access. The current local runtime can list slides and create
   standard normal slides, multi-slide outlines, slide groups, and deck theme
-  changes, HTML export links, and active deck summaries in the active deck from
-  simple prompts. It can also list available themes and change the app shell
-  theme, list and apply design systems, and create/list/restore deck snapshots.
+  changes, slide title/speaker-note edits, HTML export links, and active deck
+  summaries in the active deck from simple prompts. It can also list available
+  themes and change the app shell theme, list and apply design systems, and
+  create/list/restore deck snapshots.
 - Local App Mode is action-backed and does not require Builder.io auth or a
   hosted model provider. The shell should show this as runtime status so users
   do not confuse product-safe App Mode with hosted Code Mode or provider-backed

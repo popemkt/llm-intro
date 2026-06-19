@@ -52,6 +52,11 @@ describe("Agent Native app context actions", () => {
     expectPublicAction(res.body.actions, "import-deck-json", { readOnly: false });
     expectPublicAction(res.body.actions, "export-deck-markdown", { readOnly: true });
     expectPublicAction(res.body.actions, "import-deck-markdown", { readOnly: false });
+    expectPublicAction(res.body.actions, "search-logo-assets", { readOnly: true });
+    expectPublicAction(res.body.actions, "import-deck-asset", { readOnly: false });
+    expectPublicAction(res.body.actions, "list-deck-assets", { readOnly: true });
+    expectPublicAction(res.body.actions, "update-deck-asset-metadata", { readOnly: false });
+    expectPublicAction(res.body.actions, "delete-deck-asset", { readOnly: false });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {

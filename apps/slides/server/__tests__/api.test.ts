@@ -196,6 +196,90 @@ describe("Normal slide actions", () => {
   });
 });
 
+describe("Deck asset actions", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+  let pid: number;
+
+  beforeEach(async () => {
+    db.exec(
+      "DELETE FROM deck_assets; DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;",
+    );
+    pid = (await request(app).post("/api/presentations").send({ name: "Asset Deck" })).body.id;
+  });
+
+  it("imports, lists, updates, and deletes deck-local SVG assets", async () => {
+    const imported = await request(app)
+      .post("/_agent-native/actions/import-deck-asset")
+      .send({
+        pid,
+        name: "Example Logo",
+        content: '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>',
+        sourceUrl: "https://example.com/logo.svg",
+        sourceName: "Example",
+        license: "internal-test",
+        usage: "cover slide",
+        metadata: { variant: "default" },
+      });
+
+    expect(imported.status).toBe(200);
+    expect(imported.body).toMatchObject({
+      presentation_id: pid,
+      name: "Example Logo",
+      kind: "svg",
+      mime_type: "image/svg+xml",
+      source_url: "https://example.com/logo.svg",
+      source_name: "Example",
+      license: "internal-test",
+      usage: "cover slide",
+      metadata: { variant: "default" },
+    });
+
+    const listed = await request(app).get("/_agent-native/actions/list-deck-assets").query({ pid });
+    expect(listed.status).toBe(200);
+    expect(listed.body).toEqual([
+      expect.objectContaining({
+        id: imported.body.id,
+        name: "Example Logo",
+        contentLength: expect.any(Number),
+      }),
+    ]);
+    expect(listed.body[0]).not.toHaveProperty("content");
+
+    const updated = await request(app)
+      .put("/_agent-native/actions/update-deck-asset-metadata")
+      .send({
+        pid,
+        assetId: imported.body.id,
+        name: "Updated Logo",
+        usage: "closing slide",
+        metadata: { variant: "dark" },
+      });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({
+      id: imported.body.id,
+      name: "Updated Logo",
+      usage: "closing slide",
+      metadata: { variant: "dark" },
+    });
+
+    const deleted = await request(app)
+      .delete("/_agent-native/actions/delete-deck-asset")
+      .send({ pid, assetId: imported.body.id });
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toBeNull();
+  });
+
+  it("rejects non-SVG content for SVG imports", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/import-deck-asset")
+      .send({ pid, name: "Bad", content: "not svg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("<svg>");
+  });
+});
+
 describe("App agent runtime", () => {
   const { db, app } = createTestContext({ seedSystemPresentation: false });
   let pid: number;

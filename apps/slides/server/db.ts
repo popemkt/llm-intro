@@ -160,6 +160,11 @@ function migrate(db: Database.Database) {
     migrateSlideNotes(db);
     db.pragma("user_version = 8");
   }
+
+  if (version < 9) {
+    migrateDeckAssets(db);
+    db.pragma("user_version = 9");
+  }
 }
 
 function migrateDeckSnapshots(db: Database.Database) {
@@ -185,6 +190,28 @@ function migrateSlideNotes(db: Database.Database) {
   } catch {
     // Column already exists.
   }
+}
+
+function migrateDeckAssets(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS deck_assets (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      presentation_id INTEGER NOT NULL REFERENCES presentations(id) ON DELETE CASCADE,
+      name            TEXT NOT NULL,
+      kind            TEXT NOT NULL DEFAULT 'other',
+      mime_type       TEXT NOT NULL,
+      content         TEXT NOT NULL,
+      source_url      TEXT,
+      source_name     TEXT,
+      license         TEXT,
+      usage           TEXT,
+      metadata        TEXT NOT NULL DEFAULT '{}',
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS deck_assets_presentation_idx
+    ON deck_assets(presentation_id, kind, name);
+  `);
 }
 
 function normalizeSlidePositions(db: Database.Database) {

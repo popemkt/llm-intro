@@ -702,7 +702,7 @@ function createLocalOrgSession() {
 type FrameworkResource = {
   id: string;
   uri: string;
-  type: "deck" | "slide" | "group";
+  type: "deck" | "slide" | "group" | "asset";
   name: string;
   title: string;
   parentId?: string;
@@ -793,6 +793,42 @@ function createGroupResource(deckId: number, group: unknown): FrameworkResource 
   };
 }
 
+function createAssetResource(deckId: number, asset: unknown): FrameworkResource | null {
+  if (!asset || typeof asset !== "object" || !("id" in asset)) return null;
+  const id = Number(asset.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const name = "name" in asset && typeof asset.name === "string" ? asset.name : `Asset ${id}`;
+  const kind = "kind" in asset && typeof asset.kind === "string" ? asset.kind : "asset";
+  const mimeType =
+    "mime_type" in asset && typeof asset.mime_type === "string"
+      ? asset.mime_type
+      : "application/octet-stream";
+
+  return {
+    id: `asset:${deckId}:${id}`,
+    uri: `slides://deck/${deckId}/asset/${id}`,
+    type: "asset",
+    name,
+    title: name,
+    parentId: `deck:${deckId}`,
+    metadata: {
+      deckId,
+      assetId: id,
+      kind,
+      mimeType,
+      sourceUrl: "source_url" in asset ? asset.source_url : null,
+      sourceName: "source_name" in asset ? asset.source_name : null,
+      license: "license" in asset ? asset.license : null,
+      usage: "usage" in asset ? asset.usage : null,
+      actions: {
+        list: "list-deck-assets",
+        update: "update-deck-asset-metadata",
+        delete: "delete-deck-asset",
+      },
+    },
+  };
+}
+
 async function listWorkspaceResources(actions: SlideDeckActions | undefined) {
   const decks = await runFrameworkAction(actions, "list-decks", {});
   if (!Array.isArray(decks)) return [];
@@ -815,6 +851,13 @@ async function listWorkspaceResources(actions: SlideDeckActions | undefined) {
     if (Array.isArray(slides)) {
       resources.push(
         ...slides.map((slide) => createSlideResource(deckId, slide)).filter(isFrameworkResource),
+      );
+    }
+
+    const assets = await runFrameworkAction(actions, "list-deck-assets", { pid: deckId });
+    if (Array.isArray(assets)) {
+      resources.push(
+        ...assets.map((asset) => createAssetResource(deckId, asset)).filter(isFrameworkResource),
       );
     }
   }
@@ -854,6 +897,9 @@ function resourcePath(resource: FrameworkResource) {
   if (resource.type === "deck") return `slides/deck-${resource.metadata.deckId}.md`;
   if (resource.type === "group") {
     return `slides/deck-${resource.metadata.deckId}/group-${resource.metadata.groupId}.md`;
+  }
+  if (resource.type === "asset") {
+    return `slides/deck-${resource.metadata.deckId}/assets/asset-${resource.metadata.assetId}.md`;
   }
   return `slides/deck-${resource.metadata.deckId}/slide-${resource.metadata.slideId}.md`;
 }

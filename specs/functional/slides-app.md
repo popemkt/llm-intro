@@ -156,6 +156,10 @@ editing, themed presentation playback, and HTML export.
 - Framework resource probes expose local deck, slide, and group resources with
   product-safe action/navigation metadata, not filesystem paths, so shells can
   render app context inside the App Mode permission boundary.
+- Deck-local assets can be searched/imported/listed/updated/deleted through
+  product actions. Imported assets store local content plus source, license,
+  usage, and metadata, and appear in framework resources as
+  `slides://deck/:deckId/asset/:assetId`.
 - Framework MCP probes advertise the local slides action server and its
   product-safe tools while keeping invocation on the existing
   `/_agent-native/actions/mcp` route.

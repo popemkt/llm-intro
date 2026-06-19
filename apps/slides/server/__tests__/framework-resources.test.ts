@@ -18,6 +18,14 @@ describe("Agent Native resource and app-state probes", () => {
         .post(`/api/presentations/${deck.id}/slides`)
         .send({ title: "Resource Slide" })
     ).body;
+    const asset = (
+      await request(app).post("/_agent-native/actions/import-deck-asset").send({
+        pid: deck.id,
+        name: "Resource Logo",
+        content: '<svg viewBox="0 0 1 1"><path d="M0 0h1v1H0z"/></svg>',
+        sourceName: "Test",
+      })
+    ).body;
 
     await expect(
       request(app).get("/_agent-native/resources/tree?scope=workspace"),
@@ -52,6 +60,13 @@ describe("Agent Native resource and app-state probes", () => {
             parentId: `deck:${deck.id}`,
             name: "Resource Slide",
           }),
+          expect.objectContaining({
+            id: `asset:${deck.id}:${asset.id}`,
+            uri: `slides://deck/${deck.id}/asset/${asset.id}`,
+            type: "asset",
+            parentId: `deck:${deck.id}`,
+            name: "Resource Logo",
+          }),
         ]),
         tree: expect.arrayContaining([
           expect.objectContaining({
@@ -70,6 +85,10 @@ describe("Agent Native resource and app-state probes", () => {
                     path: `slides/deck-${deck.id}/slide-${slide.id}.md`,
                     resource: expect.objectContaining({ id: `slide:${deck.id}:${slide.id}` }),
                   }),
+                  expect.objectContaining({
+                    path: `slides/deck-${deck.id}/assets/asset-${asset.id}.md`,
+                    resource: expect.objectContaining({ id: `asset:${deck.id}:${asset.id}` }),
+                  }),
                 ]),
               }),
             ]),
@@ -81,6 +100,7 @@ describe("Agent Native resource and app-state probes", () => {
             children: expect.arrayContaining([
               `group:${deck.id}:${group.id}`,
               `slide:${deck.id}:${slide.id}`,
+              `asset:${deck.id}:${asset.id}`,
             ]),
           }),
         ]),
@@ -92,6 +112,7 @@ describe("Agent Native resource and app-state probes", () => {
         resources: expect.arrayContaining([
           expect.objectContaining({ id: `deck:${deck.id}`, type: "deck" }),
           expect.objectContaining({ id: `slide:${deck.id}:${slide.id}`, type: "slide" }),
+          expect.objectContaining({ id: `asset:${deck.id}:${asset.id}`, type: "asset" }),
         ]),
       },
     });

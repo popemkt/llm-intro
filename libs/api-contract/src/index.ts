@@ -97,6 +97,34 @@ export interface ApiDeckSnapshotRestoreResult {
   groups: ApiSlideGroup[];
 }
 
+export type DeckAssetKind = "svg" | "image" | "video" | "audio" | "other";
+
+export interface ApiDeckAsset {
+  id: number;
+  presentation_id: number;
+  name: string;
+  kind: DeckAssetKind;
+  mime_type: string;
+  content: string;
+  source_url: string | null;
+  source_name: string | null;
+  license: string | null;
+  usage: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiLogoAssetCandidate {
+  id: string;
+  title: string;
+  category: string[];
+  svgUrl: string;
+  brandUrl: string | null;
+  source: "svgl";
+  variants: Array<{ name: string; svgUrl: string }>;
+}
+
 export interface LayoutInput {
   ungrouped: number[];
   groups: Array<{ id: number; slideIds: number[] }>;

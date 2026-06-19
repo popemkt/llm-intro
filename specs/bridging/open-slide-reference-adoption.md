@@ -105,6 +105,21 @@ Initial action candidates:
 - `update-deck-asset-metadata`
 - `delete-deck-asset`
 
+First runtime slice:
+
+- `deck_assets` stores deck-local assets with content, kind, MIME type, source URL/name, license, usage, and JSON metadata.
+- The five product actions above are implemented and exposed through Agent Native HTTP/MCP/A2A discovery.
+- `search-logo-assets` uses the public SVGL API (`https://api.svgl.app`) as a logo candidate source.
+- `import-deck-asset` can import inline SVG content or fetch an SVG URL into the local deck asset library.
+- Framework resource probes expose imported assets as `slides://deck/:deckId/asset/:assetId` resources under their deck.
+
+Still future work:
+
+- visible deck asset manager UI;
+- inserting selected assets into normal slides from the editor;
+- export rewriting for asset references when slides use asset IDs instead of direct content/URLs;
+- richer provider adapters beyond SVGL.
+
 ## Transitions
 
 Open Slide models transitions as data with enter/exit phases and keyframes. We should adopt that shape, but not lock implementation to CSS.

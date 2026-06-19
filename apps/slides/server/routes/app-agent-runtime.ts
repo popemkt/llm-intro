@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { THEME_META, THEME_NAMES, type ThemeName } from "@llm-intro/api-contract";
+import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
 import { AppError } from "../errors.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import type { NormalSlideLayout } from "../../actions/normal-slide-layouts.js";
@@ -704,6 +705,24 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
 
 export function createAppAgentRuntimeRouter(actions: SlideDeckActions) {
   const router = Router();
+
+  router.get("/", (_req, res) => {
+    res.json(APP_AGENT_MANIFEST);
+  });
+
+  router.get("/capabilities", (_req, res) => {
+    res.json({
+      id: APP_AGENT_MANIFEST.id,
+      runtime: APP_AGENT_MANIFEST.runtime,
+      hosted: APP_AGENT_MANIFEST.hosted,
+      requiresHostedModel: APP_AGENT_MANIFEST.requiresHostedModel,
+      chat: APP_AGENT_MANIFEST.chat,
+      tools: APP_AGENT_MANIFEST.tools,
+      models: APP_AGENT_MANIFEST.models,
+      promptFamilies: APP_AGENT_MANIFEST.promptFamilies,
+      suggestions: APP_AGENT_MANIFEST.suggestions,
+    });
+  });
 
   router.post("/", async (req, res, next) => {
     try {

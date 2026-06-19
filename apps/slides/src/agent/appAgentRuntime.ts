@@ -1,4 +1,5 @@
 import { createHttpAgentChatRuntime, type AgentChatRuntime } from "@agent-native/core/client/chat";
+import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest";
 
 type DeckScope = {
   type: "deck";
@@ -8,19 +9,22 @@ type DeckScope = {
 
 export function createSlidesAppAgentRuntime(scope: DeckScope): AgentChatRuntime {
   return createHttpAgentChatRuntime({
-    id: "llm-intro:app-agent",
-    label: "Slides App Agent",
-    description: "Uses the slide deck action registry for App Mode workflows.",
+    id: APP_AGENT_MANIFEST.id,
+    label: APP_AGENT_MANIFEST.label,
+    description: APP_AGENT_MANIFEST.description,
     endpoint: "/_agent-native/app-agent",
     capabilities: {
       messages: {
-        streaming: false,
-        history: true,
-        structuredContent: true,
-        attachments: false,
+        streaming: APP_AGENT_MANIFEST.chat.streaming,
+        history: APP_AGENT_MANIFEST.chat.history,
+        structuredContent: APP_AGENT_MANIFEST.chat.structuredContent,
+        attachments: APP_AGENT_MANIFEST.chat.attachments,
       },
-      tools: { events: false },
-      models: { selectable: false, reasoningEffort: false },
+      tools: { events: APP_AGENT_MANIFEST.tools.events },
+      models: {
+        selectable: APP_AGENT_MANIFEST.models.selectable,
+        reasoningEffort: APP_AGENT_MANIFEST.models.reasoningEffort,
+      },
     },
     mapRequest: ({ turn }) => ({
       prompt: turn.prompt,

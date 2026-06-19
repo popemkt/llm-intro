@@ -1,0 +1,76 @@
+export const APP_AGENT_SUGGESTIONS = [
+  "Summarize this deck",
+  "List available themes",
+  "Save a snapshot of this deck",
+  "Create a title slide for this deck",
+  "Add a bullets slide after the current topic",
+  "Turn this outline into normal slides",
+  "Export this deck as HTML",
+] as const;
+
+export const APP_AGENT_PROMPT_FAMILIES = [
+  "navigation",
+  "active-deck-context",
+  "slide-listing",
+  "group-listing",
+  "normal-slide-creation",
+  "outline-slide-creation",
+  "prompt-deck-creation",
+  "theme-catalog",
+  "design-system-catalog",
+  "deck-theme-change",
+  "app-shell-theme-change",
+  "html-export",
+  "typed-json-export",
+  "markdown-export",
+  "markdown-import",
+  "snapshot-create-list-restore",
+  "local-model-status",
+] as const;
+
+export const APP_AGENT_MANIFEST = {
+  id: "llm-intro:app-agent",
+  label: "Slides App Agent",
+  description: "Uses the slide deck action registry for App Mode workflows.",
+  runtime: "local-app-agent",
+  hosted: false,
+  requiresHostedModel: false,
+  toolBoundary: "product-actions",
+  modes: {
+    app: {
+      runtime: "local-app-agent",
+      hosted: false,
+      requiresHostedModel: false,
+      toolBoundary: "product-actions",
+    },
+    code: {
+      runtime: "local-terminal",
+      hosted: false,
+      toolBoundary: "trusted-local-cli",
+    },
+  },
+  chat: {
+    streaming: false,
+    history: true,
+    structuredContent: true,
+    attachments: false,
+  },
+  tools: {
+    events: false,
+    filesystem: false,
+    shell: false,
+  },
+  models: {
+    selectable: false,
+    reasoningEffort: false,
+    localProviderDiscovery: "/_agent-native/agent-model-defaults",
+  },
+  actions: {
+    registry: "/_agent-native/actions",
+    invoke: "/_agent-native/actions/invoke/:name",
+    mcp: "/_agent-native/actions/mcp",
+    a2a: "/_agent-native/a2a/agent-card",
+  },
+  promptFamilies: APP_AGENT_PROMPT_FAMILIES,
+  suggestions: APP_AGENT_SUGGESTIONS,
+} as const;

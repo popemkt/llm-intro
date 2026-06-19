@@ -28,6 +28,7 @@ framework boundary.
 | Framework core probes | No-op or local defaults for Agent-Native panel/status/resource probes | `apps/slides/server/routes/framework-core.ts` |
 | Local Code Mode terminal | Local PTY WebSocket bridge for known authenticated CLIs | `apps/slides/server/agent-terminal.ts`, `apps/slides/server/index.ts` |
 | Local App Mode runtime | Deck-scoped HTTP chat runtime backed by the action registry | `apps/slides/server/routes/app-agent-runtime.ts`, `apps/slides/src/agent/appAgentRuntime.ts` |
+| App Mode manifest | Shared local capability manifest for server probes and shell suggestions | `apps/slides/shared/app-agent-manifest.ts` |
 | Action HTTP mount | `/_agent-native/actions/:name` | `apps/slides/server/routes/agent-native-actions.ts`, `apps/slides/server/app.ts` |
 | Action definitions | `defineAction` wrappers over existing services | `apps/slides/actions/*.ts` |
 | Action discovery | `GET /_agent-native/actions`, `GET /_agent-native/openapi.json` | `apps/slides/server/routes/agent-native-actions.ts` |
@@ -182,6 +183,10 @@ same `appMode` metadata for automation. The framework model probes
 OpenAI-compatible provider status as `get-local-model-status`; this is provider
 discovery for local prompt drafting, not a hosted engine dependency. Production
 shell access remains gated by the server-side terminal policy.
+`GET /_agent-native/app-agent` exposes the full local App Mode manifest, and
+`GET /_agent-native/app-agent/capabilities` exposes a compact view of the same
+capabilities for framework shells. The frontend imports the same shared
+manifest for starter suggestions so the UI and protocol surface stay aligned.
 
 ### App Mode And Code Mode
 

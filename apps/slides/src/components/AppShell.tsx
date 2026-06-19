@@ -18,20 +18,11 @@ import {
 import { createSlidesAppAgentRuntime } from "@/agent/appAgentRuntime";
 import { applyAppTheme } from "@/lib/appTheme";
 import { THEME_NAMES, type ThemeName } from "@/types";
+import { APP_AGENT_SUGGESTIONS } from "../../shared/app-agent-manifest";
 
 const navItems = [
   { label: "Decks", to: "/", icon: LayoutDashboard },
   { label: "Theme", to: "/settings", icon: Settings },
-];
-
-const agentSuggestions = [
-  "Summarize this deck",
-  "List available themes",
-  "Save a snapshot of this deck",
-  "Create a title slide for this deck",
-  "Add a bullets slide after the current topic",
-  "Turn this outline into normal slides",
-  "Export this deck as HTML",
 ];
 
 type AgentTerminalInfo =
@@ -540,7 +531,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="slides-app-agent-panel agent-sidebar-panel" aria-label="Agent">
           <SlidesAgentSurface
             runtime={appAgentRuntime}
-            suggestions={agentSuggestions}
+            suggestions={[...APP_AGENT_SUGGESTIONS]}
             onCollapse={() => setAgentOpenPersisted(false)}
           />
         </aside>

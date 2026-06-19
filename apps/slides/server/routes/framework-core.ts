@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import type { AgentTerminalBridge } from "../agent-terminal.js";
 import type { LocalDeckModelProvider, LocalModelStatus } from "../local-model-provider.js";
 import type { SlideDeckActions } from "../../actions/index.js";
+import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
 import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
 
 type LocalAgentChatMessage = {
@@ -290,14 +291,13 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
       devMode: localCodeModeEnabled(),
       canToggle: false,
       appMode: {
-        runtime: "local-app-agent",
-        hosted: false,
-        requiresHostedModel: false,
-        toolBoundary: "product-actions",
+        ...APP_AGENT_MANIFEST.modes.app,
+        promptFamilies: APP_AGENT_MANIFEST.promptFamilies,
+        suggestions: APP_AGENT_MANIFEST.suggestions,
+        capabilitiesUrl: "/_agent-native/app-agent/capabilities",
       },
       codeMode: {
-        runtime: "local-terminal",
-        hosted: false,
+        ...APP_AGENT_MANIFEST.modes.code,
         available: localCodeModeEnabled(),
       },
     });

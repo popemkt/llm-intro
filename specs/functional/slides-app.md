@@ -126,6 +126,9 @@ editing, themed presentation playback, and HTML export.
 - Framework model/provider probes expose the same local model harness status so
   Agent-Native shells can distinguish local App Mode and local Code Mode from a
   hosted provider requirement.
+- Local App Mode exposes a manifest and compact capabilities endpoint so shells
+  can discover prompt families, starter suggestions, local-only tool boundaries,
+  and action protocol URLs without relying on hard-coded UI copy.
 - Agents can create standard themeable DB-backed slide layouts through
   `create-normal-slide`: title, section, bullets, two-column, quote, metrics,
   and closing.

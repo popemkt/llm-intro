@@ -12,6 +12,7 @@ import { createDeckMarkdownActions } from "./deck-markdown.js";
 import { createActiveDeckContextAction } from "./active-deck-context.js";
 import { createThemeDesignActions } from "./theme-design.js";
 import { createSnapshotActions } from "./snapshots.js";
+import { createLocalHarnessActions } from "./local-harness.js";
 import type { createSnapshotsService } from "../server/services/snapshots.js";
 import type { LocalDeckModelProvider } from "../server/local-model-provider.js";
 
@@ -44,6 +45,7 @@ export function createSlideDeckActions(services: {
     ),
     ...createDeckJsonActions(services),
     ...createDeckMarkdownActions(services),
+    ...createLocalHarnessActions(),
     ...createGroupActions(services.groupsService),
     ...createSnapshotActions(services.snapshotsService),
   };

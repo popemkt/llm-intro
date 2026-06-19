@@ -4,6 +4,10 @@ import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
 import { AppError } from "../errors.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import type { NormalSlideLayout } from "../../actions/normal-slide-layouts.js";
+import {
+  handleLocalHarnessPrompt,
+  handleLocalHarnessToolsPrompt,
+} from "./app-agent-local-harness.js";
 
 export type AppAgentRequest = {
   prompt?: string;
@@ -318,31 +322,6 @@ function responseTextForLocalModelStatus(result: unknown) {
     }.`;
   }
   return `Local model harness is not configured.${reason ? ` ${reason}` : ""}`;
-}
-
-function responseTextForLocalHarnessStatus(result: unknown) {
-  if (!result || typeof result !== "object") {
-    return "I cannot read the local harness status yet.";
-  }
-  const protocols =
-    "protocols" in result && Array.isArray(result.protocols) ? result.protocols : [];
-  const available = protocols.filter(
-    (protocol): protocol is { label?: unknown; endpoint?: unknown } =>
-      Boolean(
-        protocol && typeof protocol === "object" && "available" in protocol && protocol.available,
-      ),
-  );
-  if (available.length === 0) {
-    return "Local harness is not configured. Set LOCAL_HARNESS_MCP_URL, LOCAL_HARNESS_OPENAPI_URL, or LOCAL_HARNESS_HTTP_URL to advertise one.";
-  }
-  const labels = available
-    .map((protocol) => {
-      const label = "label" in protocol ? getText(protocol.label) : "Local harness";
-      const endpoint = "endpoint" in protocol ? getText(protocol.endpoint) : "";
-      return endpoint ? `${label} at ${endpoint}` : label;
-    })
-    .join("; ");
-  return `Local harness is configured for discovery: ${labels}. Invocation remains discovery-only until a harness contract is selected.`;
 }
 
 function responseTextForCreatedGroup(result: unknown) {
@@ -689,19 +668,6 @@ async function handleLocalModelPrompt(actions: SlideDeckActions, normalized: str
   return responseTextForLocalModelStatus(result);
 }
 
-async function handleLocalHarnessPrompt(actions: SlideDeckActions, normalized: string) {
-  if (
-    !/\blocal\s+harness\b.*\b(status|available|configured|provider|protocol|mcp|openapi|http)\b/.test(
-      normalized,
-    )
-  ) {
-    return null;
-  }
-
-  const result = await runAction(actions["get-local-harness-status"], {});
-  return responseTextForLocalHarnessStatus(result);
-}
-
 async function handleMarkdownImportPrompt(
   actions: SlideDeckActions,
   prompt: string,
@@ -813,6 +779,7 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
     () => handleThemePrompt(actions, prompt, normalized, deckId),
     () => handleDeckReadPrompt(actions, normalized, deckId),
     () => handleLocalModelPrompt(actions, normalized),
+    () => handleLocalHarnessToolsPrompt(actions, normalized),
     () => handleLocalHarnessPrompt(actions, normalized),
     () => handleMarkdownImportPrompt(actions, prompt, normalized),
     () => handleDeckCreationPrompt(actions, prompt, normalized),

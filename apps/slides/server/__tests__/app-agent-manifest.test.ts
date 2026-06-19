@@ -33,8 +33,13 @@ describe("Agent Native app-agent manifest", () => {
           "prompt-deck-creation",
           "snapshot-create-list-restore",
           "local-harness-status",
+          "local-harness-mcp-tools",
         ]),
-        suggestions: expect.arrayContaining(["Summarize this deck", "Check local harness status"]),
+        suggestions: expect.arrayContaining([
+          "Summarize this deck",
+          "Check local harness status",
+          "List local harness tools",
+        ]),
       },
     });
   });
@@ -52,6 +57,7 @@ describe("Agent Native app-agent manifest", () => {
           "markdown-import",
           "slide-editing",
           "local-harness-status",
+          "local-harness-mcp-tools",
         ]),
         suggestions: expect.arrayContaining(["Export this deck as HTML"]),
       },

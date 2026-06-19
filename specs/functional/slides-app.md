@@ -130,6 +130,10 @@ editing, themed presentation playback, and HTML export.
 - Agents can read optional external local harness discovery through
   `get-local-harness-status`. This reports configured HTTP, OpenAPI, and MCP
   endpoints without granting shell or filesystem access.
+- When `LOCAL_HARNESS_MCP_URL` is configured, agents can list MCP tools through
+  `list-local-harness-tools` and call a specific tool through
+  `call-local-harness-tool`. HTTP and OpenAPI harness entries remain
+  discovery-only until their concrete contract is selected.
 - Framework model/provider probes expose the same local model harness status so
   Agent-Native shells can distinguish local App Mode and local Code Mode from a
   hosted provider requirement.
@@ -140,8 +144,10 @@ editing, themed presentation playback, and HTML export.
   or trusted Code Mode without assuming hosted infrastructure.
 - Optional external local harness endpoints can be advertised as HTTP, OpenAPI,
   and MCP transports. These endpoints are discovery-only until a concrete
-  harness adapter grants specific invocation rights, and the same status is
-  part of the App Mode manifest's discoverable prompt surface.
+  harness adapter grants specific invocation rights. MCP harnesses use the
+  standard MCP contract, so tool listing and calls are available through
+  product actions, and the same status is part of the App Mode manifest's
+  discoverable prompt surface.
 - Framework environment status exposes local model configured/fallback state
   without returning secret values.
 - Local App Mode exposes a manifest and compact capabilities endpoint so shells

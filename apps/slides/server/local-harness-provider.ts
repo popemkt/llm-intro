@@ -13,9 +13,17 @@ export type LocalHarnessStatus = {
   available: boolean;
   hosted: false;
   requiresBuilderAuth: false;
-  invocation: "discovery-only";
+  invocation: "discovery-only" | "mcp-tools";
   protocols: LocalHarnessProtocol[];
 };
+
+type LocalHarnessMcpManager = import("@agent-native/core/mcp-client").McpClientManager;
+
+let mcpManagerCache: {
+  url: string;
+  manager: LocalHarnessMcpManager;
+  started: boolean;
+} | null = null;
 
 export function localHarnessEnvValue(...names: string[]) {
   for (const name of names) {
@@ -75,11 +83,111 @@ export function createLocalHarnessProtocols(): LocalHarnessProtocol[] {
 
 export function getLocalHarnessStatus(): LocalHarnessStatus {
   const protocols = createLocalHarnessProtocols();
+  const mcpAvailable = protocols.some(
+    (protocol) => protocol.id === "local-harness-mcp" && protocol.available,
+  );
   return {
     available: protocols.some((protocol) => protocol.available),
     hosted: false,
     requiresBuilderAuth: false,
-    invocation: "discovery-only",
+    invocation: mcpAvailable ? "mcp-tools" : "discovery-only",
     protocols,
+  };
+}
+
+function localHarnessMcpUrl() {
+  return localHarnessEnvValue("LOCAL_HARNESS_MCP_URL", "AGENT_NATIVE_LOCAL_HARNESS_MCP_URL");
+}
+
+async function localHarnessMcpManager() {
+  const url = localHarnessMcpUrl();
+  if (!url) return null;
+
+  if (mcpManagerCache?.url !== url) {
+    await mcpManagerCache?.manager.stop();
+    const { McpClientManager } = await import("@agent-native/core/mcp-client");
+    mcpManagerCache = {
+      url,
+      manager: new McpClientManager(
+        {
+          source: "local-harness-env",
+          servers: {
+            "local-harness": {
+              type: "http",
+              url,
+              description: "External local harness MCP server.",
+            },
+          },
+        },
+        { debug: false },
+      ),
+      started: false,
+    };
+  }
+
+  if (!mcpManagerCache.started) {
+    await mcpManagerCache.manager.start();
+    mcpManagerCache.started = true;
+  }
+
+  return mcpManagerCache.manager;
+}
+
+export async function listLocalHarnessMcpTools() {
+  const status = getLocalHarnessStatus();
+  const manager = await localHarnessMcpManager();
+  if (!manager) {
+    return {
+      ...status,
+      configured: false,
+      tools: [],
+    };
+  }
+
+  return {
+    ...status,
+    configured: true,
+    connectedServers: manager.connectedServers,
+    tools: manager.getTools().map((tool) => ({
+      name: tool.name,
+      originalName: tool.originalName,
+      title: tool.title ?? null,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      source: tool.source,
+      readOnly: tool.annotations?.readOnlyHint === true,
+    })),
+  };
+}
+
+function resolveLocalHarnessTool(manager: LocalHarnessMcpManager, toolName: string) {
+  return (
+    manager.getTool(toolName) ??
+    manager
+      .getTools()
+      .find((tool) => tool.originalName === toolName || tool.name.endsWith(`__${toolName}`)) ??
+    null
+  );
+}
+
+export async function callLocalHarnessMcpTool(input: { toolName: string; args?: unknown }) {
+  const manager = await localHarnessMcpManager();
+  if (!manager) {
+    throw new Error("Set LOCAL_HARNESS_MCP_URL to call local harness MCP tools.");
+  }
+
+  const tool = resolveLocalHarnessTool(manager, input.toolName);
+  if (!tool) {
+    throw new Error(`Local harness MCP tool not found: ${input.toolName}`);
+  }
+
+  const raw = await manager.callTool(tool.name, input.args ?? {});
+  const { flattenMcpToolResult } = await import("@agent-native/core/mcp-client");
+  return {
+    toolName: tool.name,
+    originalToolName: tool.originalName,
+    source: tool.source,
+    text: flattenMcpToolResult(raw),
+    raw,
   };
 }

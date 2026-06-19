@@ -8,6 +8,7 @@ export const APP_AGENT_SUGGESTIONS = [
   "Turn this outline into normal slides",
   "Export this deck as HTML",
   "Check local harness status",
+  "List local harness tools",
 ] as const;
 
 export const APP_AGENT_PROMPT_FAMILIES = [
@@ -30,6 +31,7 @@ export const APP_AGENT_PROMPT_FAMILIES = [
   "snapshot-create-list-restore",
   "local-model-status",
   "local-harness-status",
+  "local-harness-mcp-tools",
 ] as const;
 
 export const APP_AGENT_MANIFEST = {

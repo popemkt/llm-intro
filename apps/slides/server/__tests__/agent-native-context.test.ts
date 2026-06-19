@@ -41,6 +41,11 @@ describe("Agent Native app context actions", () => {
     });
     expectPublicAction(res.body.actions, "get-local-model-status", { readOnly: true });
     expectPublicAction(res.body.actions, "get-local-harness-status", { readOnly: true });
+    expectPublicAction(res.body.actions, "list-local-harness-tools", { readOnly: true });
+    expectPublicAction(res.body.actions, "call-local-harness-tool", {
+      readOnly: false,
+      isConsequential: true,
+    });
     expectPublicAction(res.body.actions, "draft-deck-from-prompt", { readOnly: true });
     expectPublicAction(res.body.actions, "create-deck-from-prompt", { readOnly: false });
     expectPublicAction(res.body.actions, "export-deck-json", { readOnly: true });
@@ -364,7 +369,7 @@ describe("Agent Native prompt deck creation", () => {
         available: true,
         hosted: false,
         requiresBuilderAuth: false,
-        invocation: "discovery-only",
+        invocation: "mcp-tools",
         protocols: expect.arrayContaining([
           expect.objectContaining({
             id: "local-harness-mcp",
@@ -376,6 +381,27 @@ describe("Agent Native prompt deck creation", () => {
     } finally {
       if (previousMcp === undefined) delete process.env.LOCAL_HARNESS_MCP_URL;
       else process.env.LOCAL_HARNESS_MCP_URL = previousMcp;
+    }
+  });
+
+  it("GET /_agent-native/actions/list-local-harness-tools reports no configured MCP harness", async () => {
+    const previousMcp = process.env.LOCAL_HARNESS_MCP_URL;
+    delete process.env.LOCAL_HARNESS_MCP_URL;
+
+    try {
+      const res = await request(app).get("/_agent-native/actions/list-local-harness-tools");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        available: false,
+        hosted: false,
+        requiresBuilderAuth: false,
+        invocation: "discovery-only",
+        configured: false,
+        tools: [],
+      });
+    } finally {
+      if (previousMcp !== undefined) process.env.LOCAL_HARNESS_MCP_URL = previousMcp;
     }
   });
 
@@ -662,6 +688,18 @@ describe("App agent active deck context runtime", () => {
     expect(res.status).toBe(200);
     expect(res.body.text).toContain("Local harness is not configured");
     expect(res.body.text).toContain("LOCAL_HARNESS_MCP_URL");
+  });
+
+  it("POST /_agent-native/app-agent lists local harness tools", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: "list local harness tools",
+        scope: { type: "deck", id: String(pid) },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("No local harness MCP tools are connected");
   });
 
   it("POST /_agent-native/app-agent renames slides through app actions", async () => {

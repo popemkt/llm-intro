@@ -193,15 +193,17 @@ MCP-compatible action tools, optional OpenAI-compatible local prompt drafting,
 and trusted local terminal Code Mode. App/action/MCP/model entries stay inside
 the product-action boundary; terminal Code Mode is the only repo-modifying
 path.
-External local harnesses are discovery-only in this slice. Configure
+External local harness HTTP and OpenAPI endpoints are discovery-only in this
+slice. Configure
 `LOCAL_HARNESS_HTTP_URL`, `LOCAL_HARNESS_OPENAPI_URL`, or
 `LOCAL_HARNESS_MCP_URL` (or the matching `AGENT_NATIVE_LOCAL_HARNESS_*` aliases)
 to advertise local harness HTTP, OpenAPI, or MCP transports through
 `local-runtime/protocols` and through the read-only `get-local-harness-status`
 action. A configured MCP URL is also listed by `GET /_agent-native/mcp/servers`.
 The local App Mode runtime can answer harness status questions through that
-action, but actual harness invocation should be added as a separate adapter once
-the harness contract is known.
+action. MCP harnesses use the standard MCP contract, so `list-local-harness-tools`
+can enumerate connected tools and `call-local-harness-tool` can invoke one by
+name.
 Use MCP when the harness is primarily a tool/resource server, OpenAPI when the
 harness already publishes REST operations, and direct HTTP only for a known
 single-purpose endpoint. Local model serving is separate: prompt drafting uses

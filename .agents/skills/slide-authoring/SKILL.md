@@ -46,7 +46,7 @@ When generating content, prefer product actions that create normal slides unless
 
 ## Interactive Slides
 
-Interactive slides are valid when interaction teaches the concept. Keep them deterministic and presenter-safe:
+Interactive slides are valid when interaction teaches the concept. This includes mini-apps, games, quizzes, calculators, simulations, sandboxes, and guided demos. Keep them deterministic and presenter-safe:
 
 - no network calls from slide render;
 - no persistent side effects except through app actions;

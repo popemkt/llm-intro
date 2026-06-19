@@ -26,6 +26,8 @@ Prefer normal DB slides when the deck can be represented with blocks, images, no
 Use code-backed slides when the user needs:
 
 - custom interaction;
+- interactive apps, tools, or calculators embedded in a slide;
+- games, quizzes, sandboxes, or playable learning moments;
 - complex animation/choreography;
 - bespoke data visualization;
 - teaching simulations;
@@ -45,6 +47,7 @@ Draft page roles before implementation:
 - process/flow;
 - big number;
 - demo/interactive page;
+- app, game, quiz, or simulator;
 - closing.
 
 Keep one idea per slide. Split when vertical budget gets tight.

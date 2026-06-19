@@ -17,6 +17,7 @@ type BlockPosition = {
   h?: number;
   rotation?: number;
   opacity?: number;
+  locked?: boolean;
   groupId?: string;
   groupName?: string;
 };
@@ -118,6 +119,12 @@ function parseOptionalBlockGroupString(value: unknown, field: string) {
   return trimmed;
 }
 
+function parseOptionalBoolean(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new AppError(400, `${field} must be a boolean`);
+  return value;
+}
+
 function parseBlockIdentity(value: JsonRecord) {
   if (typeof value.id !== "string" || !value.id) throw new AppError(400, "block id is required");
   if (typeof value.type !== "string") throw new AppError(400, "block type is required");
@@ -132,6 +139,7 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     h: parsePosition(value.h, "block.h"),
     rotation: parseBoundedNumber(value.rotation, "block.rotation", { min: -360, max: 360 }),
     opacity: parseBoundedNumber(value.opacity, "block.opacity", { min: 0, max: 1 }),
+    locked: parseOptionalBoolean(value.locked, "block.locked"),
     groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),
     groupName: parseOptionalBlockGroupString(value.groupName, "block.groupName"),
   };

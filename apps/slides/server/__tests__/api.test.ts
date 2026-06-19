@@ -233,6 +233,7 @@ describe("Manual slide actions", () => {
             opacity: 0.85,
             groupId: "hero-group",
             groupName: "Hero",
+            locked: true,
             fontSize: 42,
             color: "#ffffff",
             background: "#123456",
@@ -285,6 +286,7 @@ describe("Manual slide actions", () => {
           opacity: 0.85,
           groupId: "hero-group",
           groupName: "Hero",
+          locked: true,
         }),
         expect.objectContaining({
           id: "logo",
@@ -417,6 +419,51 @@ describe("Manual slide actions", () => {
       .send({ pid, sid: slide.id, blockIds: ["a"], direction: "front" });
     expect(layered.status).toBe(200);
     expect(layered.body.blocks.at(-1)).toMatchObject({ id: "a" });
+  });
+
+  it("manual block locks protect layout edits and can be toggled", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Locked Blocks",
+          blocks: [
+            { id: "locked", type: "text", markdown: "Locked", x: 10, y: 10, w: 20, h: 10 },
+            { id: "free", type: "text", markdown: "Free", x: 40, y: 10, w: 20, h: 10 },
+          ],
+        })
+    ).body;
+
+    const locked = await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ pid, sid: slide.id, blockIds: ["locked"], locked: true });
+    expect(locked.status).toBe(200);
+    expect(locked.body.blocks[0]).toMatchObject({ id: "locked", locked: true });
+
+    const rejectedArrange = await request(app)
+      .put("/_agent-native/actions/arrange-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["locked"], action: "fit-slide" });
+    expect(rejectedArrange.status).toBe(400);
+    expect(rejectedArrange.body.error).toContain("block is locked");
+
+    const rejectedDelete = await request(app)
+      .delete("/_agent-native/actions/delete-manual-block")
+      .send({ pid, sid: slide.id, bid: "locked" });
+    expect(rejectedDelete.status).toBe(400);
+    expect(rejectedDelete.body.error).toContain("block is locked");
+
+    const unlocked = await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ pid, sid: slide.id, blockIds: ["locked"], locked: false });
+    expect(unlocked.status).toBe(200);
+    expect(unlocked.body.blocks[0]).toMatchObject({ id: "locked", locked: false });
+
+    const arranged = await request(app)
+      .put("/_agent-native/actions/arrange-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["locked"], action: "fit-slide" });
+    expect(arranged.status).toBe(200);
+    expect(arranged.body.blocks[0]).toMatchObject({ id: "locked", x: 5, y: 5, w: 90, h: 90 });
   });
 
   it("inserts reusable manual presets as typed blocks", async () => {

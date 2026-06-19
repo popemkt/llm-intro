@@ -57,6 +57,7 @@ framework boundary.
 | Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields | Vitest/API |
 | Fine-grained manual block actions | `add-manual-block`, `update-manual-block`, `delete-manual-block`, `group-manual-blocks`, and `ungroup-manual-blocks` reuse server block validation and `slidesService.update` so agents can safely edit manual slides incrementally | Vitest/API |
 | Manual block layout actions | `arrange-manual-blocks`, `duplicate-manual-blocks`, and `move-manual-block-layer` mirror visual editor alignment, distribution, duplication, and layer ordering behavior for agents | Vitest/API |
+| Manual block locking action | `set-manual-block-lock` updates the shared typed block `locked` field; destructive/layout actions reject locked blocks while update can still unlock them | Vitest/API |
 | Manual preset action | `insert-manual-preset` appends shared preset blocks to a manual slide so agents and the visual editor use the same reusable layouts | Vitest/API |
 | Create HTML slide | `create-html-slide` action persists `kind: "html"` slides with authored HTML source | Vitest/API plus renderer tests |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
@@ -104,6 +105,7 @@ framework boundary.
 | Selected block menu | `BlockBubbleMenu` exposes edit, duplicate, layer order, and delete actions on selected canvas blocks | Browser smoke, typecheck |
 | Multi-select editing | `SlideEditorPage` tracks primary and multi-selection state, supports modifier selection from canvas/layers, group drag, duplicate/delete selection, keyboard nudging, selection-bound alignment, and horizontal/vertical distribution | Browser smoke, typecheck |
 | Block object grouping | `BlockPos` carries optional `groupId`/`groupName`, server block validation preserves those fields, and `SlideEditorPage` groups/ungroups selected blocks while selecting, dragging, deleting, and duplicating grouped blocks together | Vitest/API, browser smoke, typecheck |
+| Block object locking | `BlockPos` carries optional `locked`, server block validation preserves it, `BlockBubbleMenu` and `CommonAppearanceEditor` toggle it, and `SlideEditorPage` prevents locked blocks from drag, resize, delete, nudge, arrange, layer, and numeric geometry edits | Vitest/API, browser smoke, typecheck |
 | Snapping and live guides | `SlideEditorPage` snaps pointer drag/resize operations to slide edges, centerlines, and neighboring block edges/centers; active guide overlays render in the fixed canvas and Alt temporarily disables snapping | Browser smoke, typecheck |
 | Inspector arrange controls | `SlideEditorPage` aligns selected blocks and fits them to slide width/height through the same typed percentage geometry used by drag, resize, and numeric fields | Browser smoke, typecheck |
 | Inspector appearance controls | `SlideEditorPage` edits typed block appearance fields: rotation, opacity, text size/color/background/alignment/padding, image fit/radius, and shape border/text color | Vitest/API, renderer tests, typecheck |

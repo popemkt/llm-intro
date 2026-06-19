@@ -197,6 +197,10 @@ editing, themed presentation playback, and HTML export.
   `arrange-manual-blocks`, `duplicate-manual-blocks`, and
   `move-manual-block-layer`, including multi-block alignment/distribution,
   block duplication with fresh ids, and layer stack changes.
+- Agents can lock or unlock manual slide blocks through
+  `set-manual-block-lock`; locked blocks stay selectable but reject destructive
+  or layout-changing actions such as delete, arrange, duplicate, and layer
+  moves.
 - Agents can append reusable manual layout presets through
   `insert-manual-preset`; presets resolve to ordinary typed blocks and can be
   edited by later block actions.
@@ -230,6 +234,9 @@ editing, themed presentation playback, and HTML export.
   `groupId`/`groupName` metadata in the typed block model, select together,
   drag together, duplicate with a fresh copied group id, and can be created or
   updated through the same agent action block payloads.
+- Users can lock manual slide blocks from the selected block menu or inspector.
+  Locked blocks remain selectable and unlockable, but resist drag, resize,
+  keyboard nudge, delete, arrange, layer, and numeric geometry edits.
 - Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
   and neighboring block edges/centers, with visible guide lines during pointer
   interaction. Holding Alt bypasses snapping for fine placement.

@@ -112,6 +112,12 @@ function assertBlockIdsExist(blocks: Block[], blockIds: string[]) {
   if (missing.length > 0) throw new AppError(404, `block not found: ${missing[0]}`);
 }
 
+function assertBlocksUnlocked(blocks: Block[], blockIds: string[]) {
+  const selected = new Set(blockIds);
+  const locked = blocks.find((block) => selected.has(block.id) && block.locked);
+  if (locked) throw new AppError(400, `block is locked: ${locked.id}`);
+}
+
 function arrangeOneBlock(block: Block, action: ManualArrangeAction): Block {
   const rect = blockRect(block);
   const maxX = Math.max(0, 100 - rect.w);
@@ -218,6 +224,7 @@ function duplicateManualBlocks(
         copy: {
           ...source,
           id: nanoid(),
+          locked: undefined,
           groupId: nextGroupId,
           x: clamp(rect.x + offsetX, 0, 100 - rect.w),
           y: clamp(rect.y + offsetY, 0, 100 - rect.h),
@@ -501,14 +508,42 @@ function createDeleteManualBlockAction(slidesService: SlidesService) {
     },
     run: ({ pid, sid, bid }) => {
       const slide = getManualSlide(slidesService, pid, sid);
-      if (!slide.blocks.some((block) => block.id === bid))
-        throw new AppError(404, "block not found");
+      assertBlockIdsExist(slide.blocks, [bid]);
+      assertBlocksUnlocked(slide.blocks, [bid]);
       return updateManualSlideBlocks(
         slidesService,
         pid,
         sid,
         slide.blocks.filter((block) => block.id !== bid),
       );
+    },
+  });
+}
+
+function createSetManualBlockLockAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Lock or unlock manual slide blocks.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      blockIds: z.array(z.string().min(1)).min(1),
+      locked: z.boolean(),
+    }),
+    http: { method: "PUT", path: "set-manual-block-lock" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Set manual block lock",
+      description: "Lock or unlock manual slide blocks to protect them from layout edits.",
+    },
+    run: ({ pid, sid, blockIds, locked }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      const selected = new Set(blockIds);
+      const blocks = slide.blocks.map((block) =>
+        selected.has(block.id) ? ({ ...block, locked } as Block) : block,
+      );
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
     },
   });
 }
@@ -598,6 +633,7 @@ function createArrangeManualBlocksAction(slidesService: SlidesService) {
     run: ({ pid, sid, blockIds, action }) => {
       const slide = getManualSlide(slidesService, pid, sid);
       assertBlockIdsExist(slide.blocks, blockIds);
+      assertBlocksUnlocked(slide.blocks, blockIds);
       return updateManualSlideBlocks(
         slidesService,
         pid,
@@ -628,6 +664,7 @@ function createDuplicateManualBlocksAction(slidesService: SlidesService) {
     run: ({ pid, sid, blockIds, offsetX, offsetY }) => {
       const slide = getManualSlide(slidesService, pid, sid);
       assertBlockIdsExist(slide.blocks, blockIds);
+      assertBlocksUnlocked(slide.blocks, blockIds);
       return updateManualSlideBlocks(
         slidesService,
         pid,
@@ -657,6 +694,7 @@ function createMoveManualBlockLayerAction(slidesService: SlidesService) {
     run: ({ pid, sid, blockIds, direction }) => {
       const slide = getManualSlide(slidesService, pid, sid);
       assertBlockIdsExist(slide.blocks, blockIds);
+      assertBlocksUnlocked(slide.blocks, blockIds);
       return updateManualSlideBlocks(
         slidesService,
         pid,
@@ -708,6 +746,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "insert-manual-preset": createInsertManualPresetAction(slidesService),
     "update-manual-block": createUpdateManualBlockAction(slidesService),
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
+    "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),
     "arrange-manual-blocks": createArrangeManualBlocksAction(slidesService),

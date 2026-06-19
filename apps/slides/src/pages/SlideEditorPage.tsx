@@ -22,6 +22,7 @@ import {
   Globe,
   Group,
   Image as ImageIcon,
+  Lock,
   Pill,
   Settings,
   Square,
@@ -33,6 +34,7 @@ import {
   StretchHorizontal,
   StretchVertical,
   Ungroup,
+  Unlock,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
@@ -329,6 +331,12 @@ const arrangeButton: React.CSSProperties = {
   justifyContent: "center",
 };
 
+const disabledArrangeButton: React.CSSProperties = {
+  ...arrangeButton,
+  cursor: "not-allowed",
+  opacity: 0.45,
+};
+
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type EditableSlideKind = "db" | "html";
 type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
@@ -411,7 +419,7 @@ function arrangeSelectedBlocks(
   action: MultiBlockArrangeAction,
 ): Block[] {
   const selected = new Set(ids);
-  const selectedBlocks = blocks.filter((block) => selected.has(block.id));
+  const selectedBlocks = blocks.filter((block) => selected.has(block.id) && !block.locked);
   if (selectedBlocks.length < 2) return blocks;
 
   const bounds = getSelectionBounds(selectedBlocks);
@@ -829,8 +837,13 @@ export function SlideEditorPage() {
         : groupedIds;
     setSelectedId(block.id);
     setSelectedIds(selectedSet);
+    if (block.locked) {
+      dragRef.current = null;
+      setActiveGuides([]);
+      return;
+    }
     const originals = blocksRef.current
-      .filter((entry) => selectedSet.includes(entry.id))
+      .filter((entry) => selectedSet.includes(entry.id) && !entry.locked)
       .map((entry) => ({
         id: entry.id,
         origX: entry.x ?? BLOCK_DEFAULTS[entry.type].x,
@@ -875,9 +888,13 @@ export function SlideEditorPage() {
       block?.groupId
         ? blocksRef.current
             .filter((entry) => entry.groupId === block.groupId)
+            .filter((entry) => !entry.locked)
             .map((entry) => entry.id)
-        : [id],
+        : block && !block.locked
+          ? [id]
+          : [],
     );
+    if (idsToDelete.size === 0) return;
     setBlocks((prev) => prev.filter((b) => !idsToDelete.has(b.id)));
     setSelectedId((s) => (s && idsToDelete.has(s) ? null : s));
     setSelectedIds((ids) => ids.filter((entry) => !idsToDelete.has(entry)));
@@ -887,8 +904,19 @@ export function SlideEditorPage() {
   const deleteSelectedBlocks = useCallback(
     (ids: string[]) => {
       const selected = new Set(ids);
-      setBlocks((prev) => prev.filter((block) => !selected.has(block.id)));
-      clearSelection();
+      const lockedIds = new Set(
+        blocksRef.current
+          .filter((block) => selected.has(block.id) && block.locked)
+          .map((block) => block.id),
+      );
+      setBlocks((prev) => prev.filter((block) => !selected.has(block.id) || block.locked));
+      if (lockedIds.size > 0) {
+        const remaining = ids.filter((id) => lockedIds.has(id));
+        setSelectedIds(remaining);
+        setSelectedId(remaining[remaining.length - 1] ?? null);
+      } else {
+        clearSelection();
+      }
     },
     [clearSelection],
   );
@@ -900,7 +928,9 @@ export function SlideEditorPage() {
   const arrangeSelectedBlock = useCallback(
     (action: BlockArrangeAction) => {
       setBlocks((prev) =>
-        prev.map((block) => (block.id === selectedId ? arrangeBlock(block, action) : block)),
+        prev.map((block) =>
+          block.id === selectedId && !block.locked ? arrangeBlock(block, action) : block,
+        ),
       );
     },
     [selectedId],
@@ -937,7 +967,7 @@ export function SlideEditorPage() {
     const selected = new Set(ids);
     const groupIdCopies = new Map<string, string>();
     const copies = blocksRef.current
-      .filter((block) => selected.has(block.id))
+      .filter((block) => selected.has(block.id) && !block.locked)
       .map((source) => {
         const nextGroupId = source.groupId
           ? (groupIdCopies.get(source.groupId) ?? `group-${nanoid(8)}`)
@@ -948,6 +978,7 @@ export function SlideEditorPage() {
           copy: {
             ...source,
             id: nanoid(),
+            locked: undefined,
             groupId: nextGroupId,
             x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
             y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
@@ -983,6 +1014,7 @@ export function SlideEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (!selected.has(block.id)) return block;
+        if (block.locked) return block;
         const defaults = BLOCK_DEFAULTS[block.type];
         const w = block.w ?? defaults.w;
         const h = block.h ?? defaults.h;
@@ -999,6 +1031,7 @@ export function SlideEditorPage() {
     setBlocks((prev) => {
       const index = prev.findIndex((block) => block.id === id);
       if (index < 0) return prev;
+      if (prev[index]?.locked) return prev;
       const nextIndex = direction === "forward" ? index + 1 : index - 1;
       if (nextIndex < 0 || nextIndex >= prev.length) return prev;
       const next = [...prev];
@@ -1327,7 +1360,7 @@ export function SlideEditorPage() {
                       key={block.id}
                       onPointerDown={(e) => startDrag(e, block, "move")}
                       onDoubleClick={(e) => {
-                        if (block.type !== "text") return;
+                        if (block.type !== "text" || block.locked) return;
                         e.stopPropagation();
                         selectOnlyBlock(block.id);
                         setEditingTextId(block.id);
@@ -1347,7 +1380,9 @@ export function SlideEditorPage() {
                         transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
                         opacity: block.opacity,
                         outline: isSelected
-                          ? "2px solid var(--theme-accent, #25d366)"
+                          ? block.locked
+                            ? "2px dashed #f6c85f"
+                            : "2px solid var(--theme-accent, #25d366)"
                           : "1px dashed transparent",
                         outlineOffset: 1,
                         overflow: isSelected ? "visible" : "hidden",
@@ -1378,37 +1413,44 @@ export function SlideEditorPage() {
                         <>
                           <BlockBubbleMenu
                             canEditText={block.type === "text"}
-                            onEditText={() => setEditingTextId(block.id)}
+                            locked={Boolean(block.locked)}
+                            onEditText={() => {
+                              if (!block.locked) setEditingTextId(block.id);
+                            }}
                             onDuplicate={() => duplicateBlock(block.id)}
                             onBringForward={() => moveBlockLayer(block.id, "forward")}
                             onSendBack={() => moveBlockLayer(block.id, "back")}
                             onDelete={() => deleteBlock(block.id)}
+                            onToggleLocked={() =>
+                              updateBlock(block.id, { locked: !block.locked } as Partial<Block>)
+                            }
                             editing={isInlineEditing}
                           />
                           {/* Resize handles */}
-                          {(["tl", "tr", "bl", "br"] as const).map((handle) => (
-                            <div
-                              key={handle}
-                              onPointerDown={(e) => startDrag(e, block, `resize-${handle}`)}
-                              style={{
-                                position: "absolute",
-                                width: 9,
-                                height: 9,
-                                background: "var(--theme-accent, #25d366)",
-                                border: "2px solid var(--theme-bg, #0d0f0e)",
-                                borderRadius: 2,
-                                cursor:
-                                  handle === "tl" || handle === "br"
-                                    ? "nwse-resize"
-                                    : "nesw-resize",
-                                zIndex: 10,
-                                ...(handle === "tl" ? { top: -5, left: -5 } : {}),
-                                ...(handle === "tr" ? { top: -5, right: -5 } : {}),
-                                ...(handle === "bl" ? { bottom: -5, left: -5 } : {}),
-                                ...(handle === "br" ? { bottom: -5, right: -5 } : {}),
-                              }}
-                            />
-                          ))}
+                          {!block.locked &&
+                            (["tl", "tr", "bl", "br"] as const).map((handle) => (
+                              <div
+                                key={handle}
+                                onPointerDown={(e) => startDrag(e, block, `resize-${handle}`)}
+                                style={{
+                                  position: "absolute",
+                                  width: 9,
+                                  height: 9,
+                                  background: "var(--theme-accent, #25d366)",
+                                  border: "2px solid var(--theme-bg, #0d0f0e)",
+                                  borderRadius: 2,
+                                  cursor:
+                                    handle === "tl" || handle === "br"
+                                      ? "nwse-resize"
+                                      : "nesw-resize",
+                                  zIndex: 10,
+                                  ...(handle === "tl" ? { top: -5, left: -5 } : {}),
+                                  ...(handle === "tr" ? { top: -5, right: -5 } : {}),
+                                  ...(handle === "bl" ? { bottom: -5, left: -5 } : {}),
+                                  ...(handle === "br" ? { bottom: -5, right: -5 } : {}),
+                                }}
+                              />
+                            ))}
                         </>
                       )}
                     </div>
@@ -1465,16 +1507,18 @@ export function SlideEditorPage() {
                       </span>
                       <button
                         onClick={() => deleteBlock(selectedBlock.id)}
+                        disabled={selectedBlock.locked}
                         style={{
                           color: "#ff6b6b",
                           background: "none",
                           border: "none",
-                          cursor: "pointer",
+                          cursor: selectedBlock.locked ? "not-allowed" : "pointer",
                           padding: 4,
                           display: "flex",
                           alignItems: "center",
                           gap: 4,
                           fontSize: 11,
+                          opacity: selectedBlock.locked ? 0.45 : 1,
                         }}
                       >
                         <Trash2 size={12} /> Delete
@@ -1503,7 +1547,8 @@ export function SlideEditorPage() {
                           aria-label="Align left"
                           title="Align left"
                           onClick={() => arrangeSelectedBlock("align-left")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <AlignHorizontalJustifyStart size={14} />
                         </button>
@@ -1512,7 +1557,8 @@ export function SlideEditorPage() {
                           aria-label="Align center"
                           title="Align center"
                           onClick={() => arrangeSelectedBlock("align-center")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <AlignHorizontalJustifyCenter size={14} />
                         </button>
@@ -1521,7 +1567,8 @@ export function SlideEditorPage() {
                           aria-label="Align right"
                           title="Align right"
                           onClick={() => arrangeSelectedBlock("align-right")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <AlignHorizontalJustifyEnd size={14} />
                         </button>
@@ -1530,7 +1577,8 @@ export function SlideEditorPage() {
                           aria-label="Align top"
                           title="Align top"
                           onClick={() => arrangeSelectedBlock("align-top")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <AlignVerticalJustifyStart size={14} />
                         </button>
@@ -1539,7 +1587,8 @@ export function SlideEditorPage() {
                           aria-label="Align middle"
                           title="Align middle"
                           onClick={() => arrangeSelectedBlock("align-middle")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <AlignVerticalJustifyCenter size={14} />
                         </button>
@@ -1548,7 +1597,8 @@ export function SlideEditorPage() {
                           aria-label="Align bottom"
                           title="Align bottom"
                           onClick={() => arrangeSelectedBlock("align-bottom")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <AlignVerticalJustifyEnd size={14} />
                         </button>
@@ -1566,7 +1616,8 @@ export function SlideEditorPage() {
                           aria-label="Fit width"
                           title="Fit width"
                           onClick={() => arrangeSelectedBlock("fit-width")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <StretchHorizontal size={14} />
                         </button>
@@ -1575,7 +1626,8 @@ export function SlideEditorPage() {
                           aria-label="Fit height"
                           title="Fit height"
                           onClick={() => arrangeSelectedBlock("fit-height")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <StretchVertical size={14} />
                         </button>
@@ -1584,7 +1636,8 @@ export function SlideEditorPage() {
                           aria-label="Fit slide"
                           title="Fit slide"
                           onClick={() => arrangeSelectedBlock("fit-slide")}
-                          style={arrangeButton}
+                          disabled={selectedBlock.locked}
+                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
                         >
                           <Maximize2 size={14} />
                         </button>
@@ -1634,12 +1687,19 @@ export function SlideEditorPage() {
                                 ) / 10
                               }
                               onChange={(e) =>
+                                !selectedBlock.locked &&
                                 updateBlock(selectedBlock.id, { [k]: Number(e.target.value) })
                               }
+                              disabled={selectedBlock.locked}
                               min={0}
                               max={100}
                               step={0.5}
-                              style={{ ...inp, padding: "4px 8px" }}
+                              style={{
+                                ...inp,
+                                padding: "4px 8px",
+                                opacity: selectedBlock.locked ? 0.55 : 1,
+                                cursor: selectedBlock.locked ? "not-allowed" : "text",
+                              }}
                             />
                           </label>
                         ))}
@@ -2583,12 +2643,25 @@ function CommonAppearanceEditor({
 }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      <button
+        type="button"
+        aria-label={block.locked ? "Unlock block" : "Lock block"}
+        title={block.locked ? "Unlock block" : "Lock block"}
+        onClick={() => onUpdate({ locked: !block.locked } as Partial<Block>)}
+        style={{
+          ...arrangeButton,
+          background: block.locked ? C.accentSubtle : C.bg,
+          color: block.locked ? "#f6c85f" : C.text,
+        }}
+      >
+        {block.locked ? <Lock size={13} /> : <Unlock size={13} />}
+      </button>
       <NumberInput
         label="Rotate"
         min={-360}
         max={360}
         value={block.rotation}
-        onChange={(rotation) => onUpdate({ rotation } as Partial<Block>)}
+        onChange={(rotation) => !block.locked && onUpdate({ rotation } as Partial<Block>)}
       />
       <NumberInput
         label="Opacity"
@@ -2596,7 +2669,7 @@ function CommonAppearanceEditor({
         max={1}
         step={0.05}
         value={block.opacity}
-        onChange={(opacity) => onUpdate({ opacity } as Partial<Block>)}
+        onChange={(opacity) => !block.locked && onUpdate({ opacity } as Partial<Block>)}
       />
     </div>
   );
@@ -2752,19 +2825,23 @@ function ImageAppearanceEditor({
 function BlockBubbleMenu({
   canEditText,
   editing,
+  locked,
   onBringForward,
   onDelete,
   onDuplicate,
   onEditText,
   onSendBack,
+  onToggleLocked,
 }: {
   canEditText: boolean;
   editing: boolean;
+  locked: boolean;
   onBringForward: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
   onEditText: () => void;
   onSendBack: () => void;
+  onToggleLocked: () => void;
 }) {
   const button: React.CSSProperties = {
     width: 26,
@@ -2803,11 +2880,14 @@ function BlockBubbleMenu({
         <button
           type="button"
           onClick={onEditText}
+          disabled={locked}
           title={editing ? "Editing text" : "Edit text"}
           style={{
             ...button,
             color: editing ? C.accent : C.textDim,
             background: editing ? C.accentSubtle : C.surface,
+            cursor: locked ? "not-allowed" : "pointer",
+            opacity: locked ? 0.45 : 1,
           }}
         >
           {editing ? <Check size={13} /> : <Edit3 size={13} />}
@@ -2816,17 +2896,55 @@ function BlockBubbleMenu({
       <button type="button" onClick={onDuplicate} title="Duplicate block" style={button}>
         <Copy size={13} />
       </button>
-      <button type="button" onClick={onBringForward} title="Bring forward" style={button}>
+      <button
+        type="button"
+        onClick={onBringForward}
+        disabled={locked}
+        title="Bring forward"
+        style={{
+          ...button,
+          cursor: locked ? "not-allowed" : "pointer",
+          opacity: locked ? 0.45 : 1,
+        }}
+      >
         <ArrowUp size={13} />
       </button>
-      <button type="button" onClick={onSendBack} title="Send backward" style={button}>
+      <button
+        type="button"
+        onClick={onSendBack}
+        disabled={locked}
+        title="Send backward"
+        style={{
+          ...button,
+          cursor: locked ? "not-allowed" : "pointer",
+          opacity: locked ? 0.45 : 1,
+        }}
+      >
         <ArrowDown size={13} />
       </button>
       <button
         type="button"
+        onClick={onToggleLocked}
+        title={locked ? "Unlock block" : "Lock block"}
+        style={{
+          ...button,
+          color: locked ? "#f6c85f" : C.textDim,
+          background: locked ? C.accentSubtle : C.surface,
+        }}
+      >
+        {locked ? <Lock size={13} /> : <Unlock size={13} />}
+      </button>
+      <button
+        type="button"
         onClick={onDelete}
+        disabled={locked}
         title="Delete block"
-        style={{ ...button, color: "#ff8a8a" }}
+        style={{
+          ...button,
+          color: "#ff8a8a",
+          cursor: locked ? "not-allowed" : "pointer",
+          opacity: locked ? 0.45 : 1,
+        }}
       >
         <Trash2 size={13} />
       </button>

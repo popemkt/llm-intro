@@ -137,10 +137,12 @@ editing, themed presentation playback, and HTML export.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.
-- Users and agents can export a deck as readable Markdown through
-  `export-deck-markdown`. The export includes deck metadata, slide titles,
-  text blocks, image/embed references, shape labels, code-slide identifiers, and
-  speaker notes.
+- Users and agents can export and import readable Markdown through
+  `export-deck-markdown` and `import-deck-markdown`. The export includes deck
+  metadata, slide titles, text blocks, image/embed references, shape labels,
+  code-slide identifiers, and speaker notes. The importer creates typed DB
+  slides from Markdown headings, body text, known theme metadata, and speaker
+  note sections.
 - Presenter mode displays the active slide's speaker notes above the controls
   when notes are present. Fullscreen mode remains audience-only.
 - Presenter mode displays an elapsed timer and compact next-slide preview while

@@ -44,6 +44,7 @@ describe("Agent Native app context actions", () => {
     expectPublicAction(res.body.actions, "export-deck-json", { readOnly: true });
     expectPublicAction(res.body.actions, "import-deck-json", { readOnly: false });
     expectPublicAction(res.body.actions, "export-deck-markdown", { readOnly: true });
+    expectPublicAction(res.body.actions, "import-deck-markdown", { readOnly: false });
   });
 
   it("GET /_agent-native/actions/get-current-app-context reads route state", async () => {
@@ -442,6 +443,14 @@ describe("Agent Native deck export action", () => {
     ]);
     expect(imported.body.skippedCodeSlides).toEqual([]);
   });
+});
+
+describe("Agent Native deck Markdown actions", () => {
+  const { db, app } = createTestContext({ seedSystemPresentation: false });
+
+  beforeEach(() => {
+    db.exec("DELETE FROM slides; DELETE FROM slide_groups; DELETE FROM presentations;");
+  });
 
   it("exports a deck as readable Markdown", async () => {
     const deck = (
@@ -479,6 +488,47 @@ describe("Agent Native deck export action", () => {
     expect(res.body.markdown).toContain("> Status");
     expect(res.body.markdown).toContain("### Speaker Notes");
     expect(res.body.markdown).toContain("Say this out loud.");
+  });
+
+  it("imports readable Markdown as a typed deck", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/import-deck-markdown")
+      .send({
+        markdown: [
+          "# Markdown Import",
+          "",
+          "Theme: `ocean`",
+          "",
+          "## 1. Opening",
+          "",
+          "Hello from markdown.",
+          "",
+          "### Speaker Notes",
+          "",
+          "Read this note.",
+          "",
+          "## 2. Next",
+          "",
+          "- One",
+          "- Two",
+        ].join("\n"),
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.deck).toMatchObject({ name: "Markdown Import", theme: "ocean" });
+    expect(res.body.importedSlideCount).toBe(2);
+    expect(res.body.slides).toEqual([
+      expect.objectContaining({
+        title: "Opening",
+        notes: "Read this note.",
+        blocks: [expect.objectContaining({ markdown: "Hello from markdown." })],
+      }),
+      expect.objectContaining({
+        title: "Next",
+        notes: "",
+        blocks: [expect.objectContaining({ markdown: "- One\n- Two" })],
+      }),
+    ]);
   });
 });
 
@@ -639,6 +689,27 @@ describe("App agent export runtime", () => {
     expect(res.body.text).toContain("Markdown export");
     expect(res.body.text).toContain("1 slide");
     expect(res.body.text).toContain("export-deck-markdown");
+  });
+
+  it("POST /_agent-native/app-agent imports pasted Markdown", async () => {
+    const res = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({
+        prompt: [
+          "Import this Markdown deck",
+          "",
+          "# App Agent Markdown Import",
+          "",
+          "## 1. First",
+          "",
+          "Imported from App Mode.",
+        ].join("\n"),
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.text).toContain("Imported Markdown deck");
+    expect(res.body.text).toContain("App Agent Markdown Import");
+    expect(res.body.text).toContain("1 slide");
   });
 });
 

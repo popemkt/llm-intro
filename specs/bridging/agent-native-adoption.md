@@ -88,7 +88,7 @@ for now. The migration should replace one workflow at a time:
 | navigate the open app | `navigate-app` mutating action that queues a one-shot route command |
 | export HTML | `get-deck-export` read action returns the existing `/api` download URL |
 | export/import typed JSON | `export-deck-json` and `import-deck-json` actions over typed deck, group, and DB slide data |
-| export Markdown | `export-deck-markdown` read action returns readable deck Markdown for agents and users |
+| export/import Markdown | `export-deck-markdown` and `import-deck-markdown` actions over readable deck Markdown |
 | create/list/read/restore snapshots | `create-deck-snapshot`, `list-deck-snapshots`, `get-deck-snapshot`, `restore-deck-snapshot` actions over captured typed deck state |
 
 ## Features To Borrow From The Reference Slides App

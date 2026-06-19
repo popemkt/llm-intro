@@ -330,6 +330,19 @@ function responseTextForMarkdownExport(result: unknown) {
   }. Use export-deck-markdown for the full payload.`;
 }
 
+function responseTextForMarkdownImport(result: unknown) {
+  if (!result || typeof result !== "object") return "Imported the Markdown deck.";
+  const deck =
+    "deck" in result && result.deck && typeof result.deck === "object" ? result.deck : null;
+  const name = deck && "name" in deck ? getText(deck.name) : "";
+  const deckId = deck && "id" in deck ? Number(deck.id) : null;
+  const slideCount = "importedSlideCount" in result ? Number(result.importedSlideCount) : 0;
+  const suffix = deckId ? ` Open deck ${deckId} to review it.` : "";
+  return `Imported Markdown deck${name ? ` "${name}"` : ""} with ${slideCount} slide${
+    slideCount === 1 ? "" : "s"
+  }.${suffix}`;
+}
+
 function formatSnapshotList(result: unknown) {
   if (!Array.isArray(result)) return "I could not read the snapshot list.";
   if (result.length === 0) return "This deck has no snapshots yet.";
@@ -557,6 +570,11 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
   const readResponse = await handleDeckReadPrompt(actions, normalized, deckId);
   if (readResponse) return readResponse;
 
+  if (/\b(import|create|make)\b.*\bmarkdown\b/.test(normalized)) {
+    const result = await runAction(actions["import-deck-markdown"], { markdown: prompt });
+    return responseTextForMarkdownImport(result);
+  }
+
   if (/\b(create|make|generate)\b.*\bdeck\b/.test(normalized)) {
     const slides = outlineSlides(prompt);
     const name = inferDeckName(prompt);
@@ -627,6 +645,7 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
     "- create a bullets slide with a short outline",
     "- export this deck as HTML",
     "- export this deck as JSON",
+    "- export this deck as Markdown",
     "",
     "For repository code changes, switch to CLI mode and use your local Codex or Claude Code login.",
   ].join("\n");

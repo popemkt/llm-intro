@@ -624,7 +624,9 @@ async function handleSlideEditPrompt(
   normalized: string,
   deckId: number,
 ) {
-  const isRename = /\b(rename|retitle|title)\b.*\bslide\b/.test(normalized);
+  const isRename =
+    /\b(rename|retitle)\b.*\bslide\b/.test(normalized) ||
+    /\b(set|change|update)\b.*\bslide\b.*\btitle\b/.test(normalized);
   const isNotes = /\b(add|set|update|change|write)\b.*\b(notes?|speaker notes?)\b/.test(normalized);
   if (!isRename && !isNotes) return null;
 

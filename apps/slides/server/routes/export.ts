@@ -129,6 +129,13 @@ function cleanup(tempDir: string) {
   }
 }
 
+function buildErrorMessage(error: unknown) {
+  if (!error || typeof error !== "object") return "unknown error";
+  const stderr = "stderr" in error ? error.stderr : null;
+  const stdout = "stdout" in error ? error.stdout : null;
+  return stderr?.toString() || stdout?.toString() || "unknown error";
+}
+
 export function createExportHandler(
   presentationsService: PresentationsService,
   slidesService: SlidesService,
@@ -186,9 +193,8 @@ export function createExportHandler(
           stdio: "pipe",
           timeout: 60_000,
         });
-      } catch (buildErr: any) {
-        const msg = buildErr?.stderr?.toString() || buildErr?.stdout?.toString() || "unknown error";
-        throw new Error(`Export build failed: ${msg}`);
+      } catch (buildErr: unknown) {
+        throw new Error(`Export build failed: ${buildErrorMessage(buildErr)}`);
       }
 
       const builtHtmlPath = fs.existsSync(workspace.distHtmlPath)

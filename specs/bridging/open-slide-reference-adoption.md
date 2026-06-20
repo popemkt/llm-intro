@@ -152,7 +152,9 @@ WAAPI should be the default runtime engine for deck-level page transitions becau
 
 First runtime slice:
 
-- `apps/slides/src/lib/slideTransitions.ts` defines the transition data shape, default WAAPI slide transition, and `slide` / `fade` / `scale` / `none` presets.
+- `apps/slides/src/lib/slideTransitions.ts` defines the transition data shape,
+  default WAAPI slide transition, and `slide` / `fade` / `scale` / `cover` /
+  `reveal` / `wipe` / `flip` / `none` presets.
 - `apps/slides/src/components/SlideTransitionStage.tsx` renders outgoing and incoming slide layers and runs enter/exit phases through WAAPI.
 - `PresentationView` and `FullscreenView` now use the shared transition stage instead of duplicated Framer Motion page-swipe variants.
 

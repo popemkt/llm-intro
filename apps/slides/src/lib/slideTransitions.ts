@@ -66,6 +66,70 @@ function scalePreset(): Pick<ResolvedSlideTransition, "enter" | "exit"> {
   };
 }
 
+function coverPreset(direction: number): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  const enterX = direction > 0 ? "100%" : "-100%";
+  return {
+    enter: {
+      keyframes: [
+        { opacity: 1, transform: `translate3d(${enterX}, 0, 0)` },
+        { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      ],
+    },
+    exit: { keyframes: [{ opacity: 1 }, { opacity: 1 }] },
+  };
+}
+
+function revealPreset(direction: number): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  const exitX = direction > 0 ? "-100%" : "100%";
+  return {
+    enter: { keyframes: [{ opacity: 1 }, { opacity: 1 }] },
+    exit: {
+      keyframes: [
+        { opacity: 1, transform: "translate3d(0, 0, 0)" },
+        { opacity: 1, transform: `translate3d(${exitX}, 0, 0)` },
+      ],
+    },
+  };
+}
+
+function wipePreset(direction: number): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  const enterStart = direction > 0 ? "inset(0 100% 0 0)" : "inset(0 0 0 100%)";
+  const exitEnd = direction > 0 ? "inset(0 0 0 100%)" : "inset(0 100% 0 0)";
+  return {
+    enter: {
+      keyframes: [
+        { opacity: 1, clipPath: enterStart },
+        { opacity: 1, clipPath: "inset(0)" },
+      ],
+    },
+    exit: {
+      keyframes: [
+        { opacity: 1, clipPath: "inset(0)" },
+        { opacity: 1, clipPath: exitEnd },
+      ],
+    },
+  };
+}
+
+function flipPreset(direction: number): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  const enterRotation = direction > 0 ? "rotateY(82deg)" : "rotateY(-82deg)";
+  const exitRotation = direction > 0 ? "rotateY(-82deg)" : "rotateY(82deg)";
+  return {
+    enter: {
+      keyframes: [
+        { opacity: 0, transform: `perspective(1400px) ${enterRotation} scale(0.96)` },
+        { opacity: 1, transform: "perspective(1400px) rotateY(0deg) scale(1)" },
+      ],
+    },
+    exit: {
+      keyframes: [
+        { opacity: 1, transform: "perspective(1400px) rotateY(0deg) scale(1)" },
+        { opacity: 0, transform: `perspective(1400px) ${exitRotation} scale(0.96)` },
+      ],
+    },
+  };
+}
+
 function nonePreset(): Pick<ResolvedSlideTransition, "enter" | "exit"> {
   return {
     enter: { keyframes: [{ opacity: 1 }] },
@@ -79,6 +143,10 @@ function resolvePreset(
 ): Pick<ResolvedSlideTransition, "enter" | "exit"> {
   if (name === "fade") return fadePreset();
   if (name === "scale") return scalePreset();
+  if (name === "cover") return coverPreset(direction);
+  if (name === "reveal") return revealPreset(direction);
+  if (name === "wipe") return wipePreset(direction);
+  if (name === "flip") return flipPreset(direction);
   if (name === "none") return nonePreset();
   return slidePreset(direction);
 }

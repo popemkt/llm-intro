@@ -2614,6 +2614,10 @@ const TRANSITION_PRESETS = [
   { value: "slide", label: "Slide" },
   { value: "fade", label: "Fade" },
   { value: "scale", label: "Scale" },
+  { value: "cover", label: "Cover" },
+  { value: "reveal", label: "Reveal" },
+  { value: "wipe", label: "Wipe" },
+  { value: "flip", label: "Flip" },
   { value: "none", label: "None" },
   { value: "custom", label: "Custom" },
 ] as const;

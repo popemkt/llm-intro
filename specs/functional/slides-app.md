@@ -279,10 +279,10 @@ editing, themed presentation playback, and HTML export.
   metadata, and render consistently in editor, overview, presentation,
   fullscreen, snapshots, and export paths.
 - Users and agents can set per-slide transition metadata. The editor exposes
-  slide, fade, scale, none, and default presets with timing controls; actions
-  accept the same transition field for manual, HTML, and code-backed slide
-  metadata, and presentation/fullscreen/export playback uses it through the
-  shared transition stage.
+  slide, fade, scale, cover, reveal, wipe, flip, none, and default presets with
+  timing controls; actions accept the same transition field for manual, HTML,
+  and code-backed slide metadata, and presentation/fullscreen/export playback
+  uses it through the shared transition stage.
 - Users can author custom transition keyframes for editable slides. Custom
   transitions store engine, easing, duration, and JSON enter/exit keyframe
   arrays in the same transition metadata used by agent actions.

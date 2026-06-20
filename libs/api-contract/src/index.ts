@@ -114,7 +114,15 @@ export type Block =
   | ChartBlock;
 
 export type SlideTransitionEngine = "waapi" | "css" | "motion" | "three" | "custom";
-export type SlideTransitionPreset = "slide" | "fade" | "scale" | "none";
+export type SlideTransitionPreset =
+  | "slide"
+  | "fade"
+  | "scale"
+  | "cover"
+  | "reveal"
+  | "wipe"
+  | "flip"
+  | "none";
 
 export type SlideTransitionKeyframe = Record<string, string | number | boolean | null>;
 

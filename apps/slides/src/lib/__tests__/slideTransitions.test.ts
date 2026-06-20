@@ -21,12 +21,32 @@ describe("slideTransitions", () => {
   it("supports non-slide presets", () => {
     const fade = resolveSlideTransition({ name: "fade", duration: 200 }, 1);
     const scale = resolveSlideTransition({ name: "scale", duration: 250 }, 1);
+    const cover = resolveSlideTransition({ name: "cover", duration: 300 }, 1);
+    const reveal = resolveSlideTransition({ name: "reveal", duration: 300 }, -1);
+    const wipe = resolveSlideTransition({ name: "wipe", duration: 300 }, 1);
+    const flip = resolveSlideTransition({ name: "flip", duration: 300 }, -1);
 
     expect(fade.enter.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
     expect(scale.exit.keyframes).toEqual([
       { opacity: 1, transform: "scale(1)" },
       { opacity: 0, transform: "scale(1.025)" },
     ]);
+    expect(cover.enter.keyframes[0]).toMatchObject({
+      opacity: 1,
+      transform: "translate3d(100%, 0, 0)",
+    });
+    expect(reveal.exit.keyframes[1]).toMatchObject({
+      opacity: 1,
+      transform: "translate3d(100%, 0, 0)",
+    });
+    expect(wipe.enter.keyframes).toEqual([
+      { opacity: 1, clipPath: "inset(0 100% 0 0)" },
+      { opacity: 1, clipPath: "inset(0)" },
+    ]);
+    expect(flip.enter.keyframes[0]).toMatchObject({
+      opacity: 0,
+      transform: "perspective(1400px) rotateY(-82deg) scale(0.96)",
+    });
   });
 
   it("keeps custom enter and exit phases over preset phases", () => {

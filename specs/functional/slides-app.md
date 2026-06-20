@@ -214,6 +214,10 @@ editing, themed presentation playback, and HTML export.
   same proportional bounds model when a user corner-resizes a multi-selection.
   It clamps geometry to the
   normalized slide canvas and rejects locked target blocks.
+- Agents can apply named manual block style presets through
+  `apply-manual-block-style-preset`. Presets update reusable appearance fields
+  such as fill, border, radius, shadow, text color, and media fit while
+  preserving content, geometry, grouping, lock state, and block IDs.
 - Agents can snap one or more manual blocks to a configurable percentage grid
   through `snap-manual-blocks-to-grid`, including optional size snapping. The
   action clamps geometry to the normalized slide canvas and rejects locked

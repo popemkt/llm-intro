@@ -62,6 +62,7 @@ framework boundary.
 | Manual block visibility action | `set-manual-block-visibility` updates the shared typed block `hidden` field so agents can suppress blocks without deleting them | Vitest/API |
 | Manual block flip action | `set-manual-block-flip` updates shared `flipX`/`flipY` fields and rejects locked target blocks | Vitest/API |
 | Manual format painter action | `apply-manual-block-format` copies the same common and type-specific appearance fields as `SlideEditorPage` format paste, while preserving target content, geometry, display names, grouping, lock state, and IDs | Vitest/API, typecheck |
+| Manual style preset action | `apply-manual-block-style-preset` applies named reusable patches from `apps/slides/shared/manual-style-presets.ts` to unlocked manual blocks through the same format-painter application helper | Vitest/action, typecheck |
 | Manual preset actions | `create-manual-preset-slide` creates a manual slide from shared preset blocks, while `insert-manual-preset` appends the same preset blocks to an existing manual slide; `shared/manual-presets` seeds semantic `displayName` values so agents and the visual editor use the same reusable layouts | Vitest/API |
 | Create HTML slide | `create-html-slide` action persists `kind: "html"` slides with authored HTML source | Vitest/API plus renderer tests |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |

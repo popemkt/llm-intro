@@ -851,6 +851,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
     "set-manual-block-visibility": createSetManualBlockVisibilityAction(slidesService),
     "set-manual-block-flip": createSetManualBlockFlipAction(slidesService),
+    "apply-manual-block-style-preset": createApplyManualBlockStylePresetAction(slidesService),
     "set-manual-block-animation": createSetManualBlockAnimationAction(slidesService),
     "set-manual-block-link": createSetManualBlockLinkAction(slidesService),
     "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),
@@ -864,3 +865,4 @@ export function createSlideActions(slidesService: SlidesService) {
     "update-deck-layout": createUpdateDeckLayoutAction(slidesService),
   };
 }
+import { createApplyManualBlockStylePresetAction } from "./manual-block-style-presets.js";

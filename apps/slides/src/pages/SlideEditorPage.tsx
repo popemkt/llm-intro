@@ -32,6 +32,7 @@ import {
   Check,
   Maximize2,
   Quote,
+  Scissors,
   StretchHorizontal,
   StretchVertical,
   Ungroup,
@@ -435,6 +436,7 @@ type MultiBlockArrangeAction =
   | "align-bottom"
   | "distribute-horizontal"
   | "distribute-vertical";
+type BlockClipboard = { blocks: Block[] };
 type BlockFormatClipboard = { patch: Partial<Block>; sourceType: Block["type"] };
 type SlideHistorySnapshot = {
   background: ApiSlideBackground | null;
@@ -672,6 +674,7 @@ export function SlideEditorPage() {
   const [theme, setTheme] = useState<ThemeName>("dark-green");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [blockClipboard, setBlockClipboard] = useState<BlockClipboard | null>(null);
   const [formatClipboard, setFormatClipboard] = useState<BlockFormatClipboard | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [activeGuides, setActiveGuides] = useState<ActiveGuide[]>([]);
@@ -685,6 +688,7 @@ export function SlideEditorPage() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const dragHistorySnapshotRef = useRef<SlideHistorySnapshot | null>(null);
+  const pasteOffsetRef = useRef(1);
   const hasLoadedRef = useRef(false);
   const undoStackRef = useRef<SlideHistorySnapshot[]>([]);
   const redoStackRef = useRef<SlideHistorySnapshot[]>([]);
@@ -1392,6 +1396,60 @@ export function SlideEditorPage() {
     [duplicateBlocks],
   );
 
+  const copyBlocksToClipboard = useCallback((ids: string[]) => {
+    const selected = new Set(ids);
+    const copied = blocksRef.current.filter((block) => selected.has(block.id));
+    if (copied.length === 0) return;
+    setBlockClipboard({ blocks: cloneHistoryValue(copied) });
+    pasteOffsetRef.current = 1;
+  }, []);
+
+  const pasteBlocksFromClipboard = useCallback(() => {
+    const sourceBlocks = blockClipboard?.blocks ?? [];
+    if (sourceBlocks.length === 0) return;
+    const offset = pasteOffsetRef.current * 3;
+    const groupIdCopies = new Map<string, string>();
+    const pasted = sourceBlocks.map((source) => {
+      const defaults = BLOCK_DEFAULTS[source.type];
+      const w = source.w ?? defaults.w;
+      const h = source.h ?? defaults.h;
+      const nextGroupId = source.groupId
+        ? (groupIdCopies.get(source.groupId) ?? `group-${nanoid(8)}`)
+        : undefined;
+      if (source.groupId && nextGroupId) groupIdCopies.set(source.groupId, nextGroupId);
+      return {
+        ...source,
+        id: nanoid(),
+        locked: undefined,
+        groupId: nextGroupId,
+        x: clamp((source.x ?? defaults.x) + offset, 0, 100 - w),
+        y: clamp((source.y ?? defaults.y) + offset, 0, 100 - h),
+      } as Block;
+    });
+    recordHistory();
+    pasteOffsetRef.current += 1;
+    setBlocks((prev) => [...prev, ...pasted]);
+    setSelectedIds(pasted.map((block) => block.id));
+    setSelectedId(pasted[pasted.length - 1]?.id ?? null);
+    setEditingTextId(null);
+  }, [blockClipboard, recordHistory]);
+
+  const cutBlocksToClipboard = useCallback(
+    (ids: string[]) => {
+      const selected = new Set(ids);
+      const cut = blocksRef.current.filter((block) => selected.has(block.id) && !block.locked);
+      if (cut.length === 0) return;
+      setBlockClipboard({ blocks: cloneHistoryValue(cut) });
+      pasteOffsetRef.current = 1;
+      recordHistory();
+      setBlocks((prev) => prev.filter((block) => !selected.has(block.id) || block.locked));
+      setSelectedIds((prev) => prev.filter((id) => !cut.some((block) => block.id === id)));
+      setSelectedId(null);
+      setEditingTextId(null);
+    },
+    [recordHistory],
+  );
+
   const nudgeBlocks = useCallback(
     (ids: string[], dx: number, dy: number) => {
       recordHistory();
@@ -1453,6 +1511,27 @@ export function SlideEditorPage() {
         return;
       }
       if (editingField) return;
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+        if (selectedIdsRef.current.length > 0) {
+          e.preventDefault();
+          copyBlocksToClipboard(selectedIdsRef.current);
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
+        if (selectedIdsRef.current.length > 0) {
+          e.preventDefault();
+          cutBlocksToClipboard(selectedIdsRef.current);
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+        if (blockClipboard) {
+          e.preventDefault();
+          pasteBlocksFromClipboard();
+        }
+        return;
+      }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedIdsRef.current.length > 0) {
         e.preventDefault();
         deleteSelectedBlocks(selectedIdsRef.current);
@@ -1484,9 +1563,13 @@ export function SlideEditorPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [
     clearSelection,
+    blockClipboard,
+    copyBlocksToClipboard,
+    cutBlocksToClipboard,
     deleteSelectedBlocks,
     duplicateBlocks,
     nudgeBlocks,
+    pasteBlocksFromClipboard,
     redoSlideEdit,
     saveAndExit,
     undoSlideEdit,
@@ -1649,6 +1732,51 @@ export function SlideEditorPage() {
             }}
           >
             <Redo2 size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => copyBlocksToClipboard(selectedIds)}
+            disabled={selectedIds.length === 0}
+            title="Copy blocks (⌘C)"
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              cursor: selectedIds.length > 0 ? "pointer" : "not-allowed",
+              opacity: selectedIds.length > 0 ? 1 : 0.45,
+            }}
+          >
+            <Copy size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => cutBlocksToClipboard(selectedIds)}
+            disabled={selectedIds.length === 0}
+            title="Cut blocks (⌘X)"
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              cursor: selectedIds.length > 0 ? "pointer" : "not-allowed",
+              opacity: selectedIds.length > 0 ? 1 : 0.45,
+            }}
+          >
+            <Scissors size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={pasteBlocksFromClipboard}
+            disabled={!blockClipboard}
+            title="Paste blocks (⌘V)"
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              cursor: blockClipboard ? "pointer" : "not-allowed",
+              opacity: blockClipboard ? 1 : 0.45,
+            }}
+          >
+            <ClipboardPaste size={14} />
           </button>
           <button
             onClick={() => navigate(`/p/${pid}/settings`)}

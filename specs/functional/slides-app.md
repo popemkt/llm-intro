@@ -264,6 +264,10 @@ editing, themed presentation playback, and HTML export.
 - Users can undo and redo manual slide edits from toolbar controls or keyboard
   shortcuts. The local history covers title, speaker notes, blocks, transition,
   and background metadata while preserving native text-field undo inside inputs.
+- Users can copy, cut, and paste selected manual slide blocks from toolbar
+  controls or keyboard shortcuts. Paste creates fresh block IDs, fresh copied
+  group IDs, and offset placement while preserving the original typed block
+  content and appearance fields.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.

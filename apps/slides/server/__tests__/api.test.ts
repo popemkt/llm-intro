@@ -151,6 +151,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Set manual block visibility",
         }),
         expect.objectContaining({
+          id: "set-manual-block-flip",
+          name: "Set manual block flip",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -821,6 +825,50 @@ describe("Manual slide actions", () => {
     expect(shown.body.blocks[0]).toMatchObject({ id: "one", hidden: false });
   });
 
+  it("manual block flip can be toggled and respects locks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Flip Blocks",
+          blocks: [
+            {
+              id: "shape",
+              type: "shape",
+              shape: "rect",
+              color: "#25d366",
+              x: 10,
+              y: 10,
+              w: 20,
+              h: 20,
+            },
+          ],
+        })
+    ).body;
+
+    const flipped = await request(app)
+      .put("/_agent-native/actions/set-manual-block-flip")
+      .send({ pid, sid: slide.id, blockIds: ["shape"], flipX: true, flipY: true });
+    expect(flipped.status).toBe(200);
+    expect(flipped.body.blocks[0]).toMatchObject({ id: "shape", flipX: true, flipY: true });
+
+    const unflipped = await request(app)
+      .put("/_agent-native/actions/set-manual-block-flip")
+      .send({ pid, sid: slide.id, blockIds: ["shape"], flipX: false });
+    expect(unflipped.status).toBe(200);
+    expect(unflipped.body.blocks[0]).toMatchObject({ id: "shape", flipX: false, flipY: true });
+
+    await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ pid, sid: slide.id, blockIds: ["shape"], locked: true });
+    const rejected = await request(app)
+      .put("/_agent-native/actions/set-manual-block-flip")
+      .send({ pid, sid: slide.id, blockIds: ["shape"], flipY: false });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error).toContain("block is locked");
+  });
+
   it("copies manual block formatting without changing content or geometry", async () => {
     const slide = (
       await request(app)
@@ -839,6 +887,8 @@ describe("Manual slide actions", () => {
               h: 12,
               opacity: 0.7,
               rotation: 3,
+              flipX: true,
+              flipY: true,
               shadow: "0 12px 24px rgba(0,0,0,0.32)",
               fontSize: 38,
               fontFamily: "Georgia, serif",
@@ -897,6 +947,8 @@ describe("Manual slide actions", () => {
       h: 10,
       opacity: 0.7,
       rotation: 3,
+      flipX: true,
+      flipY: true,
       shadow: "0 12px 24px rgba(0,0,0,0.32)",
       fontSize: 38,
       fontFamily: "Georgia, serif",
@@ -913,6 +965,8 @@ describe("Manual slide actions", () => {
       color: "#25d366",
       opacity: 0.7,
       rotation: 3,
+      flipX: true,
+      flipY: true,
       shadow: "0 12px 24px rgba(0,0,0,0.32)",
     });
 

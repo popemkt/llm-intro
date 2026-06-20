@@ -221,6 +221,8 @@ editing, themed presentation playback, and HTML export.
 - Agents can show or hide manual slide blocks through
   `set-manual-block-visibility`. Hidden blocks remain in the editable block
   list for later revision but are omitted from normal presentation rendering.
+- Agents can flip manual slide blocks horizontally or vertically through
+  `set-manual-block-flip`; locked blocks reject flip changes.
 - Agents can copy appearance formatting from one manual block to other blocks
   through `apply-manual-block-format`. The action preserves target content,
   geometry, display names, grouping, lock state, and IDs, while applying common
@@ -286,6 +288,9 @@ editing, themed presentation playback, and HTML export.
   or inspector. Hidden blocks remain selectable from Layers and appear as a
   translucent editor ghost when selected, but do not render in presentation or
   export output.
+- Users can flip selected manual slide blocks horizontally or vertically from
+  the inspector. Flip metadata composes with rotation and persists through
+  presentation, fullscreen, snapshots, export, and format painter.
 - Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
   and neighboring block edges/centers, with visible guide lines during pointer
   interaction. Holding Alt bypasses snapping for fine placement.

@@ -91,7 +91,7 @@ export function DbSlideRenderer({ background, blocks, theme }: Props) {
                   width: `${block.w}%`,
                   height: `${block.h}%`,
                   overflow: "hidden",
-                  transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                  transform: blockTransform(block),
                   opacity: block.opacity,
                   boxShadow: block.shadow,
                 }}
@@ -104,6 +104,15 @@ export function DbSlideRenderer({ background, blocks, theme }: Props) {
             .map((block) => <BlockView key={block.id} block={block} />)}
     </div>
   );
+}
+
+function blockTransform(block: Block) {
+  const parts = [
+    block.flipX ? "scaleX(-1)" : null,
+    block.flipY ? "scaleY(-1)" : null,
+    block.rotation ? `rotate(${block.rotation}deg)` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
 function BlockView({ block, canvas }: { block: Block; canvas?: boolean }) {

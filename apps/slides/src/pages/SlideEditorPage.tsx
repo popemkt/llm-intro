@@ -22,6 +22,8 @@ import {
   Edit3,
   Eye,
   EyeOff,
+  FlipHorizontal,
+  FlipVertical,
   Globe,
   Grid3X3,
   Group,
@@ -611,6 +613,8 @@ function arrangeSelectedBlocks(
 
 function copyBlockFormat(block: Block): BlockFormatClipboard {
   const common: Partial<Block> = {
+    flipX: block.flipX,
+    flipY: block.flipY,
     opacity: block.opacity,
     rotation: block.rotation,
     shadow: block.shadow,
@@ -714,12 +718,23 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
 
 function applyBlockFormat(block: Block, clipboard: BlockFormatClipboard): Block {
   const common = {
+    flipX: clipboard.patch.flipX,
+    flipY: clipboard.patch.flipY,
     opacity: clipboard.patch.opacity,
     rotation: clipboard.patch.rotation,
     shadow: clipboard.patch.shadow,
   };
   if (block.type !== clipboard.sourceType) return { ...block, ...common } as Block;
   return { ...block, ...clipboard.patch } as Block;
+}
+
+function blockTransform(block: Block) {
+  const parts = [
+    block.flipX ? "scaleX(-1)" : null,
+    block.flipY ? "scaleY(-1)" : null,
+    block.rotation ? `rotate(${block.rotation}deg)` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
 function getBlockLayerName(block: Block) {
@@ -2085,7 +2100,7 @@ export function SlideEditorPage() {
                         width: `${w}%`,
                         height: `${h}%`,
                         cursor: "move",
-                        transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                        transform: blockTransform(block),
                         opacity: block.hidden ? 0.22 : block.opacity,
                         boxShadow: block.shadow,
                         outline: isSelected
@@ -3782,33 +3797,8 @@ function CommonAppearanceEditor({
           style={inp}
         />
       </InspectorField>
+      <CommonStateControls block={block} onUpdate={onUpdate} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <button
-          type="button"
-          aria-label={block.locked ? "Unlock block" : "Lock block"}
-          title={block.locked ? "Unlock block" : "Lock block"}
-          onClick={() => onUpdate({ locked: !block.locked } as Partial<Block>)}
-          style={{
-            ...arrangeButton,
-            background: block.locked ? C.accentSubtle : C.bg,
-            color: block.locked ? "#f6c85f" : C.text,
-          }}
-        >
-          {block.locked ? <Lock size={13} /> : <Unlock size={13} />}
-        </button>
-        <button
-          type="button"
-          aria-label={block.hidden ? "Show block" : "Hide block"}
-          title={block.hidden ? "Show block" : "Hide block"}
-          onClick={() => onUpdate({ hidden: !block.hidden } as Partial<Block>)}
-          style={{
-            ...arrangeButton,
-            background: block.hidden ? C.accentSubtle : C.bg,
-            color: block.hidden ? C.accent : C.text,
-          }}
-        >
-          {block.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
-        </button>
         <NumberInput
           label="Rotate"
           min={-360}
@@ -3825,6 +3815,7 @@ function CommonAppearanceEditor({
           onChange={(opacity) => !block.locked && onUpdate({ opacity } as Partial<Block>)}
         />
       </div>
+      <BlockFlipControls block={block} onUpdate={onUpdate} />
       <InspectorField label="Shadow">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4 }}>
           {shadowPresets.map((preset) => (
@@ -3859,6 +3850,88 @@ function CommonAppearanceEditor({
           style={{ ...inp, marginTop: 6, opacity: block.locked ? 0.45 : 1 }}
         />
       </InspectorField>
+    </div>
+  );
+}
+
+function CommonStateControls({
+  block,
+  onUpdate,
+}: {
+  block: Block;
+  onUpdate: (patch: Partial<Block>) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      <button
+        type="button"
+        aria-label={block.locked ? "Unlock block" : "Lock block"}
+        title={block.locked ? "Unlock block" : "Lock block"}
+        onClick={() => onUpdate({ locked: !block.locked } as Partial<Block>)}
+        style={{
+          ...arrangeButton,
+          background: block.locked ? C.accentSubtle : C.bg,
+          color: block.locked ? "#f6c85f" : C.text,
+        }}
+      >
+        {block.locked ? <Lock size={13} /> : <Unlock size={13} />}
+      </button>
+      <button
+        type="button"
+        aria-label={block.hidden ? "Show block" : "Hide block"}
+        title={block.hidden ? "Show block" : "Hide block"}
+        onClick={() => onUpdate({ hidden: !block.hidden } as Partial<Block>)}
+        style={{
+          ...arrangeButton,
+          background: block.hidden ? C.accentSubtle : C.bg,
+          color: block.hidden ? C.accent : C.text,
+        }}
+      >
+        {block.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+      </button>
+    </div>
+  );
+}
+
+function BlockFlipControls({
+  block,
+  onUpdate,
+}: {
+  block: Block;
+  onUpdate: (patch: Partial<Block>) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      <button
+        type="button"
+        aria-label={block.flipX ? "Remove horizontal flip" : "Flip horizontally"}
+        title={block.flipX ? "Remove horizontal flip" : "Flip horizontally"}
+        onClick={() => !block.locked && onUpdate({ flipX: !block.flipX } as Partial<Block>)}
+        disabled={block.locked}
+        style={{
+          ...arrangeButton,
+          background: block.flipX ? C.accentSubtle : C.bg,
+          color: block.flipX ? C.accent : C.text,
+          opacity: block.locked ? 0.45 : 1,
+        }}
+      >
+        <FlipHorizontal size={13} />
+      </button>
+      <button
+        type="button"
+        aria-label={block.flipY ? "Remove vertical flip" : "Flip vertically"}
+        title={block.flipY ? "Remove vertical flip" : "Flip vertically"}
+        onClick={() => !block.locked && onUpdate({ flipY: !block.flipY } as Partial<Block>)}
+        disabled={block.locked}
+        style={{
+          ...arrangeButton,
+          background: block.flipY ? C.accentSubtle : C.bg,
+          color: block.flipY ? C.accent : C.text,
+          opacity: block.locked ? 0.45 : 1,
+        }}
+      >
+        <FlipVertical size={13} />
+      </button>
     </div>
   );
 }

@@ -556,6 +556,42 @@ function createSetManualBlockVisibilityAction(slidesService: SlidesService) {
   });
 }
 
+function createSetManualBlockFlipAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Flip manual slide blocks horizontally or vertically.",
+    schema: z
+      .object({
+        blockIds: z.array(z.string().min(1)).min(1),
+        flipX: z.boolean().optional(),
+        flipY: z.boolean().optional(),
+        pid: z.coerce.number().int().positive(),
+        sid: z.coerce.number().int().positive(),
+      })
+      .refine((input) => input.flipX !== undefined || input.flipY !== undefined, {
+        message: "flipX or flipY is required",
+      }),
+    http: { method: "PUT", path: "set-manual-block-flip" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Set manual block flip",
+      description: "Flip manual slide blocks horizontally or vertically.",
+    },
+    run: ({ pid, sid, blockIds, flipX, flipY }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      assertBlocksUnlocked(slide.blocks, blockIds);
+      const selected = new Set(blockIds);
+      const blocks = slide.blocks.map((block) =>
+        selected.has(block.id)
+          ? ({ ...block, flipX: flipX ?? block.flipX, flipY: flipY ?? block.flipY } as Block)
+          : block,
+      );
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
 function createApplyManualBlockFormatAction(slidesService: SlidesService) {
   return defineAction({
     description:
@@ -763,6 +799,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
     "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
     "set-manual-block-visibility": createSetManualBlockVisibilityAction(slidesService),
+    "set-manual-block-flip": createSetManualBlockFlipAction(slidesService),
     "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),

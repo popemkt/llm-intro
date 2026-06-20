@@ -26,6 +26,8 @@ type BlockPos = {
   rotation?: number;
   opacity?: number;
   shadow?: string;
+  flipX?: boolean;
+  flipY?: boolean;
   hidden?: boolean;
   locked?: boolean;
   groupId?: string;

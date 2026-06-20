@@ -261,6 +261,9 @@ editing, themed presentation playback, and HTML export.
   it onto another selected block. Format paste copies common opacity/rotation
   and matching block-type appearance fields without copying content, geometry,
   group membership, lock state, or IDs.
+- Users can undo and redo manual slide edits from toolbar controls or keyboard
+  shortcuts. The local history covers title, speaker notes, blocks, transition,
+  and background metadata while preserving native text-field undo inside inputs.
 - Users can write speaker notes for each editable slide. Notes are slide
   metadata and persist through the same slide actions, snapshots, and export
   payloads as the rest of the slide model.

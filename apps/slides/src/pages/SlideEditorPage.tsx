@@ -36,6 +36,8 @@ import {
   StretchVertical,
   Ungroup,
   Unlock,
+  Redo2,
+  Undo2,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
@@ -406,6 +408,10 @@ function slideBackgroundStyle(background: ApiSlideBackground | null): React.CSSP
   };
 }
 
+function cloneHistoryValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type EditableSlideKind = "db" | "html";
 type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
@@ -430,6 +436,13 @@ type MultiBlockArrangeAction =
   | "distribute-horizontal"
   | "distribute-vertical";
 type BlockFormatClipboard = { patch: Partial<Block>; sourceType: Block["type"] };
+type SlideHistorySnapshot = {
+  background: ApiSlideBackground | null;
+  blocks: Block[];
+  notes: string;
+  title: string;
+  transition: ApiSlideTransition | null;
+};
 
 type MarkdownFormatResult = {
   value: string;
@@ -666,10 +679,15 @@ export function SlideEditorPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const dragHistorySnapshotRef = useRef<SlideHistorySnapshot | null>(null);
   const hasLoadedRef = useRef(false);
+  const undoStackRef = useRef<SlideHistorySnapshot[]>([]);
+  const redoStackRef = useRef<SlideHistorySnapshot[]>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -732,6 +750,10 @@ export function SlideEditorPage() {
     setLoadError(null);
     setSaveError(null);
     setSaveStatus("idle");
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+    setCanUndo(false);
+    setCanRedo(false);
     hasLoadedRef.current = false;
   }, [pid, sid]);
 
@@ -779,6 +801,10 @@ export function SlideEditorPage() {
     setTransition(slide.transition);
     setBackground(slide.background);
     setTheme(pres.theme);
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+    setCanUndo(false);
+    setCanRedo(false);
     hasLoadedRef.current = true;
     setLoading(false);
   }, [
@@ -892,6 +918,24 @@ export function SlideEditorPage() {
       );
     };
     const onUp = () => {
+      const dragSnapshot = dragHistorySnapshotRef.current;
+      const currentSnapshot: SlideHistorySnapshot = {
+        background: cloneHistoryValue(backgroundRef.current),
+        blocks: cloneHistoryValue(blocksRef.current),
+        notes: notesRef.current,
+        title: titleRef.current,
+        transition: cloneHistoryValue(transitionRef.current),
+      };
+      if (dragSnapshot && JSON.stringify(dragSnapshot) !== JSON.stringify(currentSnapshot)) {
+        const last = undoStackRef.current[undoStackRef.current.length - 1];
+        if (!last || JSON.stringify(last) !== JSON.stringify(dragSnapshot)) {
+          undoStackRef.current = [...undoStackRef.current.slice(-99), dragSnapshot];
+          redoStackRef.current = [];
+          setCanUndo(true);
+          setCanRedo(false);
+        }
+      }
+      dragHistorySnapshotRef.current = null;
       dragRef.current = null;
       setActiveGuides([]);
     };
@@ -962,6 +1006,107 @@ export function SlideEditorPage() {
     }
   }, [pid, sid, navigate, updateSlide]);
 
+  const updateHistoryFlags = useCallback(() => {
+    setCanUndo(undoStackRef.current.length > 0);
+    setCanRedo(redoStackRef.current.length > 0);
+  }, []);
+
+  const currentHistorySnapshot = useCallback(
+    (): SlideHistorySnapshot => ({
+      background: cloneHistoryValue(backgroundRef.current),
+      blocks: cloneHistoryValue(blocksRef.current),
+      notes: notesRef.current,
+      title: titleRef.current,
+      transition: cloneHistoryValue(transitionRef.current),
+    }),
+    [],
+  );
+
+  const applyHistorySnapshot = useCallback((snapshot: SlideHistorySnapshot) => {
+    const nextBackground = cloneHistoryValue(snapshot.background);
+    const nextBlocks = cloneHistoryValue(snapshot.blocks);
+    const nextTransition = cloneHistoryValue(snapshot.transition);
+
+    backgroundRef.current = nextBackground;
+    blocksRef.current = nextBlocks;
+    notesRef.current = snapshot.notes;
+    titleRef.current = snapshot.title;
+    transitionRef.current = nextTransition;
+
+    setBackground(nextBackground);
+    setBlocks(nextBlocks);
+    setNotes(snapshot.notes);
+    setTitle(snapshot.title);
+    setTransition(nextTransition);
+    setEditingTextId(null);
+  }, []);
+
+  const recordHistory = useCallback(() => {
+    if (!hasLoadedRef.current || slideKindRef.current === "html") return;
+    const snapshot = currentHistorySnapshot();
+    const last = undoStackRef.current[undoStackRef.current.length - 1];
+    if (last && JSON.stringify(last) === JSON.stringify(snapshot)) return;
+    undoStackRef.current = [...undoStackRef.current.slice(-99), snapshot];
+    redoStackRef.current = [];
+    updateHistoryFlags();
+  }, [currentHistorySnapshot, updateHistoryFlags]);
+
+  const undoSlideEdit = useCallback(() => {
+    const snapshot = undoStackRef.current.pop();
+    if (!snapshot) return;
+    redoStackRef.current = [...redoStackRef.current, currentHistorySnapshot()];
+    applyHistorySnapshot(snapshot);
+    setSelectedId(null);
+    setSelectedIds([]);
+    updateHistoryFlags();
+  }, [applyHistorySnapshot, currentHistorySnapshot, updateHistoryFlags]);
+
+  const redoSlideEdit = useCallback(() => {
+    const snapshot = redoStackRef.current.pop();
+    if (!snapshot) return;
+    undoStackRef.current = [...undoStackRef.current, currentHistorySnapshot()];
+    applyHistorySnapshot(snapshot);
+    setSelectedId(null);
+    setSelectedIds([]);
+    updateHistoryFlags();
+  }, [applyHistorySnapshot, currentHistorySnapshot, updateHistoryFlags]);
+
+  const updateSlideTitle = useCallback(
+    (value: string) => {
+      recordHistory();
+      titleRef.current = value;
+      setTitle(value);
+    },
+    [recordHistory],
+  );
+
+  const updateSlideNotes = useCallback(
+    (value: string) => {
+      recordHistory();
+      notesRef.current = value;
+      setNotes(value);
+    },
+    [recordHistory],
+  );
+
+  const updateSlideTransition = useCallback(
+    (value: ApiSlideTransition | null) => {
+      recordHistory();
+      transitionRef.current = value;
+      setTransition(value);
+    },
+    [recordHistory],
+  );
+
+  const updateSlideBackground = useCallback(
+    (value: ApiSlideBackground | null) => {
+      recordHistory();
+      backgroundRef.current = value;
+      setBackground(value);
+    },
+    [recordHistory],
+  );
+
   const clearSelection = useCallback(() => {
     setSelectedId(null);
     setSelectedIds([]);
@@ -1031,6 +1176,7 @@ export function SlideEditorPage() {
         origW: entry.w ?? BLOCK_DEFAULTS[entry.type].w,
         origH: entry.h ?? BLOCK_DEFAULTS[entry.type].h,
       }));
+    dragHistorySnapshotRef.current = originals.length > 0 ? currentHistorySnapshot() : null;
     dragRef.current = {
       mode,
       blockId: block.id,
@@ -1041,45 +1187,61 @@ export function SlideEditorPage() {
     setActiveGuides([]);
   };
 
-  const addBlock = useCallback((type: Block["type"]) => {
-    const b = makeBlock(type);
-    setBlocks((prev) => [...prev, b]);
-    setSelectedId(b.id);
-    setSelectedIds([b.id]);
-  }, []);
+  const addBlock = useCallback(
+    (type: Block["type"]) => {
+      recordHistory();
+      const b = makeBlock(type);
+      setBlocks((prev) => [...prev, b]);
+      setSelectedId(b.id);
+      setSelectedIds([b.id]);
+    },
+    [recordHistory],
+  );
 
-  const addBlocks = useCallback((nextBlocks: Block[]) => {
-    setBlocks((prev) => [...prev, ...nextBlocks]);
-    setSelectedId(nextBlocks[0]?.id ?? null);
-    setSelectedIds(nextBlocks.map((block) => block.id));
-  }, []);
+  const addBlocks = useCallback(
+    (nextBlocks: Block[]) => {
+      recordHistory();
+      setBlocks((prev) => [...prev, ...nextBlocks]);
+      setSelectedId(nextBlocks[0]?.id ?? null);
+      setSelectedIds(nextBlocks.map((block) => block.id));
+    },
+    [recordHistory],
+  );
 
-  const insertAssetBlock = useCallback((asset: ApiDeckAsset) => {
-    const block = makeImageBlockFromAsset(asset);
-    setBlocks((prev) => [...prev, block]);
-    setSelectedId(block.id);
-    setSelectedIds([block.id]);
-    setEditingTextId(null);
-  }, []);
+  const insertAssetBlock = useCallback(
+    (asset: ApiDeckAsset) => {
+      recordHistory();
+      const block = makeImageBlockFromAsset(asset);
+      setBlocks((prev) => [...prev, block]);
+      setSelectedId(block.id);
+      setSelectedIds([block.id]);
+      setEditingTextId(null);
+    },
+    [recordHistory],
+  );
 
-  const deleteBlock = useCallback((id: string) => {
-    const block = blocksRef.current.find((entry) => entry.id === id);
-    const idsToDelete = new Set(
-      block?.groupId
-        ? blocksRef.current
-            .filter((entry) => entry.groupId === block.groupId)
-            .filter((entry) => !entry.locked)
-            .map((entry) => entry.id)
-        : block && !block.locked
-          ? [id]
-          : [],
-    );
-    if (idsToDelete.size === 0) return;
-    setBlocks((prev) => prev.filter((b) => !idsToDelete.has(b.id)));
-    setSelectedId((s) => (s && idsToDelete.has(s) ? null : s));
-    setSelectedIds((ids) => ids.filter((entry) => !idsToDelete.has(entry)));
-    setEditingTextId((s) => (s && idsToDelete.has(s) ? null : s));
-  }, []);
+  const deleteBlock = useCallback(
+    (id: string) => {
+      const block = blocksRef.current.find((entry) => entry.id === id);
+      const idsToDelete = new Set(
+        block?.groupId
+          ? blocksRef.current
+              .filter((entry) => entry.groupId === block.groupId)
+              .filter((entry) => !entry.locked)
+              .map((entry) => entry.id)
+          : block && !block.locked
+            ? [id]
+            : [],
+      );
+      if (idsToDelete.size === 0) return;
+      recordHistory();
+      setBlocks((prev) => prev.filter((b) => !idsToDelete.has(b.id)));
+      setSelectedId((s) => (s && idsToDelete.has(s) ? null : s));
+      setSelectedIds((ids) => ids.filter((entry) => !idsToDelete.has(entry)));
+      setEditingTextId((s) => (s && idsToDelete.has(s) ? null : s));
+    },
+    [recordHistory],
+  );
 
   const deleteSelectedBlocks = useCallback(
     (ids: string[]) => {
@@ -1089,6 +1251,7 @@ export function SlideEditorPage() {
           .filter((block) => selected.has(block.id) && block.locked)
           .map((block) => block.id),
       );
+      if (ids.some((id) => !lockedIds.has(id))) recordHistory();
       setBlocks((prev) => prev.filter((block) => !selected.has(block.id) || block.locked));
       if (lockedIds.size > 0) {
         const remaining = ids.filter((id) => lockedIds.has(id));
@@ -1098,12 +1261,16 @@ export function SlideEditorPage() {
         clearSelection();
       }
     },
-    [clearSelection],
+    [clearSelection, recordHistory],
   );
 
-  const updateBlock = useCallback(<K extends Block>(id: string, patch: Partial<K>) => {
-    setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
-  }, []);
+  const updateBlock = useCallback(
+    <K extends Block>(id: string, patch: Partial<K>) => {
+      recordHistory();
+      setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)));
+    },
+    [recordHistory],
+  );
 
   const copySelectedBlockFormat = useCallback((block: Block) => {
     setFormatClipboard(copyBlockFormat(block));
@@ -1111,6 +1278,8 @@ export function SlideEditorPage() {
 
   const pasteSelectedBlockFormat = useCallback(
     (id: string) => {
+      if (!formatClipboard) return;
+      recordHistory();
       setBlocks((prev) =>
         prev.map((block) =>
           block.id === id && !block.locked && formatClipboard
@@ -1119,85 +1288,102 @@ export function SlideEditorPage() {
         ),
       );
     },
-    [formatClipboard],
+    [formatClipboard, recordHistory],
   );
 
   const arrangeSelectedBlock = useCallback(
     (action: BlockArrangeAction) => {
+      recordHistory();
       setBlocks((prev) =>
         prev.map((block) =>
           block.id === selectedId && !block.locked ? arrangeBlock(block, action) : block,
         ),
       );
     },
-    [selectedId],
+    [recordHistory, selectedId],
   );
 
-  const arrangeSelectedGroup = useCallback((action: MultiBlockArrangeAction, ids: string[]) => {
-    setBlocks((prev) => arrangeSelectedBlocks(prev, ids, action));
-  }, []);
+  const arrangeSelectedGroup = useCallback(
+    (action: MultiBlockArrangeAction, ids: string[]) => {
+      recordHistory();
+      setBlocks((prev) => arrangeSelectedBlocks(prev, ids, action));
+    },
+    [recordHistory],
+  );
 
-  const groupSelectedBlocks = useCallback((ids: string[]) => {
-    if (ids.length < 2) return;
-    const nextGroupId = `group-${nanoid(8)}`;
-    setBlocks((prev) =>
-      prev.map((block) =>
-        ids.includes(block.id)
-          ? ({ ...block, groupId: nextGroupId, groupName: "Group" } as Block)
-          : block,
-      ),
-    );
-  }, []);
+  const groupSelectedBlocks = useCallback(
+    (ids: string[]) => {
+      if (ids.length < 2) return;
+      recordHistory();
+      const nextGroupId = `group-${nanoid(8)}`;
+      setBlocks((prev) =>
+        prev.map((block) =>
+          ids.includes(block.id)
+            ? ({ ...block, groupId: nextGroupId, groupName: "Group" } as Block)
+            : block,
+        ),
+      );
+    },
+    [recordHistory],
+  );
 
-  const ungroupSelectedBlocks = useCallback((ids: string[]) => {
-    const selected = new Set(ids);
-    setBlocks((prev) =>
-      prev.map((block) =>
-        selected.has(block.id)
-          ? ({ ...block, groupId: undefined, groupName: undefined } as Block)
-          : block,
-      ),
-    );
-  }, []);
+  const ungroupSelectedBlocks = useCallback(
+    (ids: string[]) => {
+      recordHistory();
+      const selected = new Set(ids);
+      setBlocks((prev) =>
+        prev.map((block) =>
+          selected.has(block.id)
+            ? ({ ...block, groupId: undefined, groupName: undefined } as Block)
+            : block,
+        ),
+      );
+    },
+    [recordHistory],
+  );
 
-  const duplicateBlocks = useCallback((ids: string[]) => {
-    const selected = new Set(ids);
-    const groupIdCopies = new Map<string, string>();
-    const copies = blocksRef.current
-      .filter((block) => selected.has(block.id) && !block.locked)
-      .map((source) => {
-        const nextGroupId = source.groupId
-          ? (groupIdCopies.get(source.groupId) ?? `group-${nanoid(8)}`)
-          : undefined;
-        if (source.groupId && nextGroupId) groupIdCopies.set(source.groupId, nextGroupId);
-        return {
-          sourceId: source.id,
-          copy: {
-            ...source,
-            id: nanoid(),
-            locked: undefined,
-            groupId: nextGroupId,
-            x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
-            y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
-          } as Block,
-        };
+  const duplicateBlocks = useCallback(
+    (ids: string[]) => {
+      const selected = new Set(ids);
+      const groupIdCopies = new Map<string, string>();
+      const copies = blocksRef.current
+        .filter((block) => selected.has(block.id) && !block.locked)
+        .map((source) => {
+          const nextGroupId = source.groupId
+            ? (groupIdCopies.get(source.groupId) ?? `group-${nanoid(8)}`)
+            : undefined;
+          if (source.groupId && nextGroupId) groupIdCopies.set(source.groupId, nextGroupId);
+          return {
+            sourceId: source.id,
+            copy: {
+              ...source,
+              id: nanoid(),
+              locked: undefined,
+              groupId: nextGroupId,
+              x: clamp((source.x ?? BLOCK_DEFAULTS[source.type].x) + 3, 0, 100 - (source.w ?? 20)),
+              y: clamp((source.y ?? BLOCK_DEFAULTS[source.type].y) + 3, 0, 100 - (source.h ?? 20)),
+            } as Block,
+          };
+        });
+      if (copies.length === 0) return;
+      recordHistory();
+      const copiesBySource = new Map(copies.map((entry) => [entry.sourceId, entry.copy]));
+      setBlocks((prev) => {
+        const next: Block[] = [];
+        for (const block of prev) {
+          next.push(block);
+          const copy = copiesBySource.get(block.id);
+          if (copy) next.push(copy);
+        }
+        return next;
       });
-    if (copies.length === 0) return;
-    const copiesBySource = new Map(copies.map((entry) => [entry.sourceId, entry.copy]));
-    setBlocks((prev) => {
-      const next: Block[] = [];
-      for (const block of prev) {
-        next.push(block);
-        const copy = copiesBySource.get(block.id);
-        if (copy) next.push(copy);
-      }
-      return next;
-    });
-    const nextIds = copies.map((entry) => entry.copy.id);
-    setSelectedIds(nextIds);
-    setSelectedId(nextIds[nextIds.length - 1] ?? null);
-    setEditingTextId(null);
-  }, []);
+      const nextIds = copies.map((entry) => entry.copy.id);
+      setSelectedIds(nextIds);
+      setSelectedId(nextIds[nextIds.length - 1] ?? null);
+      setEditingTextId(null);
+    },
+    [recordHistory],
+  );
 
   const duplicateBlock = useCallback(
     (id: string) => {
@@ -1206,36 +1392,44 @@ export function SlideEditorPage() {
     [duplicateBlocks],
   );
 
-  const nudgeBlocks = useCallback((ids: string[], dx: number, dy: number) => {
-    const selected = new Set(ids);
-    setBlocks((prev) =>
-      prev.map((block) => {
-        if (!selected.has(block.id)) return block;
-        if (block.locked) return block;
-        const defaults = BLOCK_DEFAULTS[block.type];
-        const w = block.w ?? defaults.w;
-        const h = block.h ?? defaults.h;
-        return {
-          ...block,
-          x: clamp((block.x ?? defaults.x) + dx, 0, 100 - w),
-          y: clamp((block.y ?? defaults.y) + dy, 0, 100 - h),
-        };
-      }),
-    );
-  }, []);
+  const nudgeBlocks = useCallback(
+    (ids: string[], dx: number, dy: number) => {
+      recordHistory();
+      const selected = new Set(ids);
+      setBlocks((prev) =>
+        prev.map((block) => {
+          if (!selected.has(block.id)) return block;
+          if (block.locked) return block;
+          const defaults = BLOCK_DEFAULTS[block.type];
+          const w = block.w ?? defaults.w;
+          const h = block.h ?? defaults.h;
+          return {
+            ...block,
+            x: clamp((block.x ?? defaults.x) + dx, 0, 100 - w),
+            y: clamp((block.y ?? defaults.y) + dy, 0, 100 - h),
+          };
+        }),
+      );
+    },
+    [recordHistory],
+  );
 
-  const moveBlockLayer = useCallback((id: string, direction: "forward" | "back") => {
-    setBlocks((prev) => {
-      const index = prev.findIndex((block) => block.id === id);
-      if (index < 0) return prev;
-      if (prev[index]?.locked) return prev;
-      const nextIndex = direction === "forward" ? index + 1 : index - 1;
-      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-      return next;
-    });
-  }, []);
+  const moveBlockLayer = useCallback(
+    (id: string, direction: "forward" | "back") => {
+      recordHistory();
+      setBlocks((prev) => {
+        const index = prev.findIndex((block) => block.id === id);
+        if (index < 0) return prev;
+        if (prev[index]?.locked) return prev;
+        const nextIndex = direction === "forward" ? index + 1 : index - 1;
+        if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+        const next = [...prev];
+        [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+        return next;
+      });
+    },
+    [recordHistory],
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1245,6 +1439,17 @@ export function SlideEditorPage() {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         void saveAndExit();
+        return;
+      }
+      if (!editingField && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redoSlideEdit();
+        else undoSlideEdit();
+        return;
+      }
+      if (!editingField && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redoSlideEdit();
         return;
       }
       if (editingField) return;
@@ -1277,7 +1482,15 @@ export function SlideEditorPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clearSelection, deleteSelectedBlocks, duplicateBlocks, nudgeBlocks, saveAndExit]);
+  }, [
+    clearSelection,
+    deleteSelectedBlocks,
+    duplicateBlocks,
+    nudgeBlocks,
+    redoSlideEdit,
+    saveAndExit,
+    undoSlideEdit,
+  ]);
 
   const selectedBlock =
     selectedIds.length === 1 ? (blocks.find((b) => b.id === selectedIds[0]) ?? null) : null;
@@ -1380,7 +1593,7 @@ export function SlideEditorPage() {
         <div style={{ width: 1, height: 20, background: C.border }} />
         <input
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => updateSlideTitle(e.target.value)}
           style={{
             ...inp,
             flex: 1,
@@ -1407,6 +1620,36 @@ export function SlideEditorPage() {
               {saveStatusLabel}
             </span>
           )}
+          <button
+            type="button"
+            onClick={undoSlideEdit}
+            disabled={!canUndo}
+            title="Undo (⌘Z)"
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              cursor: canUndo ? "pointer" : "not-allowed",
+              opacity: canUndo ? 1 : 0.45,
+            }}
+          >
+            <Undo2 size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={redoSlideEdit}
+            disabled={!canRedo}
+            title="Redo (⇧⌘Z)"
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              cursor: canRedo ? "pointer" : "not-allowed",
+              opacity: canRedo ? 1 : 0.45,
+            }}
+          >
+            <Redo2 size={14} />
+          </button>
           <button
             onClick={() => navigate(`/p/${pid}/settings`)}
             style={{
@@ -2090,9 +2333,15 @@ export function SlideEditorPage() {
                   </div>
                 )}
 
-                <SlideBackgroundEditor background={background} onBackground={setBackground} />
+                <SlideBackgroundEditor
+                  background={background}
+                  onBackground={updateSlideBackground}
+                />
 
-                <SlideTransitionEditor transition={transition} onTransition={setTransition} />
+                <SlideTransitionEditor
+                  transition={transition}
+                  onTransition={updateSlideTransition}
+                />
 
                 <div>
                   <div
@@ -2109,7 +2358,7 @@ export function SlideEditorPage() {
                   </div>
                   <textarea
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(e) => updateSlideNotes(e.target.value)}
                     placeholder="Private presenter notes for this slide..."
                     rows={5}
                     style={{

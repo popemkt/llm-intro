@@ -142,6 +142,10 @@ describe("Agent Native A2A exposure", () => {
           id: "create-normal-slides",
           name: "Create normal slides",
         }),
+        expect.objectContaining({
+          id: "duplicate-slide",
+          name: "Duplicate slide",
+        }),
       ]),
     );
   });
@@ -1090,6 +1094,66 @@ describe("Slides API", () => {
       kind: "html",
       html: '<main style="width:100%;height:100%">Hello HTML</main>',
       notes: "HTML note",
+      blocks: [],
+    });
+  });
+
+  it("POST /_agent-native/actions/duplicate-slide copies editable slide content", async () => {
+    const original = await request(app)
+      .post("/_agent-native/actions/create-manual-slide")
+      .send({
+        pid,
+        title: "Original Manual",
+        notes: "Keep notes",
+        background: { fill: "#101412" },
+        transition: { engine: "waapi", name: "fade", duration: 220 },
+        blocks: [
+          {
+            id: "headline",
+            type: "text",
+            markdown: "# Original",
+            displayName: "Headline",
+            x: 10,
+            y: 12,
+            w: 70,
+            h: 20,
+            fontSize: 42,
+          },
+        ],
+      });
+
+    const manualCopy = await request(app)
+      .post("/_agent-native/actions/duplicate-slide")
+      .send({ pid, sid: original.body.id, title: "Manual Copy" });
+
+    expect(manualCopy.status).toBe(200);
+    expect(manualCopy.body).toMatchObject({
+      title: "Manual Copy",
+      kind: "db",
+      notes: "Keep notes",
+      background: { fill: "#101412" },
+      transition: { name: "fade", duration: 220 },
+      blocks: [expect.objectContaining({ id: "headline", displayName: "Headline" })],
+    });
+    expect(manualCopy.body.id).not.toBe(original.body.id);
+
+    const html = await request(app).post("/_agent-native/actions/create-html-slide").send({
+      pid,
+      title: "HTML Original",
+      html: "<main>hello</main>",
+      notes: "HTML notes",
+    });
+
+    const htmlCopy = await request(app)
+      .post("/_agent-native/actions/duplicate-slide")
+      .send({ pid, sid: html.body.id });
+
+    expect(htmlCopy.status).toBe(200);
+    expect(htmlCopy.body).toMatchObject({
+      title: "HTML Original copy",
+      kind: "html",
+      html: "<main>hello</main>",
+      notes: "HTML notes",
       blocks: [],
     });
   });

@@ -27,7 +27,7 @@ editing, themed presentation playback, and HTML export.
 - Users can edit HTML slide source in the browser slide editor with a live
   full-canvas preview and speaker notes.
 - Manual database-backed slides contain editable block data.
-- Users can create, rename, reorder, edit, and delete manual slides.
+- Users can create, duplicate, rename, reorder, edit, and delete manual slides.
 - Reorder operations preserve every slide exactly once.
 
 ## Groups And Overview
@@ -189,6 +189,9 @@ editing, themed presentation playback, and HTML export.
   and closing.
 - Agents can create a sequence of standard DB-backed slides from a structured
   outline through `create-normal-slides`.
+- Agents can duplicate editable manual and HTML slides through
+  `duplicate-slide`, preserving slide content, notes, background, and transition
+  metadata with a fresh slide id.
 - Agents can create fully manual, PowerPoint-style editable slides through
   `create-manual-slide` by providing typed text, image, iframe, shape, line,
   table, and chart blocks with geometry and appearance fields.

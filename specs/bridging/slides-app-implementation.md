@@ -54,6 +54,7 @@ framework boundary.
 |---|---|---|
 | List slides | `list-slides` action, slide service | Vitest API tests |
 | Create slide | `create-slide` action, `PresentationPage` handlers | Vitest/API plus browser flow |
+| Duplicate slide | `duplicate-slide` copies editable manual and HTML slide content through `slidesService.create`, preserving notes/background/transition metadata while assigning a fresh slide id | Vitest/API |
 | Create manual slide | `create-manual-slide` action validates typed editable blocks, including manual appearance fields for text, image, iframe, shape, line, table, and chart blocks | Vitest/API |
 | Fine-grained manual block actions | `add-manual-block`, `update-manual-block`, `delete-manual-block`, `group-manual-blocks`, and `ungroup-manual-blocks` reuse server block validation and `slidesService.update` so agents can safely edit manual slides incrementally | Vitest/API |
 | Manual block layout actions | `arrange-manual-blocks`, `duplicate-manual-blocks`, and `move-manual-block-layer` mirror visual editor alignment, distribution, duplication, and layer ordering behavior for agents | Vitest/API |

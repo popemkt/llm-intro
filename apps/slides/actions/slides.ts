@@ -442,6 +442,50 @@ function createUpdateSlideAction(slidesService: SlidesService) {
   });
 }
 
+function createDuplicateSlideAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Duplicate an editable manual or HTML slide with the same content metadata.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      title: z.string().optional(),
+    }),
+    http: {
+      method: "POST",
+      path: "duplicate-slide",
+    },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Duplicate slide",
+      description: "Duplicate an editable manual or HTML slide with the same content metadata.",
+    },
+    run: ({ pid, sid, title }) => {
+      const source = slidesService.list(pid).find((slide) => slide.id === sid);
+      if (!source) throw new AppError(404, "slide not found");
+      if (source.kind === "code") throw new AppError(403, "code slides cannot be duplicated");
+      const duplicateTitle = title?.trim() || `${source.title} copy`;
+      if (source.kind === "html") {
+        return slidesService.create(pid, {
+          kind: "html",
+          title: duplicateTitle,
+          html: source.html,
+          notes: source.notes,
+          transition: source.transition,
+          background: source.background,
+        });
+      }
+      return slidesService.create(pid, {
+        title: duplicateTitle,
+        blocks: source.blocks.map((block) => ({ ...block })),
+        notes: source.notes,
+        transition: source.transition,
+        background: source.background,
+      });
+    },
+  });
+}
+
 function createDeleteSlideAction(slidesService: SlidesService) {
   return defineAction({
     description: "Delete a database-backed slide.",
@@ -828,6 +872,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "create-normal-slide": createNormalSlideAction(slidesService),
     "create-normal-slides": createNormalSlidesAction(slidesService),
     "update-slide": createUpdateSlideAction(slidesService),
+    "duplicate-slide": createDuplicateSlideAction(slidesService),
     "delete-slide": createDeleteSlideAction(slidesService),
     "add-manual-block": createAddManualBlockAction(slidesService),
     "insert-manual-preset": createInsertManualPresetAction(slidesService),

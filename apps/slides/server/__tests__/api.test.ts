@@ -236,6 +236,7 @@ describe("Manual slide actions", () => {
             groupName: "Hero",
             locked: true,
             fontSize: 42,
+            fontFamily: "Georgia, serif",
             color: "#ffffff",
             background: "#123456",
             align: "center",
@@ -336,6 +337,7 @@ describe("Manual slide actions", () => {
         expect.objectContaining({
           id: "headline",
           fontSize: 42,
+          fontFamily: "Georgia, serif",
           background: "#123456",
           align: "center",
           rotation: -2,

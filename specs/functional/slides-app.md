@@ -257,13 +257,13 @@ editing, themed presentation playback, and HTML export.
   middle, and bottom, and can fit blocks to slide width, height, or both while
   preserving typed percentage geometry.
 - The selected block inspector can edit common appearance, including rotation,
-  opacity, and shadow presets/freeform CSS shadow, plus text appearance, image
-  fitting/radius, and shape border/label styling using the same typed block
-  fields available to agent actions.
+  opacity, and shadow presets/freeform CSS shadow, plus text appearance
+  including font family, image fitting/radius, and shape border/label styling
+  using the same typed block fields available to agent actions.
 - Users can copy appearance formatting from the selected manual block and paste
   it onto another selected block. Format paste copies common opacity/rotation/
-  shadow and matching block-type appearance fields without copying content,
-  geometry, group membership, lock state, or IDs.
+  shadow and matching block-type appearance fields, including text font family,
+  without copying content, geometry, group membership, lock state, or IDs.
 - Users can undo and redo manual slide edits from toolbar controls or keyboard
   shortcuts. The local history covers title, speaker notes, blocks, transition,
   and background metadata while preserving native text-field undo inside inputs.

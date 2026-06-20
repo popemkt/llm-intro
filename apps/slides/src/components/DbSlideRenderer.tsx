@@ -138,6 +138,7 @@ function TextBlockView({
     <div
       style={{
         fontSize: block.fontSize ? `${block.fontSize}px` : "clamp(0.85rem, 1.5vw, 1.05rem)",
+        fontFamily: block.fontFamily,
         lineHeight: 1.7,
         color: block.color ?? "var(--theme-text)",
         background: block.background,

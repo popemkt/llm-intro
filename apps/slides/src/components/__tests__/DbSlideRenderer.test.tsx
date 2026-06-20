@@ -89,6 +89,7 @@ describe("DbSlideRenderer", () => {
         opacity: 0.7,
         shadow: "0 12px 32px rgba(0,0,0,0.35)",
         fontSize: 36,
+        fontFamily: "Georgia, serif",
         color: "#ffffff",
         background: "#123456",
         align: "center",
@@ -162,6 +163,7 @@ describe("DbSlideRenderer", () => {
 
     const text = screen.getByText("Styled text").closest(".prose-block") as HTMLElement;
     expect(text.style.fontSize).toBe("36px");
+    expect(text.style.fontFamily).toBe("Georgia, serif");
     expect(text.style.background).toBe("rgb(18, 52, 86)");
     expect(text.style.textAlign).toBe("center");
 

@@ -570,6 +570,7 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
           align: block.align,
           background: block.background,
           color: block.color,
+          fontFamily: block.fontFamily,
           fontSize: block.fontSize,
           padding: block.padding,
         } as Partial<Block>,
@@ -3541,6 +3542,20 @@ function TextAppearanceEditor({
           onChange={(padding) => onUpdate({ padding })}
         />
       </div>
+      <InspectorField label="Font family">
+        <select
+          value={block.fontFamily ?? ""}
+          onChange={(event) => onUpdate({ fontFamily: event.target.value || undefined })}
+          style={inp}
+        >
+          <option value="">Theme default</option>
+          <option value="Inter, system-ui, sans-serif">Inter</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value='"JetBrains Mono", monospace'>JetBrains Mono</option>
+          <option value='"Times New Roman", serif'>Times New Roman</option>
+          <option value="Arial, Helvetica, sans-serif">Arial</option>
+        </select>
+      </InspectorField>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
         {alignButton("left", <AlignLeft size={14} />)}
         {alignButton("center", <AlignCenter size={14} />)}
@@ -3833,6 +3848,7 @@ function CanvasTextBlock({ block }: { block: Extract<Block, { type: "text" }> })
         overflow: "hidden",
         boxSizing: "border-box",
         fontSize: "clamp(0.6rem, 0.9vw, 0.85rem)",
+        fontFamily: block.fontFamily,
         lineHeight: 1.55,
         color: block.color ?? "var(--theme-text)",
         background: block.background,

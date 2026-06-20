@@ -280,6 +280,7 @@ function validateTextBlock(id: string, value: JsonRecord, position: BlockPositio
     type: "text",
     markdown: value.markdown,
     fontSize: parseBoundedNumber(value.fontSize, "text block fontSize", { min: 8, max: 180 }),
+    fontFamily: parseOptionalBlockStyleString(value.fontFamily, "text block fontFamily"),
     color: parseOptionalColor(value.color, "text block color"),
     background: parseOptionalColor(value.background, "text block background"),
     align: parseTextAlign(value.align),

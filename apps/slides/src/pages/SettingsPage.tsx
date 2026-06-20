@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
-import type { ApiPresentation, ThemeName } from "@/types";
+import type { ApiPresentation, ApiSlideTransition, ThemeName } from "@/types";
 import { THEME_NAMES } from "@/types";
 import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
@@ -23,6 +23,28 @@ const inp: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const transitionPresets = [
+  { value: "default", label: "App default" },
+  { value: "slide", label: "Slide" },
+  { value: "fade", label: "Fade" },
+  { value: "scale", label: "Scale" },
+  { value: "cover", label: "Cover" },
+  { value: "reveal", label: "Reveal" },
+  { value: "wipe", label: "Wipe" },
+  { value: "flip", label: "Flip" },
+  { value: "none", label: "None" },
+] as const;
+
+function makeDeckTransition(name: string, duration: number): ApiSlideTransition | null {
+  if (name === "default") return null;
+  return {
+    engine: "waapi",
+    name,
+    duration: Math.max(0, Math.min(5000, Math.round(duration))),
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+  };
+}
+
 export function SettingsPage() {
   const { id } = useParams<{ id: string }>();
   const pid = Number(id);
@@ -30,6 +52,7 @@ export function SettingsPage() {
 
   const [name, setName] = useState("");
   const [slideTheme, setSlideTheme] = useState<ThemeName>("dark-green");
+  const [defaultTransition, setDefaultTransition] = useState<ApiSlideTransition | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,7 +65,7 @@ export function SettingsPage() {
   );
   const updatePresentation = useActionMutation<
     ApiPresentation,
-    { id: number; name?: string; theme?: ThemeName }
+    { id: number; name?: string; theme?: ThemeName; defaultTransition?: ApiSlideTransition | null }
   >("update-deck", { method: "PUT" });
 
   useEffect(() => {
@@ -66,6 +89,7 @@ export function SettingsPage() {
     if (!presentation) return;
     setName(presentation.name);
     setSlideTheme(presentation.theme);
+    setDefaultTransition(presentation.defaultTransition);
     setLoading(false);
   }, [presentationQuery.data, presentationQuery.error, presentationQuery.isLoading, validPid]);
 
@@ -73,7 +97,12 @@ export function SettingsPage() {
     setSaving(true);
     setError(null);
     try {
-      await updatePresentation.mutateAsync({ id: pid, name, theme: slideTheme });
+      await updatePresentation.mutateAsync({
+        id: pid,
+        name,
+        theme: slideTheme,
+        defaultTransition,
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -320,6 +349,59 @@ export function SettingsPage() {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section>
+          <div style={{ marginBottom: 16 }}>
+            <h2
+              style={{
+                fontSize: 11,
+                fontFamily: "JetBrains Mono, monospace",
+                color: C.muted,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                margin: "0 0 4px 0",
+              }}
+            >
+              Default Transition
+            </h2>
+            <p style={{ fontSize: 12, color: C.textDim, margin: 0 }}>
+              Used by slides that do not set their own transition.
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 10 }}>
+            <select
+              value={defaultTransition?.name ?? "default"}
+              onChange={(event) =>
+                setDefaultTransition(
+                  makeDeckTransition(event.target.value, defaultTransition?.duration ?? 350),
+                )
+              }
+              disabled={loading}
+              style={inp}
+            >
+              {transitionPresets.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={0}
+              max={5000}
+              step={50}
+              aria-label="Default transition duration"
+              disabled={loading || !defaultTransition}
+              value={defaultTransition?.duration ?? 350}
+              onChange={(event) => {
+                const duration = Number(event.target.value);
+                if (!Number.isFinite(duration) || !defaultTransition?.name) return;
+                setDefaultTransition(makeDeckTransition(defaultTransition.name, duration));
+              }}
+              style={{ ...inp, opacity: defaultTransition ? 1 : 0.55 }}
+            />
           </div>
         </section>
 

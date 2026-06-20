@@ -27,6 +27,7 @@ describe("Agent Native action manifest", () => {
       type: "object",
       properties: {
         name: expect.objectContaining({ type: "string" }),
+        defaultTransition: expect.objectContaining({ anyOf: expect.any(Array) }),
       },
     });
     expect(res.body.actions["create-normal-slide"]).toMatchObject({

@@ -28,8 +28,10 @@ export const api = {
     get: (id: number) => callAction<ApiPresentation>("get-deck", { id }, { method: "GET" }),
     create: (name: string, theme: ThemeName = "dark-green") =>
       callAction<ApiPresentation>("create-deck", { name, theme }, { method: "POST" }),
-    update: (id: number, patch: Partial<Pick<ApiPresentation, "name" | "theme">>) =>
-      callAction<ApiPresentation>("update-deck", { id, ...patch }, { method: "PUT" }),
+    update: (
+      id: number,
+      patch: Partial<Pick<ApiPresentation, "name" | "theme" | "defaultTransition">>,
+    ) => callAction<ApiPresentation>("update-deck", { id, ...patch }, { method: "PUT" }),
     delete: async (id: number) => {
       await callAction<null>("delete-deck", { id }, { method: "DELETE" });
     },

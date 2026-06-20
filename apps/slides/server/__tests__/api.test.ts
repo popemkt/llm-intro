@@ -24,7 +24,19 @@ describe("Presentations API", () => {
     expect(res.status).toBe(201);
     expect(res.body.name).toBe("Test");
     expect(res.body.theme).toBe("dark-blue");
+    expect(res.body.defaultTransition).toBeNull();
     expect(res.body.id).toBeDefined();
+  });
+
+  it("POST / accepts a deck default transition", async () => {
+    const res = await request(app)
+      .post("/api/presentations")
+      .send({
+        name: "Transitions",
+        defaultTransition: { engine: "waapi", name: "fade", duration: 250 },
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.defaultTransition).toMatchObject({ name: "fade", duration: 250 });
   });
 
   it("POST / rejects missing name", async () => {
@@ -48,9 +60,14 @@ describe("Presentations API", () => {
     } = await request(app).post("/api/presentations").send({ name: "Old" });
     const res = await request(app)
       .patch(`/api/presentations/${id}`)
-      .send({ name: "New", theme: "neon" });
+      .send({
+        name: "New",
+        theme: "neon",
+        defaultTransition: { engine: "waapi", name: "flip", duration: 450 },
+      });
     expect(res.body.name).toBe("New");
     expect(res.body.theme).toBe("neon");
+    expect(res.body.defaultTransition).toMatchObject({ name: "flip", duration: 450 });
   });
 
   it("DELETE /:id removes a user presentation", async () => {
@@ -71,6 +88,7 @@ describe("Presentations API", () => {
       expect.objectContaining({
         name: "Action Deck",
         theme: "dark-blue",
+        defaultTransition: null,
       }),
     ]);
   });

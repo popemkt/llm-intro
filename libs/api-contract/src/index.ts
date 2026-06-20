@@ -158,6 +158,7 @@ export interface ApiPresentation {
   id: number;
   name: string;
   theme: ThemeName;
+  defaultTransition: ApiSlideTransition | null;
   created_at: string;
   updated_at: string;
 }

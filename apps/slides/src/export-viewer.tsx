@@ -41,6 +41,7 @@ function resolve(
   registry: Record<string, ComponentType<SlideProps>>,
 ): UnifiedSlide {
   const groupId = apiSlide.group_id ?? null;
+  const transition = apiSlide.transition ?? pres.defaultTransition;
   if (apiSlide.kind === "code" && apiSlide.code_id && registry[apiSlide.code_id]) {
     return {
       kind: "code",
@@ -48,7 +49,7 @@ function resolve(
       groupId,
       title: apiSlide.title,
       notes: apiSlide.notes,
-      transition: apiSlide.transition,
+      transition,
       component: registry[apiSlide.code_id],
     };
   }
@@ -59,7 +60,7 @@ function resolve(
       groupId,
       title: apiSlide.title,
       notes: apiSlide.notes,
-      transition: apiSlide.transition,
+      transition,
       html: apiSlide.html,
     };
   }
@@ -70,7 +71,7 @@ function resolve(
     groupId,
     title: apiSlide.title,
     notes: apiSlide.notes,
-    transition: apiSlide.transition,
+    transition,
     blocks: apiSlide.blocks,
     theme: pres.theme,
     background: apiSlide.background,

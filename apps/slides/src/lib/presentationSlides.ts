@@ -1,8 +1,13 @@
 import { codeSlideRegistry } from "@/slides/registry";
 import type { ApiPresentation, ApiSlide, UnifiedSlide } from "@/types";
 
-export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"]): UnifiedSlide {
+export function toUnifiedSlide(
+  slide: ApiSlide,
+  theme: ApiPresentation["theme"],
+  defaultTransition: ApiPresentation["defaultTransition"] = null,
+): UnifiedSlide {
   const groupId = slide.group_id ?? null;
+  const transition = slide.transition ?? defaultTransition;
   if (slide.kind === "code") {
     const component = codeSlideRegistry[slide.code_id ?? ""];
     if (!component) {
@@ -13,7 +18,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
         groupId,
         title: slide.title,
         notes: slide.notes,
-        transition: slide.transition,
+        transition,
         blocks: [],
         theme,
         background: slide.background,
@@ -25,7 +30,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
       groupId,
       title: slide.title,
       notes: slide.notes,
-      transition: slide.transition,
+      transition,
       component,
     };
   }
@@ -36,7 +41,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
       groupId,
       title: slide.title,
       notes: slide.notes,
-      transition: slide.transition,
+      transition,
       html: slide.html,
     };
   }
@@ -46,7 +51,7 @@ export function toUnifiedSlide(slide: ApiSlide, theme: ApiPresentation["theme"])
     groupId,
     title: slide.title,
     notes: slide.notes,
-    transition: slide.transition,
+    transition,
     blocks: slide.blocks,
     theme,
     background: slide.background,

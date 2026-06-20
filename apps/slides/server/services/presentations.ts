@@ -1,4 +1,4 @@
-import type { ThemeName } from "@llm-intro/api-contract";
+import type { ApiSlideTransition, ThemeName } from "@llm-intro/api-contract";
 import { AppError } from "../errors.js";
 import type { createPresentationsRepository } from "../repositories/presentations.js";
 
@@ -16,16 +16,27 @@ export function createPresentationsService(presentationsRepo: PresentationsRepos
       return presentation;
     },
 
-    create(input: { name: string; theme: ThemeName }) {
+    create(input: {
+      name: string;
+      theme: ThemeName;
+      defaultTransition?: ApiSlideTransition | null;
+    }) {
       return presentationsRepo.create(input);
     },
 
-    update(id: number, patch: { name?: string; theme?: ThemeName }) {
+    update(
+      id: number,
+      patch: { name?: string; theme?: ThemeName; defaultTransition?: ApiSlideTransition | null },
+    ) {
       const current = this.get(id);
 
       return presentationsRepo.update(id, {
         name: patch.name ?? current.name,
         theme: patch.theme ?? current.theme,
+        defaultTransition:
+          patch.defaultTransition === undefined
+            ? current.defaultTransition
+            : patch.defaultTransition,
       });
     },
 

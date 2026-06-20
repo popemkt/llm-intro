@@ -73,6 +73,7 @@ framework boundary.
 | Code slide rendering | `apps/slides/src/slides/registry.ts` and `SlideShell` | build, visual inspection when changed |
 | HTML slide rendering/editing | `HtmlSlideRenderer` renders `kind: "html"` slides in a sandboxed full-canvas iframe, reused by presentation, fullscreen, overview, export viewer, and the HTML source editor branch in `SlideEditorPage` | Vitest renderer tests, build, browser smoke |
 | Per-slide transitions | `slides.transition_json`, `ApiSlide.transition`, `update-slide` action, `SlideTransitionEditor` preset/custom keyframe controls, server transition validation, and `SlideTransitionStage` in presentation/fullscreen/export paths | Vitest/API, typed JSON round-trip, browser smoke |
+| Deck default transitions | `presentations.default_transition_json`, `ApiPresentation.defaultTransition`, `create-deck`/`update-deck` actions, `SettingsPage`, and `toUnifiedSlide` inheritance for presentation/fullscreen/audience/export playback | Vitest/API, typecheck |
 
 ## Groups
 

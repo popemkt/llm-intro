@@ -29,7 +29,11 @@ export function AudienceDisplayPage() {
     const presentation = presentationQuery.data;
     const apiSlides = slidesQuery.data as ApiSlide[] | undefined;
     if (!presentation || !apiSlides) return;
-    setSlides(apiSlides.map((slide) => toUnifiedSlide(slide, presentation.theme)));
+    setSlides(
+      apiSlides.map((slide) =>
+        toUnifiedSlide(slide, presentation.theme, presentation.defaultTransition),
+      ),
+    );
     const synced = readPresenterSyncState(presentation.id, apiSlides.length);
     setActiveIndex(synced?.activeIndex ?? 0);
   }, [presentationQuery.data, slidesQuery.data]);

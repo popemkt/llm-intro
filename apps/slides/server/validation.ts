@@ -556,6 +556,7 @@ export function parsePresentationCreate(input: unknown) {
   return {
     name: parseNonEmptyString(body.name, "name"),
     theme: parseTheme(body.theme) ?? "dark-green",
+    defaultTransition: parseTransition(body.defaultTransition) ?? null,
   };
 }
 
@@ -564,9 +565,14 @@ export function parsePresentationPatch(input: unknown) {
   const patch = {
     name: parseOptionalTrimmedString(body.name, "name"),
     theme: parseTheme(body.theme),
+    defaultTransition: parseTransition(body.defaultTransition),
   };
 
-  if (patch.name === undefined && patch.theme === undefined) {
+  if (
+    patch.name === undefined &&
+    patch.theme === undefined &&
+    patch.defaultTransition === undefined
+  ) {
     throw new AppError(400, "at least one field is required");
   }
 

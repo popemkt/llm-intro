@@ -167,10 +167,11 @@ Persistence and product controls slice:
 - `SlideEditorPage` exposes preset and duration controls for editable manual
   and HTML slides.
 - Typed JSON export/import and deck snapshots preserve slide transition data.
+- Decks can store a default transition that slides inherit when they do not
+  define their own transition.
 
 Still future work:
 
-- per-deck default transition choices;
 - richer custom transition authoring UI beyond preset/timing fields;
 - implement non-WAAPI engines, including a `three` overlay path for 3D transitions.
 

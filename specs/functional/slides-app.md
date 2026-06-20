@@ -284,6 +284,9 @@ editing, themed presentation playback, and HTML export.
   timing controls; actions accept the same transition field for manual, HTML,
   and code-backed slide metadata, and presentation/fullscreen/export playback
   uses it through the shared transition stage.
+- Users and agents can set a deck default transition from deck settings or deck
+  actions. Slides without their own transition inherit that deck default in
+  presentation, fullscreen, audience display, and exported playback.
 - Users can author custom transition keyframes for editable slides. Custom
   transitions store engine, easing, duration, and JSON enter/exit keyframe
   arrays in the same transition metadata used by agent actions.

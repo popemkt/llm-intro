@@ -72,7 +72,7 @@ export function PresentationPage() {
   });
 
   const hydrateSlides = useCallback((apiSlides: ApiSlide[], pres: ApiPresentation) => {
-    setSlides(apiSlides.map((slide) => toUnifiedSlide(slide, pres.theme)));
+    setSlides(apiSlides.map((slide) => toUnifiedSlide(slide, pres.theme, pres.defaultTransition)));
   }, []);
 
   useEffect(() => {
@@ -127,7 +127,10 @@ export function PresentationPage() {
     if (!presentation) return;
     try {
       const slide = await createSlide.mutateAsync({ pid: presentation.id });
-      setSlides((prev) => [...prev, toUnifiedSlide(slide, presentation.theme)]);
+      setSlides((prev) => [
+        ...prev,
+        toUnifiedSlide(slide, presentation.theme, presentation.defaultTransition),
+      ]);
     } catch (err) {
       showNotice(getErrorMessage(err));
     }
@@ -142,7 +145,10 @@ export function PresentationPage() {
           layout,
           title: normalSlideTitles[layout],
         });
-        setSlides((prev) => [...prev, toUnifiedSlide(slide, presentation.theme)]);
+        setSlides((prev) => [
+          ...prev,
+          toUnifiedSlide(slide, presentation.theme, presentation.defaultTransition),
+        ]);
       } catch (err) {
         showNotice(getErrorMessage(err));
       }
@@ -198,7 +204,7 @@ export function PresentationPage() {
       try {
         const slide = await createSlide.mutateAsync({ pid: presentation.id });
         // New slide is created in ungrouped; move it into the target group.
-        const unified = toUnifiedSlide(slide, presentation.theme);
+        const unified = toUnifiedSlide(slide, presentation.theme, presentation.defaultTransition);
         const nextSlides = [...slides, unified];
         setSlides(nextSlides);
         const layout: LayoutInput = {
@@ -297,7 +303,9 @@ export function PresentationPage() {
         });
         setSlides((prev) =>
           prev.map((slide) =>
-            slide.id === slideId ? toUnifiedSlide(updatedSlide, presentation.theme) : slide,
+            slide.id === slideId
+              ? toUnifiedSlide(updatedSlide, presentation.theme, presentation.defaultTransition)
+              : slide,
           ),
         );
       } catch (err) {

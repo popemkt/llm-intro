@@ -31,6 +31,7 @@ const importDeckSchema = z.object({
   deck: z.object({
     name: z.string().optional(),
     theme: portableThemeSchema.optional(),
+    defaultTransition: transitionInput.optional(),
   }),
   groups: z
     .array(
@@ -77,7 +78,7 @@ function exportDeckJson(services: DeckJsonServices, id: number) {
   const slides = services.slidesService.list(id);
   return {
     version: 1,
-    deck: { name: deck.name, theme: deck.theme },
+    deck: { name: deck.name, theme: deck.theme, defaultTransition: deck.defaultTransition },
     groups: groups.map((group) => ({
       id: group.id,
       title: group.title,
@@ -150,6 +151,7 @@ function importDeckJson(services: DeckJsonServices, input: unknown) {
   const deck = services.presentationsService.create({
     name: source.name?.trim() || source.deck.name?.trim() || "Imported deck",
     theme: source.deck.theme ?? "dark-green",
+    defaultTransition: source.deck.defaultTransition as ApiSlideTransition | null | undefined,
   });
   const { groupIdMap, groups } = importDeckGroups(services, deck.id, source);
   const { importedSlides, skippedCodeSlides } = importDeckSlides(services, deck.id, source);

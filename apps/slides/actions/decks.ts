@@ -86,6 +86,7 @@ export function createDeckActions(presentationsService: PresentationsService) {
       schema: z.object({
         name: z.string(),
         theme: z.string().optional(),
+        defaultTransition: z.record(z.string(), z.unknown()).nullable().optional(),
       }),
       http: {
         method: "POST",
@@ -101,11 +102,12 @@ export function createDeckActions(presentationsService: PresentationsService) {
     }),
 
     "update-deck": defineAction({
-      description: "Update a presentation deck name or theme.",
+      description: "Update a presentation deck name, theme, or default slide transition.",
       schema: z.object({
         id: z.coerce.number().int().positive(),
         name: z.string().optional(),
         theme: z.string().optional(),
+        defaultTransition: z.record(z.string(), z.unknown()).nullable().optional(),
       }),
       http: {
         method: "PUT",
@@ -115,7 +117,7 @@ export function createDeckActions(presentationsService: PresentationsService) {
       publicAgent: {
         ...publicWriteAction,
         title: "Update deck",
-        description: "Update a presentation deck name or theme.",
+        description: "Update a presentation deck name, theme, or default slide transition.",
       },
       run: ({ id, ...patch }) => presentationsService.update(id, parsePresentationPatch(patch)),
     }),

@@ -312,7 +312,8 @@ editing, themed presentation playback, and HTML export.
   clickable in presentation, fullscreen, and exported playback.
 - Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
   and neighboring block edges/centers, with visible guide lines during pointer
-  interaction. Holding Alt bypasses snapping for fine placement.
+  interaction. Holding Alt bypasses snapping for fine placement, while holding
+  Shift during corner resize preserves the block's current aspect ratio.
 - Users can enable a visible manual editor grid with configurable percentage
   spacing. When enabled, dragging and resizing blocks snaps to grid lines in
   addition to slide and block guides.

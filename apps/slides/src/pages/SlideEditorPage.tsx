@@ -235,6 +235,48 @@ function resizeRectForDrag(
   }
 }
 
+function constrainResizeRectAspect(
+  original: DragState["originals"][number],
+  mode: DragMode,
+  rect: RectPercent,
+): RectPercent {
+  if (mode === "move") return rect;
+  const ratio = original.origW / original.origH;
+  if (!Number.isFinite(ratio) || ratio <= 0) return rect;
+  const right = original.origX + original.origW;
+  const bottom = original.origY + original.origH;
+  const maxW = mode === "resize-bl" || mode === "resize-tl" ? right : 100 - original.origX;
+  const maxH = mode === "resize-tr" || mode === "resize-tl" ? bottom : 100 - original.origY;
+  const widthChange = Math.abs(rect.w - original.origW) / original.origW;
+  const heightChange = Math.abs(rect.h - original.origH) / original.origH;
+  let w: number;
+  let h: number;
+
+  if (widthChange >= heightChange) {
+    w = clamp(rect.w, 5, maxW);
+    h = w / ratio;
+    if (h > maxH) {
+      h = maxH;
+      w = h * ratio;
+    }
+  } else {
+    h = clamp(rect.h, 5, maxH);
+    w = h * ratio;
+    if (w > maxW) {
+      w = maxW;
+      h = w / ratio;
+    }
+  }
+
+  w = clamp(w, 5, maxW);
+  h = clamp(h, 5, maxH);
+
+  if (mode === "resize-br") return { x: original.origX, y: original.origY, w, h };
+  if (mode === "resize-bl") return { x: right - w, y: original.origY, w, h };
+  if (mode === "resize-tr") return { x: original.origX, y: bottom - h, w, h };
+  return { x: right - w, y: bottom - h, w, h };
+}
+
 function closestGuide(point: number, targets: number[], axis: GuideAxis): ActiveGuide | null {
   let best: { distance: number; guide: ActiveGuide } | null = null;
   for (const target of targets) {
@@ -291,6 +333,37 @@ function snapResizeRect(
   }
 
   return { rect: next, guides };
+}
+
+function applyDragToBlock(
+  block: Block,
+  context: {
+    drag: DragState;
+    dx: number;
+    dy: number;
+    moveDelta: { x: number; y: number };
+    resizeRect: RectPercent | null;
+  },
+): Block {
+  const { drag, dx, dy, moveDelta, resizeRect } = context;
+  const original = drag.originals.find((entry) => entry.id === block.id);
+  if (!original) return block;
+  if (drag.mode === "move") {
+    return {
+      ...block,
+      x: clamp(original.origX + moveDelta.x, 0, 100 - original.origW),
+      y: clamp(original.origY + moveDelta.y, 0, 100 - original.origH),
+    };
+  }
+  if (block.id !== drag.blockId) return block;
+  const nextRect = resizeRect ?? resizeRectForDrag(original, drag.mode, dx, dy);
+  return {
+    ...block,
+    x: nextRect.x,
+    y: nextRect.y,
+    w: nextRect.w,
+    h: nextRect.h,
+  };
 }
 
 const BLOCK_DEFAULTS: Record<Block["type"], { x: number; y: number; w: number; h: number }> = {
@@ -971,76 +1044,35 @@ export function SlideEditorPage() {
         guides = snapped.guides;
       }
 
-      if (snapEnabled && drag.mode !== "move") {
+      if (drag.mode !== "move") {
         const original = drag.originals.find((entry) => entry.id === drag.blockId);
         if (original) {
           const rawRect = resizeRectForDrag(original, drag.mode, dx, dy);
-          const snapped = snapResizeRect(
-            rawRect,
-            drag.mode,
-            currentBlocks,
-            draggedIds,
-            activeGridStep,
-          );
-          resizeRect = snapped.rect;
-          guides = snapped.guides;
+          const constrainedRect = e.shiftKey
+            ? constrainResizeRectAspect(original, drag.mode, rawRect)
+            : rawRect;
+          if (snapEnabled) {
+            const snapped = snapResizeRect(
+              constrainedRect,
+              drag.mode,
+              currentBlocks,
+              draggedIds,
+              activeGridStep,
+            );
+            resizeRect = e.shiftKey
+              ? constrainResizeRectAspect(original, drag.mode, snapped.rect)
+              : snapped.rect;
+            guides = snapped.guides;
+          } else {
+            resizeRect = constrainedRect;
+          }
         }
       }
 
       setActiveGuides(guides);
 
       setBlocks((prev) =>
-        prev.map((b) => {
-          const original = drag.originals.find((entry) => entry.id === b.id);
-          if (!original) return b;
-          const bw = original.origW;
-          const bh = original.origH;
-          switch (drag.mode) {
-            case "move":
-              return {
-                ...b,
-                x: clamp(original.origX + moveDelta.x, 0, 100 - bw),
-                y: clamp(original.origY + moveDelta.y, 0, 100 - bh),
-              };
-            case "resize-br":
-              if (b.id !== drag.blockId) return b;
-              if (resizeRect) return { ...b, w: resizeRect.w, h: resizeRect.h };
-              return {
-                ...b,
-                w: Math.max(5, original.origW + dx),
-                h: Math.max(5, original.origH + dy),
-              };
-            case "resize-bl":
-              if (b.id !== drag.blockId) return b;
-              if (resizeRect) return { ...b, x: resizeRect.x, w: resizeRect.w, h: resizeRect.h };
-              return {
-                ...b,
-                x: clamp(original.origX + dx, 0, original.origX + original.origW - 5),
-                w: Math.max(5, original.origW - dx),
-                h: Math.max(5, original.origH + dy),
-              };
-            case "resize-tr":
-              if (b.id !== drag.blockId) return b;
-              if (resizeRect) return { ...b, y: resizeRect.y, w: resizeRect.w, h: resizeRect.h };
-              return {
-                ...b,
-                y: clamp(original.origY + dy, 0, original.origY + original.origH - 5),
-                w: Math.max(5, original.origW + dx),
-                h: Math.max(5, original.origH - dy),
-              };
-            case "resize-tl":
-              if (b.id !== drag.blockId) return b;
-              if (resizeRect)
-                return { ...b, x: resizeRect.x, y: resizeRect.y, w: resizeRect.w, h: resizeRect.h };
-              return {
-                ...b,
-                x: clamp(original.origX + dx, 0, original.origX + original.origW - 5),
-                y: clamp(original.origY + dy, 0, original.origY + original.origH - 5),
-                w: Math.max(5, original.origW - dx),
-                h: Math.max(5, original.origH - dy),
-              };
-          }
-        }),
+        prev.map((block) => applyDragToBlock(block, { drag, dx, dy, moveDelta, resizeRect })),
       );
     };
     const onUp = () => {

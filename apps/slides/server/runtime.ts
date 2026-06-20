@@ -53,6 +53,7 @@ export function buildRuntime(
       presentationsService,
       slidesService,
       groupsService,
+      assetsService,
       actions,
       agentTerminalBridge,
       localModelProvider,

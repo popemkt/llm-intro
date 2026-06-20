@@ -188,7 +188,7 @@ function ImageBlockView({
         ...(canvas ? { width: "100%", height: "100%" } : {}),
       }}
     >
-      <img src={block.url} alt={block.alt ?? ""} style={imgStyle} />
+      <img src={block.url || ""} alt={block.alt ?? ""} style={imgStyle} />
     </div>
   );
 }

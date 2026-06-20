@@ -17,12 +17,18 @@ describe("DbSlideRenderer", () => {
 
   it("renders image block", () => {
     const blocks: Block[] = [
-      { id: "1", type: "image", url: "https://example.com/img.png", alt: "test image" },
+      {
+        id: "1",
+        type: "image",
+        url: "/api/presentations/1/assets/2/content",
+        assetId: 2,
+        alt: "test image",
+      },
     ];
     render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
     const img = screen.getByAltText("test image") as HTMLImageElement;
     expect(img).toBeInTheDocument();
-    expect(img.src).toBe("https://example.com/img.png");
+    expect(img.getAttribute("src")).toBe("/api/presentations/1/assets/2/content");
   });
 
   it("renders iframe block", () => {

@@ -88,6 +88,14 @@ function parseShapeDimension(value: unknown, field: string) {
   return value;
 }
 
+function parsePositiveInteger(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    throw new AppError(400, `${field} must be a positive integer`);
+  }
+  return value;
+}
+
 function parseOptionalColor(value: unknown, field: string) {
   if (value === undefined) return undefined;
   if (typeof value !== "string" || !value.trim()) {
@@ -291,6 +299,7 @@ function validateImageBlock(id: string, value: JsonRecord, position: BlockPositi
     id,
     type: "image",
     url: value.url,
+    assetId: parsePositiveInteger(value.assetId, "image block assetId"),
     alt: value.alt,
     objectFit: parseObjectFit(value.objectFit),
     borderRadius: parseBoundedNumber(value.borderRadius, "image block borderRadius", {

@@ -3,13 +3,16 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { ApiSlide, Block } from "@llm-intro/api-contract";
 import type { createPresentationsService } from "../services/presentations.js";
 import type { createSlidesService } from "../services/slides.js";
 import type { createGroupsService } from "../services/groups.js";
+import type { createAssetsService } from "../services/assets.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
 type GroupsService = ReturnType<typeof createGroupsService>;
+type AssetsService = ReturnType<typeof createAssetsService>;
 type ExportMode = "player" | "deck";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -129,6 +132,34 @@ function cleanup(tempDir: string) {
   }
 }
 
+function assetDataUrl(mimeType: string, content: string) {
+  if (mimeType === "image/svg+xml") {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(content)}`;
+  }
+  return `data:${mimeType};base64,${Buffer.from(content).toString("base64")}`;
+}
+
+function resolveAssetImageBlocks(
+  presentationId: number,
+  slides: ApiSlide[],
+  assetsService: AssetsService,
+): ApiSlide[] {
+  return slides.map((slide) => {
+    if (slide.kind !== "db") return slide;
+
+    let changed = false;
+    const blocks = slide.blocks.map((block): Block => {
+      if (block.type !== "image" || !block.assetId) return block;
+
+      const asset = assetsService.get(presentationId, block.assetId);
+      changed = true;
+      return { ...block, url: assetDataUrl(asset.mime_type, asset.content) };
+    });
+
+    return changed ? { ...slide, blocks } : slide;
+  });
+}
+
 function buildErrorMessage(error: unknown) {
   if (!error || typeof error !== "object") return "unknown error";
   const stderr = "stderr" in error ? error.stderr : null;
@@ -140,6 +171,7 @@ export function createExportHandler(
   presentationsService: PresentationsService,
   slidesService: SlidesService,
   groupsService: GroupsService,
+  assetsService: AssetsService,
 ): express.RequestHandler {
   return async (req, res, next) => {
     const pid = Number(req.params.pid);
@@ -159,6 +191,7 @@ export function createExportHandler(
         );
         groups = groups.filter((g) => retainedGroupIds.has(g.id));
       }
+      slides = resolveAssetImageBlocks(pid, slides, assetsService);
       const codeIds = slides
         .filter((s) => s.kind === "code" && s.code_id)
         .map((s) => s.code_id as string);

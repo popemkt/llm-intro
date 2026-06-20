@@ -17,17 +17,20 @@ import type { SlideDeckActions } from "../actions/index.js";
 import type { createPresentationsService } from "./services/presentations.js";
 import type { createSlidesService } from "./services/slides.js";
 import type { createGroupsService } from "./services/groups.js";
+import type { createAssetsService } from "./services/assets.js";
 import type { AgentTerminalBridge } from "./agent-terminal.js";
 import type { LocalDeckModelProvider } from "./local-model-provider.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
 type GroupsService = ReturnType<typeof createGroupsService>;
+type AssetsService = ReturnType<typeof createAssetsService>;
 
 export function createApp(services: {
   presentationsService: PresentationsService;
   slidesService: SlidesService;
   groupsService: GroupsService;
+  assetsService: AssetsService;
   actions: SlideDeckActions;
   agentTerminalBridge?: AgentTerminalBridge;
   localModelProvider?: LocalDeckModelProvider;
@@ -54,10 +57,21 @@ export function createApp(services: {
     services.presentationsService,
     services.slidesService,
     services.groupsService,
+    services.assetsService,
   );
   app.post("/_agent-native/export/presentations/:pid", exportHandler);
   app.post("/api/presentations/:pid/export", exportHandler);
   app.use("/api/presentations", createPresentationsRouter(services.presentationsService));
+  app.get("/api/presentations/:pid/assets/:assetId/content", (req, res, next) => {
+    try {
+      const asset = services.assetsService.get(Number(req.params.pid), Number(req.params.assetId));
+      res.setHeader("Content-Type", asset.mime_type);
+      res.setHeader("Cache-Control", "private, max-age=300");
+      res.send(asset.content);
+    } catch (err) {
+      next(err);
+    }
+  });
   app.use("/api/presentations/:pid/slides", createSlidesRouter(services.slidesService));
   app.use("/api/presentations/:pid/groups", createGroupsRouter(services.groupsService));
 

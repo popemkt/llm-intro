@@ -130,14 +130,12 @@ framework boundary.
 | Import asset | `import-deck-asset` stores inline or fetched SVG content with source/license/usage metadata |
 | List assets | `list-deck-assets` returns metadata by default and accepts `includeContent=true` for editor insertion flows |
 | Manage assets | `update-deck-asset-metadata` and `delete-deck-asset` actions |
-| Editor insertion | `DeckAssetPanel` in `SlideEditorPage` converts imported SVG content into a local `data:image/svg+xml` image block |
+| Editor insertion | `DeckAssetPanel` in `SlideEditorPage` inserts imported assets as image blocks with `assetId` plus the deck asset content URL |
 | Agent resources | Framework resource routes expose deck assets as `slides://deck/:deckId/asset/:assetId` |
 
-The current manual slide block contract stores image references as URLs. The
-first visible asset workflow therefore inserts SVG assets as local data URLs so
-presenter, fullscreen, and HTML export can render without remote hotlinks. A
-later contract slice should add explicit `assetId` references to image blocks,
-then have render/export paths resolve deck assets directly.
+Manual image blocks can reference deck assets through `assetId`. Live app
+rendering uses the deck asset content URL, while HTML export rewrites referenced
+assets to data URLs so exported single-file decks remain self-contained.
 
 ## Manual Block Contract
 

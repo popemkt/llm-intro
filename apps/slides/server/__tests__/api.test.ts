@@ -245,6 +245,7 @@ describe("Manual slide actions", () => {
             id: "logo",
             type: "image",
             url: "data:image/svg+xml,%3Csvg%2F%3E",
+            assetId: 1,
             alt: "Logo",
             objectFit: "cover",
             borderRadius: 18,
@@ -345,6 +346,7 @@ describe("Manual slide actions", () => {
         }),
         expect.objectContaining({
           id: "logo",
+          assetId: 1,
           objectFit: "cover",
           borderRadius: 18,
           groupId: "hero-group",
@@ -665,6 +667,22 @@ describe("Deck asset actions", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("<svg>");
+  });
+
+  it("serves deck asset content for first-class image references", async () => {
+    const imported = await request(app).post("/_agent-native/actions/import-deck-asset").send({
+      pid,
+      name: "Inline Logo",
+      content: '<svg xmlns="http://www.w3.org/2000/svg"><title>Logo</title></svg>',
+    });
+
+    const res = await request(app).get(
+      `/api/presentations/${pid}/assets/${imported.body.id}/content`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("image/svg+xml");
+    expect(res.body.toString("utf8")).toContain("<title>Logo</title>");
   });
 });
 
@@ -1208,6 +1226,40 @@ describe("System presentation bootstrap", () => {
     expect(res.text).toContain("export-deck-overview");
     expect(res.text).toContain("LLM & Agent Basics");
     expect(res.text).toMatch(/slideCount:\d+/);
+  });
+
+  it("rewrites deck asset image references in HTML exports", { timeout: 60000 }, async () => {
+    const { app } = createTestContext({ seedSystemPresentation: false });
+    const {
+      body: { id: pid },
+    } = await request(app).post("/api/presentations").send({ name: "Export Assets" });
+    const asset = await request(app).post("/_agent-native/actions/import-deck-asset").send({
+      pid,
+      name: "Export Logo",
+      content: '<svg xmlns="http://www.w3.org/2000/svg"><title>Export Logo</title></svg>',
+    });
+
+    await request(app)
+      .post("/_agent-native/actions/create-manual-slide")
+      .send({
+        pid,
+        title: "Asset Slide",
+        blocks: [
+          {
+            id: "logo",
+            type: "image",
+            url: `/api/presentations/${pid}/assets/${asset.body.id}/content`,
+            assetId: asset.body.id,
+            alt: "Export Logo",
+          },
+        ],
+      });
+
+    const res = await request(app).post(`/api/presentations/${pid}/export`).send({});
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("data:image/svg+xml");
+    expect(res.text).not.toContain(`/api/presentations/${pid}/assets/${asset.body.id}/content`);
   });
 
   it("exports HTML through the Agent-Native file route", { timeout: 60000 }, async () => {

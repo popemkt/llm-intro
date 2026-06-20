@@ -45,6 +45,7 @@ export type ImageBlock = {
   id: string;
   type: "image";
   url: string;
+  assetId?: number;
   alt?: string;
   objectFit?: "contain" | "cover" | "fill";
   borderRadius?: number;

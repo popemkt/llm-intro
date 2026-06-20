@@ -176,9 +176,10 @@ editing, themed presentation playback, and HTML export.
   usage, and metadata, and appear in framework resources as
   `slides://deck/:deckId/asset/:assetId`.
 - The manual slide editor exposes a visible deck asset manager backed by those
-  same actions. Selecting an imported SVG inserts it as a local image block,
-  currently using a `data:image/svg+xml` URL for export-stable rendering until
-  slide blocks grow first-class asset references.
+  same actions. Selecting an imported asset inserts it as a local image block
+  with a first-class `assetId` reference. Live rendering uses the local deck
+  asset content URL, and HTML export rewrites asset references to data URLs so
+  single-file decks remain self-contained.
 - Framework MCP probes advertise the local slides action server and its
   product-safe tools while keeping invocation on the existing
   `/_agent-native/actions/mcp` route.

@@ -333,10 +333,8 @@ function makeImageBlockFromAsset(asset: ApiDeckAsset): Block {
   return {
     id: nanoid(),
     type: "image",
-    url:
-      asset.mime_type === "image/svg+xml"
-        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.content)}`
-        : (asset.source_url ?? ""),
+    url: `/api/presentations/${asset.presentation_id}/assets/${asset.id}/content`,
+    assetId: asset.id,
     alt: asset.name,
     ...pos,
   };

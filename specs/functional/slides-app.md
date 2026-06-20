@@ -228,6 +228,8 @@ editing, themed presentation playback, and HTML export.
   without opening the manual editor first.
 - Users can create common editable manual preset slides from the overview add
   tile, then refine the resulting typed blocks in the visual editor.
+- Users can duplicate editable manual and HTML slides from the overview hover
+  controls, preserving slide content, notes, backgrounds, and transitions.
 - Users can insert primitive blocks and common content presets in the visual
   slide editor. Presets still write ordinary typed blocks so themes, export, and
   agent actions keep using the same slide model.

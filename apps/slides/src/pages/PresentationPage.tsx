@@ -71,6 +71,9 @@ export function PresentationPage() {
     ApiSlide,
     { pid: number; sid: number; title?: string; blocks?: unknown[] }
   >("update-slide", { method: "PUT" });
+  const duplicateSlide = useActionMutation<ApiSlide, { pid: number; sid: number; title?: string }>(
+    "duplicate-slide",
+  );
   const deleteSlide = useActionMutation<null, { pid: number; sid: number }>("delete-slide", {
     method: "DELETE",
   });
@@ -330,6 +333,27 @@ export function PresentationPage() {
     [deleteSlide, presentation, showNotice],
   );
 
+  const handleDuplicateSlide = useCallback(
+    async (slideId: number) => {
+      if (!presentation) return;
+      try {
+        const source = slides.find((slide) => slide.id === slideId);
+        const duplicated = await duplicateSlide.mutateAsync({
+          pid: presentation.id,
+          sid: slideId,
+          title: source ? `${source.title} copy` : undefined,
+        });
+        setSlides((prev) => [
+          ...prev,
+          toUnifiedSlide(duplicated, presentation.theme, presentation.defaultTransition),
+        ]);
+      } catch (err) {
+        showNotice(getErrorMessage(err));
+      }
+    },
+    [duplicateSlide, presentation, showNotice, slides],
+  );
+
   const handleRenameSlide = useCallback(
     async (slideId: number, newTitle: string) => {
       if (!presentation) return;
@@ -461,6 +485,7 @@ export function PresentationPage() {
             onUpdateGroup={handleUpdateGroup}
             onDeleteGroup={handleDeleteGroup}
             onEditSlide={handleEditSlide}
+            onDuplicateSlide={handleDuplicateSlide}
             onDeleteSlide={handleDeleteSlide}
             onRenameSlide={handleRenameSlide}
             onOpenSettings={() => navigate(`/p/${presentation.id}/settings`)}

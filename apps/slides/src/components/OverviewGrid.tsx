@@ -11,6 +11,7 @@ import {
   CheckSquare,
   X,
   Check,
+  Copy,
   AlertTriangle,
   Loader2,
   RotateCcw,
@@ -57,6 +58,7 @@ interface OverviewGridProps {
   onUpdateGroup: (gid: number, patch: { title?: string; collapsed?: boolean }) => void;
   onDeleteGroup: (gid: number) => void;
   onEditSlide: (slideId: number) => void;
+  onDuplicateSlide?: (slideId: number) => Promise<void>;
   onDeleteSlide: (slideId: number, options?: { confirm?: boolean }) => Promise<void>;
   onRenameSlide: (slideId: number, newTitle: string) => void;
   onOpenSettings?: () => void;
@@ -107,11 +109,76 @@ const manualQuickAddButtonStyle: React.CSSProperties = {
   color: "var(--color-accent)",
 };
 
+function ThumbnailActions({
+  slide,
+  onDelete,
+  onDuplicate,
+  onEdit,
+}: {
+  slide: UnifiedSlide;
+  onDelete: (slideId: number) => void;
+  onDuplicate?: (slideId: number) => Promise<void>;
+  onEdit: (slideId: number) => void;
+}) {
+  const buttonStyle: React.CSSProperties = {
+    background: "var(--color-surface)",
+    border: "1px solid var(--color-border)",
+    color: "var(--color-text-dim)",
+    cursor: "pointer",
+  };
+  return (
+    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          onEdit(slide.id);
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        aria-label={`Edit ${slide.title}`}
+        className="p-1.5 rounded-lg"
+        style={buttonStyle}
+        title="Edit slide"
+      >
+        <Pencil size={12} />
+      </button>
+      {onDuplicate && (
+        <button
+          onClick={(event) => {
+            event.stopPropagation();
+            void onDuplicate(slide.id);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-label={`Duplicate ${slide.title}`}
+          className="p-1.5 rounded-lg"
+          style={buttonStyle}
+          title="Duplicate slide"
+        >
+          <Copy size={12} />
+        </button>
+      )}
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete(slide.id);
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        aria-label={`Delete ${slide.title}`}
+        className="p-1.5 rounded-lg"
+        style={{ ...buttonStyle, color: "#ff6b6b" }}
+        title="Delete slide"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
+}
+
 function ThumbnailCell({
   slide,
   index,
   onSelect,
   onEdit,
+  onDuplicate,
   onDelete,
   onRename,
   sortableEnabled,
@@ -124,6 +191,7 @@ function ThumbnailCell({
   index: number;
   onSelect: (i: number) => void;
   onEdit: (slideId: number) => void;
+  onDuplicate?: (slideId: number) => Promise<void>;
   onDelete: (slideId: number) => void;
   onRename: (slideId: number, newTitle: string) => void;
   sortableEnabled: boolean;
@@ -312,44 +380,12 @@ function ThumbnailCell({
 
       {/* Edit + delete buttons — visible on hover for editable slides */}
       {!selectMode && sortableEnabled && slide.kind !== "code" && !isRenaming && (
-        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(slide.id);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={`Edit ${slide.title}`}
-            className="p-1.5 rounded-lg"
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text-dim)",
-              cursor: "pointer",
-            }}
-            title="Edit slide"
-          >
-            <Pencil size={12} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(slide.id);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={`Delete ${slide.title}`}
-            className="p-1.5 rounded-lg"
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              color: "#ff6b6b",
-              cursor: "pointer",
-            }}
-            title="Delete slide"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
+        <ThumbnailActions
+          slide={slide}
+          onDelete={onDelete}
+          onDuplicate={onDuplicate}
+          onEdit={onEdit}
+        />
       )}
     </div>
   );
@@ -1305,6 +1341,7 @@ export function OverviewGrid({
   onUpdateGroup,
   onDeleteGroup,
   onEditSlide,
+  onDuplicateSlide,
   onDeleteSlide,
   onRenameSlide,
   onOpenSettings,
@@ -1797,6 +1834,7 @@ export function OverviewGrid({
                         hoverEffects={true}
                         onSelect={onSelectSlide}
                         onEdit={onEditSlide}
+                        onDuplicate={onDuplicateSlide}
                         onDelete={onDeleteSlide}
                         onRename={onRenameSlide}
                       />
@@ -1851,6 +1889,7 @@ export function OverviewGrid({
                             hoverEffects={true}
                             onSelect={onSelectSlide}
                             onEdit={onEditSlide}
+                            onDuplicate={onDuplicateSlide}
                             onDelete={onDeleteSlide}
                             onRename={onRenameSlide}
                           />

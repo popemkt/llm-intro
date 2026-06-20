@@ -2490,6 +2490,10 @@ export function SlideEditorPage() {
                       block={selectedBlock}
                       onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
                     />
+                    <BlockLinkEditor
+                      block={selectedBlock}
+                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                    />
 
                     {/* Type-specific fields */}
                     {selectedBlock.type === "text" && (
@@ -4050,6 +4054,92 @@ function BlockAnimationEditor({
             style={{ ...inp, opacity: disabled || !animation ? 0.45 : 1 }}
           />
         </InspectorField>
+      </div>
+    </InspectorField>
+  );
+}
+
+function BlockLinkEditor({
+  block,
+  onUpdate,
+}: {
+  block: Block;
+  onUpdate: (patch: Partial<Block>) => void;
+}) {
+  const disabled = Boolean(block.locked);
+  const updateLink = (patch: Partial<Block>) => {
+    if (disabled) return;
+    onUpdate({
+      linkTarget: block.linkTarget ?? "_blank",
+      ...patch,
+    } as Partial<Block>);
+  };
+
+  return (
+    <InspectorField label="Link">
+      <div style={{ display: "grid", gap: 6 }}>
+        <input
+          value={block.linkUrl ?? ""}
+          onChange={(event) => {
+            const linkUrl = event.target.value.trim() ? event.target.value : undefined;
+            updateLink(
+              linkUrl
+                ? ({ linkTarget: block.linkTarget ?? "_blank", linkUrl } as Partial<Block>)
+                : ({
+                    linkTarget: undefined,
+                    linkTitle: undefined,
+                    linkUrl: undefined,
+                  } as Partial<Block>),
+            );
+          }}
+          disabled={disabled}
+          placeholder="https://example.com"
+          style={{ ...inp, opacity: disabled ? 0.45 : 1 }}
+        />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6 }}>
+          <select
+            value={block.linkTarget ?? "_blank"}
+            onChange={(event) =>
+              updateLink({ linkTarget: event.target.value as Block["linkTarget"] })
+            }
+            disabled={disabled || !block.linkUrl}
+            style={{ ...inp, opacity: disabled || !block.linkUrl ? 0.45 : 1 }}
+          >
+            <option value="_blank">New tab</option>
+            <option value="_self">Same tab</option>
+          </select>
+          <button
+            type="button"
+            title="Clear link"
+            onClick={() =>
+              !disabled &&
+              onUpdate({
+                linkTarget: undefined,
+                linkTitle: undefined,
+                linkUrl: undefined,
+              } as Partial<Block>)
+            }
+            disabled={disabled || !block.linkUrl}
+            style={{
+              ...arrangeButton,
+              width: 32,
+              opacity: disabled || !block.linkUrl ? 0.45 : 1,
+            }}
+          >
+            x
+          </button>
+        </div>
+        <input
+          value={block.linkTitle ?? ""}
+          onChange={(event) =>
+            updateLink({
+              linkTitle: event.target.value.trim() ? event.target.value : undefined,
+            } as Partial<Block>)
+          }
+          disabled={disabled || !block.linkUrl}
+          placeholder="Accessible link title"
+          style={{ ...inp, opacity: disabled || !block.linkUrl ? 0.45 : 1 }}
+        />
       </div>
     </InspectorField>
   );

@@ -16,6 +16,7 @@ import { applyManualBlockFormat, copyManualBlockFormat } from "./manual-block-fo
 import { createUpdateManualBlocksAction } from "./manual-block-batch.js";
 import { createTransformManualBlocksAction } from "./manual-block-geometry.js";
 import { createSnapManualBlocksToGridAction } from "./manual-block-grid.js";
+import { createSetManualBlockLinkAction } from "./manual-block-link.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -851,6 +852,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "set-manual-block-visibility": createSetManualBlockVisibilityAction(slidesService),
     "set-manual-block-flip": createSetManualBlockFlipAction(slidesService),
     "set-manual-block-animation": createSetManualBlockAnimationAction(slidesService),
+    "set-manual-block-link": createSetManualBlockLinkAction(slidesService),
     "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),

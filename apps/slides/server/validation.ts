@@ -22,6 +22,9 @@ type BlockPosition = {
   flipX?: boolean;
   flipY?: boolean;
   animation?: Block["animation"];
+  linkTarget?: Block["linkTarget"];
+  linkTitle?: string;
+  linkUrl?: string;
   hidden?: boolean;
   locked?: boolean;
   groupId?: string;
@@ -263,6 +266,26 @@ function parseOptionalBoolean(value: unknown, field: string) {
   return value;
 }
 
+function parseOptionalLinkUrl(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new AppError(400, `${field} cannot be empty`);
+  if (trimmed.length > 2048) throw new AppError(400, `${field} must be 2048 characters or less`);
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+    throw new AppError(400, `${field} uses an unsupported protocol`);
+  }
+  return trimmed;
+}
+
+function parseOptionalLinkTarget(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (value !== "_self" && value !== "_blank") {
+    throw new AppError(400, `${field} must be _self or _blank`);
+  }
+  return value;
+}
+
 function parseBlockAnimation(value: unknown) {
   if (value === undefined) return undefined;
   const animation = asRecord(value);
@@ -307,6 +330,9 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     flipX: parseOptionalBoolean(value.flipX, "block.flipX"),
     flipY: parseOptionalBoolean(value.flipY, "block.flipY"),
     animation: parseBlockAnimation(value.animation),
+    linkUrl: parseOptionalLinkUrl(value.linkUrl, "block.linkUrl"),
+    linkTitle: parseOptionalBlockGroupString(value.linkTitle, "block.linkTitle"),
+    linkTarget: parseOptionalLinkTarget(value.linkTarget, "block.linkTarget"),
     hidden: parseOptionalBoolean(value.hidden, "block.hidden"),
     locked: parseOptionalBoolean(value.locked, "block.locked"),
     groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),

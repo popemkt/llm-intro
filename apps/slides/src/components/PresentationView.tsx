@@ -130,6 +130,7 @@ function RenderSlide({ slide, isActive }: { slide: UnifiedSlide; isActive: boole
       animateBlocks={isActive}
       background={slide.background}
       blocks={slide.blocks}
+      interactiveLinks={isActive}
       theme={slide.theme}
     />
   );

@@ -227,6 +227,10 @@ editing, themed presentation playback, and HTML export.
   `set-manual-block-animation`. Supported presets include fade-in, rise,
   scale-in, side slides, wipe-right, and pulse, with optional duration, delay,
   easing, and repeat fields; locked blocks reject animation changes.
+- Agents can set or clear hyperlink metadata on manual slide blocks through
+  `set-manual-block-link`, including URL, accessible title, and same-tab/new-tab
+  target. Unsafe script/data-style protocols are rejected, and locked blocks
+  reject link changes.
 - Agents can copy appearance formatting from one manual block to other blocks
   through `apply-manual-block-format`. The action preserves target content,
   geometry, display names, grouping, lock state, and IDs, while applying common
@@ -299,6 +303,9 @@ editing, themed presentation playback, and HTML export.
   metadata is preserved with the block model, copied by format painter, and
   plays through WAAPI in presentation and fullscreen while editor thumbnails stay
   static.
+- Users can assign hyperlinks to manual slide blocks from the inspector.
+  Links remain inert while editing and in overview thumbnails, but become
+  clickable in presentation, fullscreen, and exported playback.
 - Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
   and neighboring block edges/centers, with visible guide lines during pointer
   interaction. Holding Alt bypasses snapping for fine placement.

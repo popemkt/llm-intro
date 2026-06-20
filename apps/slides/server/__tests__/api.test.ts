@@ -159,6 +159,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Set manual block animation",
         }),
         expect.objectContaining({
+          id: "set-manual-block-link",
+          name: "Set manual block link",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -935,6 +939,69 @@ describe("Manual slide actions", () => {
       .send({ animation: { preset: "pulse" }, blockIds: ["shape"], pid, sid: slide.id });
     expect(rejected.status).toBe(400);
     expect(rejected.body.error).toContain("block is locked");
+  });
+
+  it("manual block links can be set, cleared, validated, and respect locks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Linked Blocks",
+          blocks: [
+            {
+              h: 12,
+              id: "cta",
+              markdown: "Read more",
+              type: "text",
+              w: 30,
+              x: 10,
+              y: 10,
+            },
+          ],
+        })
+    ).body;
+
+    const linked = await request(app)
+      .put("/_agent-native/actions/set-manual-block-link")
+      .send({
+        blockIds: ["cta"],
+        linkTarget: "_self",
+        linkTitle: "Open reference",
+        linkUrl: "https://example.com/reference",
+        pid,
+        sid: slide.id,
+      });
+    expect(linked.status).toBe(200);
+    expect(linked.body.blocks[0]).toMatchObject({
+      id: "cta",
+      linkTarget: "_self",
+      linkTitle: "Open reference",
+      linkUrl: "https://example.com/reference",
+    });
+
+    const rejectedUrl = await request(app)
+      .put("/_agent-native/actions/set-manual-block-link")
+      .send({ blockIds: ["cta"], linkUrl: "javascript:alert(1)", pid, sid: slide.id });
+    expect(rejectedUrl.status).toBe(400);
+    expect(rejectedUrl.body.error).toContain("unsupported protocol");
+
+    const cleared = await request(app)
+      .put("/_agent-native/actions/set-manual-block-link")
+      .send({ blockIds: ["cta"], linkUrl: null, pid, sid: slide.id });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.blocks[0]).not.toHaveProperty("linkUrl");
+    expect(cleared.body.blocks[0]).not.toHaveProperty("linkTarget");
+    expect(cleared.body.blocks[0]).not.toHaveProperty("linkTitle");
+
+    await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ blockIds: ["cta"], locked: true, pid, sid: slide.id });
+    const rejectedLock = await request(app)
+      .put("/_agent-native/actions/set-manual-block-link")
+      .send({ blockIds: ["cta"], linkUrl: "https://example.com", pid, sid: slide.id });
+    expect(rejectedLock.status).toBe(400);
+    expect(rejectedLock.body.error).toContain("block is locked");
   });
 
   it("copies manual block formatting without changing content or geometry", async () => {

@@ -236,4 +236,32 @@ describe("DbSlideRenderer", () => {
     unmount();
     expect(cancel).toHaveBeenCalled();
   });
+
+  it("renders manual block links only when interactive links are enabled", () => {
+    const blocks: Block[] = [
+      {
+        h: 12,
+        id: "linked",
+        linkTarget: "_blank",
+        linkTitle: "Open docs",
+        linkUrl: "https://example.com/docs",
+        markdown: "Docs",
+        type: "text",
+        w: 30,
+        x: 10,
+        y: 10,
+      },
+    ];
+
+    const inert = render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
+    expect(inert.queryByRole("link")).not.toBeInTheDocument();
+    inert.unmount();
+
+    render(<DbSlideRenderer blocks={blocks} interactiveLinks theme="dark-green" />);
+    const link = screen.getByRole("link", { name: /docs/i });
+    expect(link).toHaveAttribute("href", "https://example.com/docs");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("title", "Open docs");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+  });
 });

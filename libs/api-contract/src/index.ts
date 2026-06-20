@@ -46,6 +46,9 @@ type BlockPos = {
   flipX?: boolean;
   flipY?: boolean;
   animation?: ManualBlockAnimation;
+  linkUrl?: string;
+  linkTitle?: string;
+  linkTarget?: "_self" | "_blank";
   hidden?: boolean;
   locked?: boolean;
   groupId?: string;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, Ref } from "react";
 import ReactMarkdown from "react-markdown";
 import type { ApiSlideBackground, Block, ThemeName } from "@/types";
 import { getReadableTextColor } from "@/lib/color";
@@ -9,6 +9,7 @@ interface Props {
   animateBlocks?: boolean;
   background?: ApiSlideBackground | null;
   blocks: Block[];
+  interactiveLinks?: boolean;
   theme: ThemeName;
 }
 
@@ -33,7 +34,13 @@ function backgroundStyle(background?: ApiSlideBackground | null): React.CSSPrope
   };
 }
 
-export function DbSlideRenderer({ animateBlocks = false, background, blocks, theme }: Props) {
+export function DbSlideRenderer({
+  animateBlocks = false,
+  background,
+  blocks,
+  interactiveLinks = false,
+  theme,
+}: Props) {
   // Canvas mode: any block has percentage-based x/y positioning
   const isCanvas = blocks.some((b) => b.x !== undefined);
 
@@ -91,6 +98,7 @@ export function DbSlideRenderer({ animateBlocks = false, background, blocks, the
                   key={block.id}
                   animate={animateBlocks}
                   block={block}
+                  interactiveLink={interactiveLinks}
                   style={{
                     position: "absolute",
                     left: `${block.x}%`,
@@ -110,7 +118,12 @@ export function DbSlideRenderer({ animateBlocks = false, background, blocks, the
         : blocks
             .filter((block) => !block.hidden)
             .map((block) => (
-              <AnimatedBlockFrame key={block.id} animate={animateBlocks} block={block}>
+              <AnimatedBlockFrame
+                key={block.id}
+                animate={animateBlocks}
+                block={block}
+                interactiveLink={interactiveLinks}
+              >
                 <BlockView block={block} />
               </AnimatedBlockFrame>
             ))}
@@ -122,16 +135,19 @@ function AnimatedBlockFrame({
   animate,
   block,
   children,
+  interactiveLink,
   style,
 }: {
   animate: boolean;
   block: Block;
   children: ReactNode;
+  interactiveLink?: boolean;
   style?: CSSProperties;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const animation = block.animation;
   const transform = style?.transform?.toString();
+  const linkActive = interactiveLink && Boolean(block.linkUrl);
   const keyframes = useMemo(
     () => (animation ? blockAnimationKeyframes(animation.preset, transform) : null),
     [animation, transform],
@@ -150,8 +166,29 @@ function AnimatedBlockFrame({
     return () => playback.cancel();
   }, [animate, animation, keyframes]);
 
+  if (linkActive) {
+    return (
+      <a
+        ref={ref as Ref<HTMLAnchorElement>}
+        href={block.linkUrl}
+        rel={block.linkTarget === "_blank" ? "noreferrer" : undefined}
+        target={block.linkTarget ?? "_blank"}
+        title={block.linkTitle}
+        style={{
+          ...style,
+          color: "inherit",
+          cursor: "pointer",
+          display: style ? undefined : "block",
+          textDecoration: "none",
+        }}
+      >
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <div ref={ref} style={style}>
+    <div ref={ref as Ref<HTMLDivElement>} style={style}>
       {children}
     </div>
   );

@@ -771,9 +771,33 @@ describe("Manual slide actions", () => {
       expect.objectContaining({ id: "text", x: 15, y: 15, w: 30, h: 10 }),
     ]);
 
+    const scaledSelection = await request(app)
+      .put("/_agent-native/actions/transform-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        blockIds: ["box", "text"],
+        dx: -5,
+        dy: -5,
+        dw: -17,
+        dh: -17,
+        scaleSelection: true,
+      });
+    expect(scaledSelection.status).toBe(200);
+    expect(scaledSelection.body.blocks).toEqual([
+      expect.objectContaining({ id: "box", x: 66, y: 66, w: 12, h: 12 }),
+      expect.objectContaining({ id: "text", x: 10, y: 10, w: 24, h: 8 }),
+    ]);
+
     await request(app)
       .put("/_agent-native/actions/set-manual-block-lock")
       .send({ pid, sid: slide.id, blockIds: ["text"], locked: true });
+    const rejectedTransform = await request(app)
+      .put("/_agent-native/actions/transform-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["box", "text"], scaleSelection: true, dw: 10 });
+    expect(rejectedTransform.status).toBe(400);
+    expect(rejectedTransform.body.error).toContain("block is locked");
+
     const rejected = await request(app)
       .put("/_agent-native/actions/snap-manual-blocks-to-grid")
       .send({ pid, sid: slide.id, blockIds: ["text"] });

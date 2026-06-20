@@ -6,6 +6,7 @@ import type { createSlidesService } from "../server/services/slides.js";
 
 type SlidesService = ReturnType<typeof createSlidesService>;
 type RectPercent = { h: number; w: number; x: number; y: number };
+type GeometryDelta = { dh: number; dw: number; dx: number; dy: number };
 
 const publicWriteAction = {
   expose: true,
@@ -56,10 +57,7 @@ function assertBlocksUnlocked(blocks: Block[], blockIds: string[]) {
   if (locked) throw new AppError(400, `block is locked: ${locked.id}`);
 }
 
-function transformBlockGeometry(
-  block: Block,
-  { dx, dy, dh, dw }: { dh: number; dw: number; dx: number; dy: number },
-) {
+function transformBlockGeometry(block: Block, { dx, dy, dh, dw }: GeometryDelta) {
   const rect = blockRect(block);
   const w = clamp(rect.w + dw, 5, 100);
   const h = clamp(rect.h + dh, 5, 100);
@@ -68,13 +66,61 @@ function transformBlockGeometry(
   return { ...block, h, w, x, y } as Block;
 }
 
+function rectBounds(rects: RectPercent[]): RectPercent {
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.w));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
+  return { h: bottom - top, w: right - left, x: left, y: top };
+}
+
+function transformSelectionBounds(bounds: RectPercent, { dx, dy, dh, dw }: GeometryDelta) {
+  const w = clamp(bounds.w + dw, 5, 100);
+  const h = clamp(bounds.h + dh, 5, 100);
+  return {
+    h,
+    w,
+    x: clamp(bounds.x + dx, 0, 100 - w),
+    y: clamp(bounds.y + dy, 0, 100 - h),
+  };
+}
+
+function scaleBlockWithinBounds(
+  block: Block,
+  sourceBounds: RectPercent,
+  targetBounds: RectPercent,
+) {
+  const rect = blockRect(block);
+  const scaleX = sourceBounds.w <= 0 ? 1 : targetBounds.w / sourceBounds.w;
+  const scaleY = sourceBounds.h <= 0 ? 1 : targetBounds.h / sourceBounds.h;
+  const w = clamp(rect.w * scaleX, 5, 100);
+  const h = clamp(rect.h * scaleY, 5, 100);
+  const x = clamp(targetBounds.x + (rect.x - sourceBounds.x) * scaleX, 0, 100 - w);
+  const y = clamp(targetBounds.y + (rect.y - sourceBounds.y) * scaleY, 0, 100 - h);
+  return { ...block, h, w, x, y } as Block;
+}
+
+function scaleSelectionGeometry(blocks: Block[], blockIds: string[], delta: GeometryDelta) {
+  const selected = new Set(blockIds);
+  const selectedBlocks = blocks.filter((block) => selected.has(block.id));
+  if (selectedBlocks.length === 0) return blocks;
+  const sourceBounds = rectBounds(selectedBlocks.map(blockRect));
+  const targetBounds = transformSelectionBounds(sourceBounds, delta);
+  return blocks.map((block) => {
+    if (!selected.has(block.id)) return block;
+    return scaleBlockWithinBounds(block, sourceBounds, targetBounds);
+  });
+}
+
 export function createTransformManualBlocksAction(slidesService: SlidesService) {
   return defineAction({
-    description: "Move or resize manual slide blocks by relative percentage deltas.",
+    description:
+      "Move or resize manual slide blocks by relative percentage deltas, optionally scaling the selected bounds proportionally.",
     http: { method: "PUT", path: "transform-manual-blocks" },
     publicAgent: {
       ...publicWriteAction,
-      description: "Move or resize manual slide blocks by relative percentage deltas.",
+      description:
+        "Move or resize manual slide blocks by relative percentage deltas, optionally scaling the selected bounds proportionally.",
       title: "Transform manual blocks",
     },
     requiresAuth: false,
@@ -85,18 +131,21 @@ export function createTransformManualBlocksAction(slidesService: SlidesService) 
       dx: z.coerce.number().min(-100).max(100).default(0),
       dy: z.coerce.number().min(-100).max(100).default(0),
       pid: z.coerce.number().int().positive(),
+      scaleSelection: z.boolean().default(false),
       sid: z.coerce.number().int().positive(),
     }),
-    run: ({ pid, sid, blockIds, dx, dy, dw, dh }) => {
+    run: ({ pid, sid, blockIds, dx, dy, dw, dh, scaleSelection }) => {
       const slide = getManualSlide(slidesService, pid, sid);
       assertBlockIdsExist(slide.blocks, blockIds);
       assertBlocksUnlocked(slide.blocks, blockIds);
 
       const selected = new Set(blockIds);
       return slidesService.update(pid, sid, {
-        blocks: slide.blocks.map((block) =>
-          selected.has(block.id) ? transformBlockGeometry(block, { dx, dy, dw, dh }) : block,
-        ),
+        blocks: scaleSelection
+          ? scaleSelectionGeometry(slide.blocks, blockIds, { dx, dy, dw, dh })
+          : slide.blocks.map((block) =>
+              selected.has(block.id) ? transformBlockGeometry(block, { dx, dy, dw, dh }) : block,
+            ),
       });
     },
   });

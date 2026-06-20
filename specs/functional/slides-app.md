@@ -208,7 +208,9 @@ editing, themed presentation playback, and HTML export.
   match width/height/size, block duplication with fresh ids, and layer stack
   changes.
 - Agents can move or resize one or more manual blocks by relative percentage
-  deltas through `transform-manual-blocks`. The action clamps geometry to the
+  deltas through `transform-manual-blocks`. The action can either apply the
+  same deltas to each target block or proportionally scale the whole selected
+  bounds while preserving relative block placement. It clamps geometry to the
   normalized slide canvas and rejects locked target blocks.
 - Agents can snap one or more manual blocks to a configurable percentage grid
   through `snap-manual-blocks-to-grid`, including optional size snapping. The

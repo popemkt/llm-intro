@@ -143,6 +143,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Transform manual blocks",
         }),
         expect.objectContaining({
+          id: "snap-manual-blocks-to-grid",
+          name: "Snap manual blocks to grid",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -677,7 +681,7 @@ describe("Manual slide actions", () => {
     expect(layered.body.blocks.at(-1)).toMatchObject({ id: "a" });
   });
 
-  it("transforms manual block geometry by relative deltas", async () => {
+  it("transforms and snaps manual block geometry", async () => {
     const slide = (
       await request(app)
         .post("/_agent-native/actions/create-manual-slide")
@@ -708,12 +712,21 @@ describe("Manual slide actions", () => {
       expect.objectContaining({ id: "text", x: 15, y: 16, w: 30, h: 12 }),
     ]);
 
+    const snapped = await request(app)
+      .put("/_agent-native/actions/snap-manual-blocks-to-grid")
+      .send({ pid, sid: slide.id, blockIds: ["box", "text"], step: 5 });
+    expect(snapped.status).toBe(200);
+    expect(snapped.body.blocks).toEqual([
+      expect.objectContaining({ id: "box", x: 85, y: 85, w: 15, h: 15 }),
+      expect.objectContaining({ id: "text", x: 15, y: 15, w: 30, h: 10 }),
+    ]);
+
     await request(app)
       .put("/_agent-native/actions/set-manual-block-lock")
       .send({ pid, sid: slide.id, blockIds: ["text"], locked: true });
     const rejected = await request(app)
-      .put("/_agent-native/actions/transform-manual-blocks")
-      .send({ pid, sid: slide.id, blockIds: ["text"], dx: 1 });
+      .put("/_agent-native/actions/snap-manual-blocks-to-grid")
+      .send({ pid, sid: slide.id, blockIds: ["text"] });
     expect(rejected.status).toBe(400);
     expect(rejected.body.error).toContain("block is locked");
   });

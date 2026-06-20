@@ -18,6 +18,23 @@ export const THEME_META: Record<ThemeName, { label: string; desc: string }> = {
   ocean: { label: "Ocean", desc: "Deep teal seabed" },
 };
 
+export type ManualBlockAnimationPreset =
+  | "fade-in"
+  | "rise"
+  | "scale-in"
+  | "slide-left"
+  | "slide-right"
+  | "wipe-right"
+  | "pulse";
+
+export interface ManualBlockAnimation {
+  preset: ManualBlockAnimationPreset;
+  duration?: number;
+  delay?: number;
+  easing?: string;
+  iterationCount?: number;
+}
+
 type BlockPos = {
   x?: number;
   y?: number;
@@ -28,6 +45,7 @@ type BlockPos = {
   shadow?: string;
   flipX?: boolean;
   flipY?: boolean;
+  animation?: ManualBlockAnimation;
   hidden?: boolean;
   locked?: boolean;
   groupId?: string;

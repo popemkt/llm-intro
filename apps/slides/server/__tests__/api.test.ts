@@ -155,6 +155,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Set manual block flip",
         }),
         expect.objectContaining({
+          id: "set-manual-block-animation",
+          name: "Set manual block animation",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -869,6 +873,70 @@ describe("Manual slide actions", () => {
     expect(rejected.body.error).toContain("block is locked");
   });
 
+  it("manual block animation can be set, cleared, and respects locks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Animated Blocks",
+          blocks: [
+            {
+              color: "#25d366",
+              h: 20,
+              id: "shape",
+              shape: "rect",
+              type: "shape",
+              w: 20,
+              x: 10,
+              y: 10,
+            },
+          ],
+        })
+    ).body;
+
+    const animated = await request(app)
+      .put("/_agent-native/actions/set-manual-block-animation")
+      .send({
+        animation: {
+          delay: 120,
+          duration: 640,
+          easing: "ease-out",
+          iterationCount: 2,
+          preset: "rise",
+        },
+        blockIds: ["shape"],
+        pid,
+        sid: slide.id,
+      });
+    expect(animated.status).toBe(200);
+    expect(animated.body.blocks[0]).toMatchObject({
+      animation: {
+        delay: 120,
+        duration: 640,
+        easing: "ease-out",
+        iterationCount: 2,
+        preset: "rise",
+      },
+      id: "shape",
+    });
+
+    const cleared = await request(app)
+      .put("/_agent-native/actions/set-manual-block-animation")
+      .send({ animation: null, blockIds: ["shape"], pid, sid: slide.id });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.blocks[0]).not.toHaveProperty("animation");
+
+    await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ blockIds: ["shape"], locked: true, pid, sid: slide.id });
+    const rejected = await request(app)
+      .put("/_agent-native/actions/set-manual-block-animation")
+      .send({ animation: { preset: "pulse" }, blockIds: ["shape"], pid, sid: slide.id });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error).toContain("block is locked");
+  });
+
   it("copies manual block formatting without changing content or geometry", async () => {
     const slide = (
       await request(app)
@@ -887,6 +955,7 @@ describe("Manual slide actions", () => {
               h: 12,
               opacity: 0.7,
               rotation: 3,
+              animation: { duration: 640, preset: "rise" },
               flipX: true,
               flipY: true,
               shadow: "0 12px 24px rgba(0,0,0,0.32)",
@@ -947,6 +1016,7 @@ describe("Manual slide actions", () => {
       h: 10,
       opacity: 0.7,
       rotation: 3,
+      animation: { duration: 640, preset: "rise" },
       flipX: true,
       flipY: true,
       shadow: "0 12px 24px rgba(0,0,0,0.32)",

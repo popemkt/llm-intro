@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DbSlideRenderer } from "../DbSlideRenderer";
 import type { Block } from "@/types";
@@ -200,5 +200,40 @@ describe("DbSlideRenderer", () => {
     expect(screen.getByLabelText("Adoption")).toBeInTheDocument();
     expect(screen.getByText("Usage")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("plays manual block animations when enabled", () => {
+    const cancel = vi.fn();
+    const animate = vi.fn(() => ({ cancel }));
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value: animate,
+    });
+    const blocks: Block[] = [
+      {
+        animation: { delay: 50, duration: 400, easing: "ease-out", preset: "rise" },
+        h: 20,
+        id: "animated",
+        markdown: "Animated",
+        type: "text",
+        w: 40,
+        x: 10,
+        y: 10,
+      },
+    ];
+
+    const { unmount } = render(
+      <DbSlideRenderer animateBlocks blocks={blocks} theme="dark-green" />,
+    );
+
+    expect(animate).toHaveBeenCalledWith(expect.any(Array), {
+      delay: 50,
+      duration: 400,
+      easing: "ease-out",
+      fill: "both",
+      iterations: 1,
+    });
+    unmount();
+    expect(cancel).toHaveBeenCalled();
   });
 });

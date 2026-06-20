@@ -223,6 +223,10 @@ editing, themed presentation playback, and HTML export.
   list for later revision but are omitted from normal presentation rendering.
 - Agents can flip manual slide blocks horizontally or vertically through
   `set-manual-block-flip`; locked blocks reject flip changes.
+- Agents can set or clear per-block manual animation metadata through
+  `set-manual-block-animation`. Supported presets include fade-in, rise,
+  scale-in, side slides, wipe-right, and pulse, with optional duration, delay,
+  easing, and repeat fields; locked blocks reject animation changes.
 - Agents can copy appearance formatting from one manual block to other blocks
   through `apply-manual-block-format`. The action preserves target content,
   geometry, display names, grouping, lock state, and IDs, while applying common
@@ -291,6 +295,10 @@ editing, themed presentation playback, and HTML export.
 - Users can flip selected manual slide blocks horizontally or vertically from
   the inspector. Flip metadata composes with rotation and persists through
   presentation, fullscreen, snapshots, export, and format painter.
+- Users can set per-block manual animation presets from the inspector. Animation
+  metadata is preserved with the block model, copied by format painter, and
+  plays through WAAPI in presentation and fullscreen while editor thumbnails stay
+  static.
 - Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
   and neighboring block edges/centers, with visible guide lines during pointer
   interaction. Holding Alt bypasses snapping for fine placement.
@@ -312,9 +320,9 @@ editing, themed presentation playback, and HTML export.
   same typed block fields available to agent actions.
 - Users can copy appearance formatting from the selected manual block and paste
   it onto another selected block. Format paste copies common opacity/rotation/
-  shadow and matching block-type appearance fields, including text typography,
-  without copying content, geometry, display names, group membership, lock state,
-  or IDs. Agents can perform the same operation through
+  shadow/animation and matching block-type appearance fields, including text
+  typography, without copying content, geometry, display names, group
+  membership, lock state, or IDs. Agents can perform the same operation through
   `apply-manual-block-format`.
 - Users can undo and redo manual slide edits from toolbar controls or keyboard
   shortcuts. The local history covers title, speaker notes, blocks, transition,

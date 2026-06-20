@@ -55,6 +55,7 @@ import type {
   ApiSlideBackground,
   ApiSlideTransition,
   Block,
+  ManualBlockAnimationPreset,
   ShapeBlock,
   ThemeName,
 } from "@/types";
@@ -480,6 +481,15 @@ type MultiBlockArrangeAction =
   | "match-size";
 type BlockClipboard = { blocks: Block[] };
 type BlockFormatClipboard = { patch: Partial<Block>; sourceType: Block["type"] };
+const BLOCK_ANIMATION_PRESETS: Array<{ label: string; value: ManualBlockAnimationPreset }> = [
+  { label: "Fade in", value: "fade-in" },
+  { label: "Rise", value: "rise" },
+  { label: "Scale in", value: "scale-in" },
+  { label: "Slide left", value: "slide-left" },
+  { label: "Slide right", value: "slide-right" },
+  { label: "Wipe right", value: "wipe-right" },
+  { label: "Pulse", value: "pulse" },
+];
 type SlideHistorySnapshot = {
   background: ApiSlideBackground | null;
   blocks: Block[];
@@ -613,6 +623,7 @@ function arrangeSelectedBlocks(
 
 function copyBlockFormat(block: Block): BlockFormatClipboard {
   const common: Partial<Block> = {
+    animation: block.animation ? { ...block.animation } : undefined,
     flipX: block.flipX,
     flipY: block.flipY,
     opacity: block.opacity,
@@ -718,6 +729,7 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
 
 function applyBlockFormat(block: Block, clipboard: BlockFormatClipboard): Block {
   const common = {
+    animation: clipboard.patch.animation,
     flipX: clipboard.patch.flipX,
     flipY: clipboard.patch.flipY,
     opacity: clipboard.patch.opacity,
@@ -2474,6 +2486,10 @@ export function SlideEditorPage() {
                       block={selectedBlock}
                       onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
                     />
+                    <BlockAnimationEditor
+                      block={selectedBlock}
+                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                    />
 
                     {/* Type-specific fields */}
                     {selectedBlock.type === "text" && (
@@ -3933,6 +3949,109 @@ function BlockFlipControls({
         <FlipVertical size={13} />
       </button>
     </div>
+  );
+}
+
+function BlockAnimationEditor({
+  block,
+  onUpdate,
+}: {
+  block: Block;
+  onUpdate: (patch: Partial<Block>) => void;
+}) {
+  const animation = block.animation;
+  const disabled = Boolean(block.locked);
+  const updateAnimation = (patch: Partial<NonNullable<Block["animation"]>>) => {
+    if (disabled) return;
+    onUpdate({
+      animation: {
+        duration: animation?.duration ?? 480,
+        preset: animation?.preset ?? "fade-in",
+        ...animation,
+        ...patch,
+      },
+    } as Partial<Block>);
+  };
+
+  return (
+    <InspectorField label="Animation">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6 }}>
+        <select
+          value={animation?.preset ?? ""}
+          onChange={(event) => {
+            const preset = event.target.value as ManualBlockAnimationPreset;
+            if (!preset) onUpdate({ animation: undefined } as Partial<Block>);
+            else updateAnimation({ preset });
+          }}
+          disabled={disabled}
+          style={{ ...inp, opacity: disabled ? 0.45 : 1 }}
+        >
+          <option value="">None</option>
+          {BLOCK_ANIMATION_PRESETS.map((preset) => (
+            <option key={preset.value} value={preset.value}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          title="Clear animation"
+          onClick={() => !disabled && onUpdate({ animation: undefined } as Partial<Block>)}
+          disabled={disabled || !animation}
+          style={{
+            ...arrangeButton,
+            width: 32,
+            opacity: disabled || !animation ? 0.45 : 1,
+          }}
+        >
+          x
+        </button>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gap: 6,
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          marginTop: 6,
+          opacity: animation ? 1 : 0.45,
+        }}
+      >
+        <NumberInput
+          label="Duration"
+          min={0}
+          max={10000}
+          value={animation?.duration}
+          onChange={(duration) => updateAnimation({ duration })}
+        />
+        <NumberInput
+          label="Delay"
+          min={0}
+          max={10000}
+          value={animation?.delay}
+          onChange={(delay) => updateAnimation({ delay })}
+        />
+        <NumberInput
+          label="Repeat"
+          min={1}
+          max={20}
+          value={animation?.iterationCount}
+          onChange={(iterationCount) => updateAnimation({ iterationCount })}
+        />
+        <InspectorField label="Easing">
+          <input
+            value={animation?.easing ?? ""}
+            onChange={(event) =>
+              updateAnimation({
+                easing: event.target.value.trim() ? event.target.value : undefined,
+              })
+            }
+            disabled={disabled || !animation}
+            placeholder="ease-out"
+            style={{ ...inp, opacity: disabled || !animation ? 0.45 : 1 }}
+          />
+        </InspectorField>
+      </div>
+    </InspectorField>
   );
 }
 

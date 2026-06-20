@@ -24,6 +24,23 @@ type RectPercent = { h: number; w: number; x: number; y: number };
 type ManualLayerDirection = "forward" | "backward" | "front" | "back";
 
 const blockInput = z.record(z.string(), z.unknown());
+const blockAnimationInput = z
+  .object({
+    delay: z.coerce.number().min(0).max(10000).optional(),
+    duration: z.coerce.number().min(0).max(10000).optional(),
+    easing: z.string().min(1).max(160).optional(),
+    iterationCount: z.coerce.number().min(1).max(20).optional(),
+    preset: z.enum([
+      "fade-in",
+      "rise",
+      "scale-in",
+      "slide-left",
+      "slide-right",
+      "wipe-right",
+      "pulse",
+    ]),
+  })
+  .nullable();
 const transitionInput = z.record(z.string(), z.unknown()).nullable();
 const backgroundInput = z
   .object({
@@ -592,6 +609,39 @@ function createSetManualBlockFlipAction(slidesService: SlidesService) {
   });
 }
 
+function createSetManualBlockAnimationAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Set or clear PowerPoint-style animation metadata on manual slide blocks.",
+    schema: z.object({
+      animation: blockAnimationInput,
+      blockIds: z.array(z.string().min(1)).min(1),
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+    }),
+    http: { method: "PUT", path: "set-manual-block-animation" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Set manual block animation",
+      description: "Set or clear PowerPoint-style animation metadata on manual slide blocks.",
+    },
+    run: ({ pid, sid, blockIds, animation }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      assertBlocksUnlocked(slide.blocks, blockIds);
+      const selected = new Set(blockIds);
+      const blocks = slide.blocks.map((block) => {
+        if (!selected.has(block.id)) return block;
+        return parseOneBlock({
+          ...block,
+          animation: animation ?? undefined,
+        });
+      });
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
 function createApplyManualBlockFormatAction(slidesService: SlidesService) {
   return defineAction({
     description:
@@ -800,6 +850,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
     "set-manual-block-visibility": createSetManualBlockVisibilityAction(slidesService),
     "set-manual-block-flip": createSetManualBlockFlipAction(slidesService),
+    "set-manual-block-animation": createSetManualBlockAnimationAction(slidesService),
     "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),

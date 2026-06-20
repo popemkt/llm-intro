@@ -21,6 +21,7 @@ type BlockPosition = {
   shadow?: string;
   flipX?: boolean;
   flipY?: boolean;
+  animation?: Block["animation"];
   hidden?: boolean;
   locked?: boolean;
   groupId?: string;
@@ -262,6 +263,32 @@ function parseOptionalBoolean(value: unknown, field: string) {
   return value;
 }
 
+function parseBlockAnimation(value: unknown) {
+  if (value === undefined) return undefined;
+  const animation = asRecord(value);
+  const preset = animation.preset;
+  if (
+    !["fade-in", "rise", "scale-in", "slide-left", "slide-right", "wipe-right", "pulse"].includes(
+      String(preset),
+    )
+  ) {
+    throw new AppError(400, "block.animation.preset is invalid");
+  }
+  return {
+    preset: preset as NonNullable<Block["animation"]>["preset"],
+    duration: parseBoundedNumber(animation.duration, "block.animation.duration", {
+      min: 0,
+      max: 10000,
+    }),
+    delay: parseBoundedNumber(animation.delay, "block.animation.delay", { min: 0, max: 10000 }),
+    easing: parseTransitionEasing(animation.easing, "block.animation.easing"),
+    iterationCount: parseBoundedNumber(animation.iterationCount, "block.animation.iterationCount", {
+      min: 1,
+      max: 20,
+    }),
+  };
+}
+
 function parseBlockIdentity(value: JsonRecord) {
   if (typeof value.id !== "string" || !value.id) throw new AppError(400, "block id is required");
   if (typeof value.type !== "string") throw new AppError(400, "block type is required");
@@ -279,6 +306,7 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     shadow: parseOptionalBlockStyleString(value.shadow, "block.shadow"),
     flipX: parseOptionalBoolean(value.flipX, "block.flipX"),
     flipY: parseOptionalBoolean(value.flipY, "block.flipY"),
+    animation: parseBlockAnimation(value.animation),
     hidden: parseOptionalBoolean(value.hidden, "block.hidden"),
     locked: parseOptionalBoolean(value.locked, "block.locked"),
     groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),

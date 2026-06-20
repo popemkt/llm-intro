@@ -1,9 +1,12 @@
+import { useEffect, useMemo, useRef } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import type { ApiSlideBackground, Block, ThemeName } from "@/types";
 import { getReadableTextColor } from "@/lib/color";
 import { ChartBlockView } from "./ChartBlockView";
 
 interface Props {
+  animateBlocks?: boolean;
   background?: ApiSlideBackground | null;
   blocks: Block[];
   theme: ThemeName;
@@ -30,7 +33,7 @@ function backgroundStyle(background?: ApiSlideBackground | null): React.CSSPrope
   };
 }
 
-export function DbSlideRenderer({ background, blocks, theme }: Props) {
+export function DbSlideRenderer({ animateBlocks = false, background, blocks, theme }: Props) {
   // Canvas mode: any block has percentage-based x/y positioning
   const isCanvas = blocks.some((b) => b.x !== undefined);
 
@@ -81,29 +84,117 @@ export function DbSlideRenderer({ background, blocks, theme }: Props) {
       {isCanvas
         ? blocks
             .filter((block) => !block.hidden)
-            .map((block) => (
-              <div
-                key={block.id}
-                style={{
-                  position: "absolute",
-                  left: `${block.x}%`,
-                  top: `${block.y}%`,
-                  width: `${block.w}%`,
-                  height: `${block.h}%`,
-                  overflow: "hidden",
-                  transform: blockTransform(block),
-                  opacity: block.opacity,
-                  boxShadow: block.shadow,
-                }}
-              >
-                <BlockView block={block} canvas />
-              </div>
-            ))
+            .map((block) => {
+              const transform = blockTransform(block);
+              return (
+                <AnimatedBlockFrame
+                  key={block.id}
+                  animate={animateBlocks}
+                  block={block}
+                  style={{
+                    position: "absolute",
+                    left: `${block.x}%`,
+                    top: `${block.y}%`,
+                    width: `${block.w}%`,
+                    height: `${block.h}%`,
+                    overflow: "hidden",
+                    transform,
+                    opacity: block.opacity,
+                    boxShadow: block.shadow,
+                  }}
+                >
+                  <BlockView block={block} canvas />
+                </AnimatedBlockFrame>
+              );
+            })
         : blocks
             .filter((block) => !block.hidden)
-            .map((block) => <BlockView key={block.id} block={block} />)}
+            .map((block) => (
+              <AnimatedBlockFrame key={block.id} animate={animateBlocks} block={block}>
+                <BlockView block={block} />
+              </AnimatedBlockFrame>
+            ))}
     </div>
   );
+}
+
+function AnimatedBlockFrame({
+  animate,
+  block,
+  children,
+  style,
+}: {
+  animate: boolean;
+  block: Block;
+  children: ReactNode;
+  style?: CSSProperties;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const animation = block.animation;
+  const transform = style?.transform?.toString();
+  const keyframes = useMemo(
+    () => (animation ? blockAnimationKeyframes(animation.preset, transform) : null),
+    [animation, transform],
+  );
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!animate || !animation || !keyframes || !el?.animate) return;
+    const playback = el.animate(keyframes, {
+      delay: animation.delay ?? 0,
+      duration: animation.duration ?? 480,
+      easing: animation.easing ?? "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "both",
+      iterations: animation.iterationCount ?? 1,
+    });
+    return () => playback.cancel();
+  }, [animate, animation, keyframes]);
+
+  return (
+    <div ref={ref} style={style}>
+      {children}
+    </div>
+  );
+}
+
+function blockAnimationKeyframes(
+  preset: NonNullable<Block["animation"]>["preset"],
+  transform = "none",
+): Keyframe[] {
+  switch (preset) {
+    case "fade-in":
+      return [
+        { opacity: 0, transform },
+        { opacity: 1, transform },
+      ];
+    case "rise":
+      return [
+        { opacity: 0, transform: `${transform} translateY(22px)` },
+        { opacity: 1, transform },
+      ];
+    case "scale-in":
+      return [
+        { opacity: 0, transform: `${transform} scale(0.86)` },
+        { opacity: 1, transform },
+      ];
+    case "slide-left":
+      return [
+        { opacity: 0, transform: `${transform} translateX(40px)` },
+        { opacity: 1, transform },
+      ];
+    case "slide-right":
+      return [
+        { opacity: 0, transform: `${transform} translateX(-40px)` },
+        { opacity: 1, transform },
+      ];
+    case "wipe-right":
+      return [
+        { clipPath: "inset(0 100% 0 0)", opacity: 1, transform },
+        { clipPath: "inset(0 0 0 0)", opacity: 1, transform },
+      ];
+    case "pulse":
+      return [{ transform }, { transform: `${transform} scale(1.04)` }, { transform }];
+  }
 }
 
 function blockTransform(block: Block) {

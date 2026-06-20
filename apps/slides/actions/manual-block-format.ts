@@ -4,6 +4,7 @@ type ManualBlockFormatClipboard = { patch: Partial<Block>; sourceType: Block["ty
 
 export function copyManualBlockFormat(block: Block): ManualBlockFormatClipboard {
   const common: Partial<Block> = {
+    animation: block.animation ? { ...block.animation } : undefined,
     flipX: block.flipX,
     flipY: block.flipY,
     opacity: block.opacity,
@@ -106,6 +107,7 @@ export function copyManualBlockFormat(block: Block): ManualBlockFormatClipboard 
 
 export function applyManualBlockFormat(block: Block, clipboard: ManualBlockFormatClipboard): Block {
   const common = {
+    animation: clipboard.patch.animation,
     flipX: clipboard.patch.flipX,
     flipY: clipboard.patch.flipY,
     opacity: clipboard.patch.opacity,

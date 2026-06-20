@@ -12,6 +12,7 @@ import {
 import { AppError } from "../server/errors.js";
 import { buildManualPresetBlocks, MANUAL_PRESET_IDS } from "../shared/manual-presets.js";
 import { applyManualBlockFormat, copyManualBlockFormat } from "./manual-block-format.js";
+import { createUpdateManualBlocksAction } from "./manual-block-batch.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -877,6 +878,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "add-manual-block": createAddManualBlockAction(slidesService),
     "insert-manual-preset": createInsertManualPresetAction(slidesService),
     "update-manual-block": createUpdateManualBlockAction(slidesService),
+    "update-manual-blocks": createUpdateManualBlocksAction(slidesService),
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
     "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
     "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),

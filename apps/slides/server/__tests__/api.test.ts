@@ -135,6 +135,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Apply manual block format",
         }),
         expect.objectContaining({
+          id: "update-manual-blocks",
+          name: "Update manual blocks",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -508,6 +512,106 @@ describe("Manual slide actions", () => {
       .send({ pid, sid: slide.id, bid: "badge" });
     expect(deleted.status).toBe(200);
     expect(deleted.body.blocks).toEqual([expect.objectContaining({ id: "title" })]);
+  });
+
+  it("updates multiple manual blocks atomically through a batch action", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Batch Blocks",
+          blocks: [
+            { id: "headline", type: "text", markdown: "Draft", x: 10, y: 10, w: 40, h: 12 },
+            {
+              id: "badge",
+              type: "shape",
+              shape: "pill",
+              color: "#25d366",
+              x: 60,
+              y: 10,
+              w: 20,
+              h: 10,
+            },
+            { id: "footer", type: "text", markdown: "Keep", x: 10, y: 82, w: 40, h: 8 },
+          ],
+        })
+    ).body;
+
+    const updated = await request(app)
+      .put("/_agent-native/actions/update-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        patches: [
+          {
+            bid: "headline",
+            patch: { markdown: "# Final", fontSize: 40, x: 8, y: 8, displayName: "Hero title" },
+          },
+          {
+            bid: "badge",
+            patch: { label: "Ready", textColor: "#0d0f0e", rotation: -3 },
+          },
+        ],
+      });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.blocks).toEqual([
+      expect.objectContaining({
+        id: "headline",
+        markdown: "# Final",
+        fontSize: 40,
+        x: 8,
+        y: 8,
+        displayName: "Hero title",
+      }),
+      expect.objectContaining({
+        id: "badge",
+        label: "Ready",
+        rotation: -3,
+        textColor: "#0d0f0e",
+      }),
+      expect.objectContaining({ id: "footer", markdown: "Keep" }),
+    ]);
+
+    const rejectedInvalid = await request(app)
+      .put("/_agent-native/actions/update-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        patches: [
+          { bid: "headline", patch: { markdown: "# Should not persist" } },
+          { bid: "badge", patch: { shape: "triangle" } },
+        ],
+      });
+    expect(rejectedInvalid.status).toBe(400);
+
+    const afterRejected = await request(app).get(`/_agent-native/actions/list-slides?pid=${pid}`);
+    const persisted = afterRejected.body.find((entry: { id: number }) => entry.id === slide.id);
+    expect(persisted.blocks[0]).toMatchObject({ id: "headline", markdown: "# Final" });
+    expect(persisted.blocks[1]).toMatchObject({ id: "badge", shape: "pill" });
+
+    const duplicateTarget = await request(app)
+      .put("/_agent-native/actions/update-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        patches: [
+          { bid: "headline", patch: { markdown: "A" } },
+          { bid: "headline", patch: { markdown: "B" } },
+        ],
+      });
+    expect(duplicateTarget.status).toBe(400);
+    expect(duplicateTarget.body.error).toContain("unique block ids");
+
+    await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ pid, sid: slide.id, blockIds: ["badge"], locked: true });
+    const rejectedLocked = await request(app)
+      .put("/_agent-native/actions/update-manual-blocks")
+      .send({ pid, sid: slide.id, patches: [{ bid: "badge", patch: { label: "Locked edit" } }] });
+    expect(rejectedLocked.status).toBe(400);
+    expect(rejectedLocked.body.error).toContain("block is locked");
   });
 
   it("manual arrange actions align, distribute, duplicate, and reorder blocks", async () => {

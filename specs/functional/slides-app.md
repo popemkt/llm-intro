@@ -198,6 +198,10 @@ editing, themed presentation playback, and HTML export.
 - Agents can refine manual slides without replacing the whole block array via
   `add-manual-block`, `update-manual-block`, `delete-manual-block`,
   `group-manual-blocks`, and `ungroup-manual-blocks`.
+- Agents can apply multiple manual block content, geometry, and appearance
+  patches atomically through `update-manual-blocks`. The action validates every
+  merged block before persisting, rejects duplicate targets, and refuses locked
+  target blocks.
 - Agents can perform PowerPoint-style manual layout operations via
   `arrange-manual-blocks`, `duplicate-manual-blocks`, and
   `move-manual-block-layer`, including multi-block alignment/distribution,

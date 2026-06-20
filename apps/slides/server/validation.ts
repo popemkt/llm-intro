@@ -19,6 +19,7 @@ type BlockPosition = {
   rotation?: number;
   opacity?: number;
   shadow?: string;
+  hidden?: boolean;
   locked?: boolean;
   groupId?: string;
   groupName?: string;
@@ -274,6 +275,7 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     rotation: parseBoundedNumber(value.rotation, "block.rotation", { min: -360, max: 360 }),
     opacity: parseBoundedNumber(value.opacity, "block.opacity", { min: 0, max: 1 }),
     shadow: parseOptionalBlockStyleString(value.shadow, "block.shadow"),
+    hidden: parseOptionalBoolean(value.hidden, "block.hidden"),
     locked: parseOptionalBoolean(value.locked, "block.locked"),
     groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),
     groupName: parseOptionalBlockGroupString(value.groupName, "block.groupName"),

@@ -20,6 +20,8 @@ import {
   List,
   Copy,
   Edit3,
+  Eye,
+  EyeOff,
   Globe,
   Grid3X3,
   Group,
@@ -407,6 +409,20 @@ const disabledArrangeButton: React.CSSProperties = {
   ...arrangeButton,
   cursor: "not-allowed",
   opacity: 0.45,
+};
+
+const bubbleButtonBase: React.CSSProperties = {
+  width: 26,
+  height: 26,
+  borderRadius: 6,
+  border: `1px solid ${C.border}`,
+  background: C.surface,
+  color: C.textDim,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
 };
 
 function cssUrl(value: string) {
@@ -2037,6 +2053,7 @@ export function SlideEditorPage() {
 
                 {blocks.map((block) => {
                   const isSelected = selectedIds.includes(block.id);
+                  if (block.hidden && !isSelected) return null;
                   const isInlineEditing = editingTextId === block.id && block.type === "text";
                   const x = block.x ?? 5;
                   const y = block.y ?? 5;
@@ -2065,12 +2082,14 @@ export function SlideEditorPage() {
                         height: `${h}%`,
                         cursor: "move",
                         transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
-                        opacity: block.opacity,
+                        opacity: block.hidden ? 0.22 : block.opacity,
                         boxShadow: block.shadow,
                         outline: isSelected
-                          ? block.locked
-                            ? "2px dashed #f6c85f"
-                            : "2px solid var(--theme-accent, #25d366)"
+                          ? block.hidden
+                            ? "2px dotted var(--theme-accent, #25d366)"
+                            : block.locked
+                              ? "2px dashed #f6c85f"
+                              : "2px solid var(--theme-accent, #25d366)"
                           : "1px dashed transparent",
                         outlineOffset: 1,
                         overflow: isSelected ? "visible" : "hidden",
@@ -2101,6 +2120,7 @@ export function SlideEditorPage() {
                         <>
                           <BlockBubbleMenu
                             canEditText={block.type === "text"}
+                            hidden={Boolean(block.hidden)}
                             locked={Boolean(block.locked)}
                             onEditText={() => {
                               if (!block.locked) setEditingTextId(block.id);
@@ -2111,6 +2131,9 @@ export function SlideEditorPage() {
                             onDelete={() => deleteBlock(block.id)}
                             onToggleLocked={() =>
                               updateBlock(block.id, { locked: !block.locked } as Partial<Block>)
+                            }
+                            onToggleHidden={() =>
+                              updateBlock(block.id, { hidden: !block.hidden } as Partial<Block>)
                             }
                             editing={isInlineEditing}
                           />
@@ -2659,6 +2682,7 @@ export function SlideEditorPage() {
                         marginBottom: 2,
                         background: selectedIds.includes(b.id) ? C.accentSubtle : "transparent",
                         border: `1px solid ${selectedIds.includes(b.id) ? C.border : "transparent"}`,
+                        opacity: b.hidden ? 0.62 : 1,
                       }}
                     >
                       <span
@@ -2685,6 +2709,24 @@ export function SlideEditorPage() {
                       >
                         {getBlockLayerName(b)}
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateBlock(b.id, { hidden: !b.hidden } as Partial<Block>);
+                        }}
+                        title={b.hidden ? "Show block" : "Hide block"}
+                        style={{
+                          color: b.hidden ? C.muted : C.textDim,
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 2,
+                          display: "flex",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {b.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -3750,6 +3792,19 @@ function CommonAppearanceEditor({
         >
           {block.locked ? <Lock size={13} /> : <Unlock size={13} />}
         </button>
+        <button
+          type="button"
+          aria-label={block.hidden ? "Show block" : "Hide block"}
+          title={block.hidden ? "Show block" : "Hide block"}
+          onClick={() => onUpdate({ hidden: !block.hidden } as Partial<Block>)}
+          style={{
+            ...arrangeButton,
+            background: block.hidden ? C.accentSubtle : C.bg,
+            color: block.hidden ? C.accent : C.text,
+          }}
+        >
+          {block.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+        </button>
         <NumberInput
           label="Rotate"
           min={-360}
@@ -4035,6 +4090,7 @@ function ImageAppearanceEditor({
 function BlockBubbleMenu({
   canEditText,
   editing,
+  hidden,
   locked,
   onBringForward,
   onDelete,
@@ -4042,9 +4098,11 @@ function BlockBubbleMenu({
   onEditText,
   onSendBack,
   onToggleLocked,
+  onToggleHidden,
 }: {
   canEditText: boolean;
   editing: boolean;
+  hidden: boolean;
   locked: boolean;
   onBringForward: () => void;
   onDelete: () => void;
@@ -4052,21 +4110,8 @@ function BlockBubbleMenu({
   onEditText: () => void;
   onSendBack: () => void;
   onToggleLocked: () => void;
+  onToggleHidden: () => void;
 }) {
-  const button: React.CSSProperties = {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    border: `1px solid ${C.border}`,
-    background: C.surface,
-    color: C.textDim,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    padding: 0,
-  };
-
   return (
     <div
       onPointerDown={(event) => event.stopPropagation()}
@@ -4093,7 +4138,7 @@ function BlockBubbleMenu({
           disabled={locked}
           title={editing ? "Editing text" : "Edit text"}
           style={{
-            ...button,
+            ...bubbleButtonBase,
             color: editing ? C.accent : C.textDim,
             background: editing ? C.accentSubtle : C.surface,
             cursor: locked ? "not-allowed" : "pointer",
@@ -4103,7 +4148,7 @@ function BlockBubbleMenu({
           {editing ? <Check size={13} /> : <Edit3 size={13} />}
         </button>
       )}
-      <button type="button" onClick={onDuplicate} title="Duplicate block" style={button}>
+      <button type="button" onClick={onDuplicate} title="Duplicate block" style={bubbleButtonBase}>
         <Copy size={13} />
       </button>
       <button
@@ -4112,7 +4157,7 @@ function BlockBubbleMenu({
         disabled={locked}
         title="Bring forward"
         style={{
-          ...button,
+          ...bubbleButtonBase,
           cursor: locked ? "not-allowed" : "pointer",
           opacity: locked ? 0.45 : 1,
         }}
@@ -4125,7 +4170,7 @@ function BlockBubbleMenu({
         disabled={locked}
         title="Send backward"
         style={{
-          ...button,
+          ...bubbleButtonBase,
           cursor: locked ? "not-allowed" : "pointer",
           opacity: locked ? 0.45 : 1,
         }}
@@ -4137,20 +4182,21 @@ function BlockBubbleMenu({
         onClick={onToggleLocked}
         title={locked ? "Unlock block" : "Lock block"}
         style={{
-          ...button,
+          ...bubbleButtonBase,
           color: locked ? "#f6c85f" : C.textDim,
           background: locked ? C.accentSubtle : C.surface,
         }}
       >
         {locked ? <Lock size={13} /> : <Unlock size={13} />}
       </button>
+      <BlockVisibilityBubbleButton hidden={hidden} onToggleHidden={onToggleHidden} />
       <button
         type="button"
         onClick={onDelete}
         disabled={locked}
         title="Delete block"
         style={{
-          ...button,
+          ...bubbleButtonBase,
           color: "#ff8a8a",
           cursor: locked ? "not-allowed" : "pointer",
           opacity: locked ? 0.45 : 1,
@@ -4159,6 +4205,29 @@ function BlockBubbleMenu({
         <Trash2 size={13} />
       </button>
     </div>
+  );
+}
+
+function BlockVisibilityBubbleButton({
+  hidden,
+  onToggleHidden,
+}: {
+  hidden: boolean;
+  onToggleHidden: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggleHidden}
+      title={hidden ? "Show block" : "Hide block"}
+      style={{
+        ...bubbleButtonBase,
+        color: hidden ? C.accent : C.textDim,
+        background: hidden ? C.accentSubtle : C.surface,
+      }}
+    >
+      {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+    </button>
   );
 }
 

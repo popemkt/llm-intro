@@ -147,6 +147,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Snap manual blocks to grid",
         }),
         expect.objectContaining({
+          id: "set-manual-block-visibility",
+          name: "Set manual block visibility",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -277,6 +281,7 @@ describe("Manual slide actions", () => {
             groupId: "hero-group",
             groupName: "Hero",
             displayName: "Hero headline",
+            hidden: true,
             locked: true,
             fontSize: 42,
             fontFamily: "Georgia, serif",
@@ -398,6 +403,7 @@ describe("Manual slide actions", () => {
           groupId: "hero-group",
           groupName: "Hero",
           displayName: "Hero headline",
+          hidden: true,
           locked: true,
         }),
         expect.objectContaining({
@@ -774,6 +780,37 @@ describe("Manual slide actions", () => {
       .send({ pid, sid: slide.id, blockIds: ["locked"], action: "fit-slide" });
     expect(arranged.status).toBe(200);
     expect(arranged.body.blocks[0]).toMatchObject({ id: "locked", x: 5, y: 5, w: 90, h: 90 });
+  });
+
+  it("manual block visibility can be toggled without deleting blocks", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Visible Blocks",
+          blocks: [
+            { id: "one", type: "text", markdown: "One", x: 10, y: 10, w: 20, h: 10 },
+            { id: "two", type: "text", markdown: "Two", x: 40, y: 10, w: 20, h: 10 },
+          ],
+        })
+    ).body;
+
+    const hidden = await request(app)
+      .put("/_agent-native/actions/set-manual-block-visibility")
+      .send({ pid, sid: slide.id, blockIds: ["one"], hidden: true });
+    expect(hidden.status).toBe(200);
+    expect(hidden.body.blocks).toEqual([
+      expect.objectContaining({ id: "one", hidden: true }),
+      expect.objectContaining({ id: "two" }),
+    ]);
+    expect(hidden.body.blocks[1]).not.toHaveProperty("hidden");
+
+    const shown = await request(app)
+      .put("/_agent-native/actions/set-manual-block-visibility")
+      .send({ pid, sid: slide.id, blockIds: ["one"], hidden: false });
+    expect(shown.status).toBe(200);
+    expect(shown.body.blocks[0]).toMatchObject({ id: "one", hidden: false });
   });
 
   it("copies manual block formatting without changing content or geometry", async () => {

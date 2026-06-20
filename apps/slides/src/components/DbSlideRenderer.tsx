@@ -79,25 +79,29 @@ export function DbSlideRenderer({ background, blocks, theme }: Props) {
       )}
 
       {isCanvas
-        ? blocks.map((block) => (
-            <div
-              key={block.id}
-              style={{
-                position: "absolute",
-                left: `${block.x}%`,
-                top: `${block.y}%`,
-                width: `${block.w}%`,
-                height: `${block.h}%`,
-                overflow: "hidden",
-                transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
-                opacity: block.opacity,
-                boxShadow: block.shadow,
-              }}
-            >
-              <BlockView block={block} canvas />
-            </div>
-          ))
-        : blocks.map((block) => <BlockView key={block.id} block={block} />)}
+        ? blocks
+            .filter((block) => !block.hidden)
+            .map((block) => (
+              <div
+                key={block.id}
+                style={{
+                  position: "absolute",
+                  left: `${block.x}%`,
+                  top: `${block.y}%`,
+                  width: `${block.w}%`,
+                  height: `${block.h}%`,
+                  overflow: "hidden",
+                  transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                  opacity: block.opacity,
+                  boxShadow: block.shadow,
+                }}
+              >
+                <BlockView block={block} canvas />
+              </div>
+            ))
+        : blocks
+            .filter((block) => !block.hidden)
+            .map((block) => <BlockView key={block.id} block={block} />)}
     </div>
   );
 }

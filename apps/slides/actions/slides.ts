@@ -528,6 +528,34 @@ function createSetManualBlockLockAction(slidesService: SlidesService) {
   });
 }
 
+function createSetManualBlockVisibilityAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Show or hide manual slide blocks without deleting them.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      blockIds: z.array(z.string().min(1)).min(1),
+      hidden: z.boolean(),
+    }),
+    http: { method: "PUT", path: "set-manual-block-visibility" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Set manual block visibility",
+      description: "Show or hide manual slide blocks without deleting them.",
+    },
+    run: ({ pid, sid, blockIds, hidden }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, blockIds);
+      const selected = new Set(blockIds);
+      const blocks = slide.blocks.map((block) =>
+        selected.has(block.id) ? ({ ...block, hidden } as Block) : block,
+      );
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
 function createApplyManualBlockFormatAction(slidesService: SlidesService) {
   return defineAction({
     description:
@@ -734,6 +762,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "update-manual-blocks": createUpdateManualBlocksAction(slidesService),
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
     "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
+    "set-manual-block-visibility": createSetManualBlockVisibilityAction(slidesService),
     "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),

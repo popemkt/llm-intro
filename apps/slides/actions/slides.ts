@@ -11,6 +11,7 @@ import {
 } from "../server/validation.js";
 import { AppError } from "../server/errors.js";
 import { buildManualPresetBlocks, MANUAL_PRESET_IDS } from "../shared/manual-presets.js";
+import { createArrangeManualBlocksAction } from "./manual-block-arrange.js";
 import { applyManualBlockFormat, copyManualBlockFormat } from "./manual-block-format.js";
 import { createUpdateManualBlocksAction } from "./manual-block-batch.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
@@ -18,18 +19,6 @@ import { z } from "zod";
 
 type SlidesService = ReturnType<typeof createSlidesService>;
 type RectPercent = { h: number; w: number; x: number; y: number };
-type ManualArrangeAction =
-  | "align-left"
-  | "align-center"
-  | "align-right"
-  | "align-top"
-  | "align-middle"
-  | "align-bottom"
-  | "distribute-horizontal"
-  | "distribute-vertical"
-  | "fit-width"
-  | "fit-height"
-  | "fit-slide";
 type ManualLayerDirection = "forward" | "backward" | "front" | "back";
 
 const blockInput = z.record(z.string(), z.unknown());
@@ -42,19 +31,6 @@ const backgroundInput = z
     imagePosition: z.string().optional(),
   })
   .nullable();
-const manualArrangeActions = [
-  "align-left",
-  "align-center",
-  "align-right",
-  "align-top",
-  "align-middle",
-  "align-bottom",
-  "distribute-horizontal",
-  "distribute-vertical",
-  "fit-width",
-  "fit-height",
-  "fit-slide",
-] as const;
 const manualLayerDirections = ["forward", "backward", "front", "back"] as const;
 const blockDefaults: Record<Block["type"], RectPercent> = {
   text: { x: 5, y: 5, w: 90, h: 30 },
@@ -110,15 +86,6 @@ function blockRect(block: Block): RectPercent {
   };
 }
 
-function selectionBounds(blocks: Block[]) {
-  const rects = blocks.map((block) => ({ id: block.id, ...blockRect(block) }));
-  const left = Math.min(...rects.map((rect) => rect.x));
-  const top = Math.min(...rects.map((rect) => rect.y));
-  const right = Math.max(...rects.map((rect) => rect.x + rect.w));
-  const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
-  return { bottom, height: bottom - top, left, rects, right, top, width: right - left };
-}
-
 function assertBlockIdsExist(blocks: Block[], blockIds: string[]) {
   const ids = new Set(blocks.map((block) => block.id));
   const missing = blockIds.filter((id) => !ids.has(id));
@@ -129,92 +96,6 @@ function assertBlocksUnlocked(blocks: Block[], blockIds: string[]) {
   const selected = new Set(blockIds);
   const locked = blocks.find((block) => selected.has(block.id) && block.locked);
   if (locked) throw new AppError(400, `block is locked: ${locked.id}`);
-}
-
-function arrangeOneBlock(block: Block, action: ManualArrangeAction): Block {
-  const rect = blockRect(block);
-  const maxX = Math.max(0, 100 - rect.w);
-  const maxY = Math.max(0, 100 - rect.h);
-  switch (action) {
-    case "align-left":
-      return { ...block, x: 0 };
-    case "align-center":
-      return { ...block, x: clamp((100 - rect.w) / 2, 0, maxX) };
-    case "align-right":
-      return { ...block, x: maxX };
-    case "align-top":
-      return { ...block, y: 0 };
-    case "align-middle":
-      return { ...block, y: clamp((100 - rect.h) / 2, 0, maxY) };
-    case "align-bottom":
-      return { ...block, y: maxY };
-    case "fit-width":
-      return { ...block, x: 5, w: 90 };
-    case "fit-height":
-      return { ...block, y: 5, h: 90 };
-    case "fit-slide":
-      return { ...block, x: 5, y: 5, w: 90, h: 90 };
-    case "distribute-horizontal":
-    case "distribute-vertical":
-      return block;
-  }
-}
-
-function arrangeManualBlocks(blocks: Block[], blockIds: string[], action: ManualArrangeAction) {
-  const selected = new Set(blockIds);
-  const selectedBlocks = blocks.filter((block) => selected.has(block.id));
-  if (selectedBlocks.length === 0) return blocks;
-  if (
-    action === "fit-width" ||
-    action === "fit-height" ||
-    action === "fit-slide" ||
-    selectedBlocks.length === 1
-  ) {
-    return blocks.map((block) => (selected.has(block.id) ? arrangeOneBlock(block, action) : block));
-  }
-  if (action === "distribute-horizontal" || action === "distribute-vertical") {
-    if (selectedBlocks.length < 3) {
-      throw new AppError(400, "distribute actions require at least three blocks");
-    }
-    return distributeManualBlocks(blocks, selectedBlocks, action);
-  }
-
-  const bounds = selectionBounds(selectedBlocks);
-  const patches = new Map<string, { x?: number; y?: number }>();
-  for (const rect of bounds.rects) {
-    if (action === "align-left") patches.set(rect.id, { x: bounds.left });
-    if (action === "align-center")
-      patches.set(rect.id, { x: bounds.left + (bounds.width - rect.w) / 2 });
-    if (action === "align-right") patches.set(rect.id, { x: bounds.right - rect.w });
-    if (action === "align-top") patches.set(rect.id, { y: bounds.top });
-    if (action === "align-middle")
-      patches.set(rect.id, { y: bounds.top + (bounds.height - rect.h) / 2 });
-    if (action === "align-bottom") patches.set(rect.id, { y: bounds.bottom - rect.h });
-  }
-  return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
-}
-
-function distributeManualBlocks(
-  blocks: Block[],
-  selectedBlocks: Block[],
-  action: "distribute-horizontal" | "distribute-vertical",
-) {
-  const axis = action === "distribute-horizontal" ? "x" : "y";
-  const size = action === "distribute-horizontal" ? "w" : "h";
-  const rects = selectedBlocks.map((block) => ({ id: block.id, ...blockRect(block) }));
-  const sorted = rects.sort((a, b) => a[axis] + a[size] / 2 - (b[axis] + b[size] / 2));
-  const first = sorted[0]!;
-  const last = sorted[sorted.length - 1]!;
-  const start = first[axis] + first[size] / 2;
-  const end = last[axis] + last[size] / 2;
-  const step = (end - start) / (sorted.length - 1);
-  const patches = new Map<string, { x?: number; y?: number }>();
-  sorted.forEach((rect, index) => {
-    const center = start + step * index;
-    const next = clamp(center - rect[size] / 2, 0, 100 - rect[size]);
-    patches.set(rect.id, axis === "x" ? { x: next } : { y: next });
-  });
-  return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
 }
 
 function duplicateManualBlocks(
@@ -741,36 +622,6 @@ function createUngroupManualBlocksAction(slidesService: SlidesService) {
           : block,
       );
       return updateManualSlideBlocks(slidesService, pid, sid, blocks);
-    },
-  });
-}
-
-function createArrangeManualBlocksAction(slidesService: SlidesService) {
-  return defineAction({
-    description: "Align, distribute, or fit manual slide blocks on the normalized canvas.",
-    schema: z.object({
-      pid: z.coerce.number().int().positive(),
-      sid: z.coerce.number().int().positive(),
-      blockIds: z.array(z.string().min(1)).min(1),
-      action: z.enum(manualArrangeActions),
-    }),
-    http: { method: "PUT", path: "arrange-manual-blocks" },
-    requiresAuth: false,
-    publicAgent: {
-      ...publicWriteAction,
-      title: "Arrange manual blocks",
-      description: "Align, distribute, or fit manual slide blocks on the normalized canvas.",
-    },
-    run: ({ pid, sid, blockIds, action }) => {
-      const slide = getManualSlide(slidesService, pid, sid);
-      assertBlockIdsExist(slide.blocks, blockIds);
-      assertBlocksUnlocked(slide.blocks, blockIds);
-      return updateManualSlideBlocks(
-        slidesService,
-        pid,
-        sid,
-        arrangeManualBlocks(slide.blocks, blockIds, action),
-      );
     },
   });
 }

@@ -456,7 +456,10 @@ type MultiBlockArrangeAction =
   | "align-middle"
   | "align-bottom"
   | "distribute-horizontal"
-  | "distribute-vertical";
+  | "distribute-vertical"
+  | "match-width"
+  | "match-height"
+  | "match-size";
 type BlockClipboard = { blocks: Block[] };
 type BlockFormatClipboard = { patch: Partial<Block>; sourceType: Block["type"] };
 type SlideHistorySnapshot = {
@@ -549,6 +552,19 @@ function arrangeSelectedBlocks(
       patches.set(rect.id, axis === "x" ? { x: next } : { y: next });
     });
     return blocks.map((block) => ({ ...block, ...patches.get(block.id) }) as Block);
+  }
+
+  if (action === "match-width" || action === "match-height" || action === "match-size") {
+    const reference = selectedBlocks.find((block) => block.id === ids[0]) ?? selectedBlocks[0];
+    const referenceRect = getBlockRect(reference);
+    return blocks.map((block) => {
+      if (!selected.has(block.id) || block.locked) return block;
+      const patch = {
+        ...(action === "match-width" || action === "match-size" ? { w: referenceRect.w } : {}),
+        ...(action === "match-height" || action === "match-size" ? { h: referenceRect.h } : {}),
+      };
+      return { ...block, ...patch } as Block;
+    });
   }
 
   for (const rect of bounds.rects) {
@@ -3493,6 +3509,24 @@ const multiDistributeItems = [
   },
 ];
 
+const multiMatchItems = [
+  {
+    action: "match-width" as const,
+    title: "Match width",
+    icon: <StretchHorizontal size={13} />,
+  },
+  {
+    action: "match-height" as const,
+    title: "Match height",
+    icon: <StretchVertical size={13} />,
+  },
+  {
+    action: "match-size" as const,
+    title: "Match size",
+    icon: <Maximize2 size={13} />,
+  },
+];
+
 function MultiSelectionPanel({
   count,
   onArrange,
@@ -3567,6 +3601,19 @@ function MultiSelectionPanel({
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         {multiDistributeItems.map((item) => (
+          <button
+            key={item.action}
+            type="button"
+            title={item.title}
+            onClick={() => onArrange(item.action)}
+            style={arrangeButton}
+          >
+            {item.icon}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {multiMatchItems.map((item) => (
           <button
             key={item.action}
             type="button"

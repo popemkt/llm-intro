@@ -623,8 +623,8 @@ describe("Manual slide actions", () => {
           title: "Arrange Blocks",
           blocks: [
             { id: "a", type: "text", markdown: "A", x: 10, y: 10, w: 10, h: 10 },
-            { id: "b", type: "text", markdown: "B", x: 35, y: 20, w: 10, h: 10 },
-            { id: "c", type: "text", markdown: "C", x: 80, y: 30, w: 10, h: 10 },
+            { id: "b", type: "text", markdown: "B", x: 35, y: 20, w: 18, h: 14 },
+            { id: "c", type: "text", markdown: "C", x: 80, y: 30, w: 8, h: 16 },
           ],
         })
     ).body;
@@ -644,14 +644,26 @@ describe("Manual slide actions", () => {
         action: "distribute-horizontal",
       });
     expect(distributed.status).toBe(200);
-    expect(distributed.body.blocks.map((block: { x: number }) => block.x)).toEqual([10, 45, 80]);
+    expect(distributed.body.blocks.map((block: { x: number }) => block.x)).toEqual([10, 40.5, 80]);
+
+    const matched = await request(app)
+      .put("/_agent-native/actions/arrange-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["b", "a", "c"], action: "match-size" });
+    expect(matched.status).toBe(200);
+    expect(
+      matched.body.blocks.map((block: { h: number; w: number }) => [block.w, block.h]),
+    ).toEqual([
+      [18, 14],
+      [18, 14],
+      [18, 14],
+    ]);
 
     const duplicated = await request(app)
       .post("/_agent-native/actions/duplicate-manual-blocks")
       .send({ pid, sid: slide.id, blockIds: ["b"], offsetX: 4, offsetY: 5 });
     expect(duplicated.status).toBe(200);
     const copy = duplicated.body.blocks[2];
-    expect(copy).toMatchObject({ markdown: "B", x: 49, y: 15 });
+    expect(copy).toMatchObject({ markdown: "B", x: 44.5, y: 15 });
     expect(copy.id).not.toBe("b");
 
     const layered = await request(app)

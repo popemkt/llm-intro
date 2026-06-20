@@ -205,7 +205,8 @@ editing, themed presentation playback, and HTML export.
 - Agents can perform PowerPoint-style manual layout operations via
   `arrange-manual-blocks`, `duplicate-manual-blocks`, and
   `move-manual-block-layer`, including multi-block alignment/distribution,
-  block duplication with fresh ids, and layer stack changes.
+  match width/height/size, block duplication with fresh ids, and layer stack
+  changes.
 - Agents can lock or unlock manual slide blocks through
   `set-manual-block-lock`; locked blocks stay selectable but reject destructive
   or layout-changing actions such as delete, arrange, duplicate, and layer
@@ -274,7 +275,8 @@ editing, themed presentation playback, and HTML export.
   spacing. When enabled, dragging and resizing blocks snaps to grid lines in
   addition to slide and block guides.
 - Users can align multi-selected manual slide blocks to their shared selection
-  bounds and distribute selected blocks horizontally or vertically.
+  bounds, distribute selected blocks horizontally or vertically, and match
+  selected block width, height, or full size to the primary selected block.
 - Text block editors include markdown formatting controls for headings, bold,
   italic, quotes, and bullet lists while preserving plain markdown storage.
 - The selected block inspector can align blocks left, center, right, top,

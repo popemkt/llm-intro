@@ -127,6 +127,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Create manual slide",
         }),
         expect.objectContaining({
+          id: "create-manual-preset-slide",
+          name: "Create manual preset slide",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -610,6 +614,35 @@ describe("Manual slide actions", () => {
       expect.objectContaining({ type: "text", markdown: expect.stringContaining("Target") }),
     ]);
     expect(new Set(res.body.blocks.map((block: { id: string }) => block.id)).size).toBe(4);
+  });
+
+  it("creates manual slides directly from reusable presets", async () => {
+    const res = await request(app)
+      .post("/_agent-native/actions/create-manual-preset-slide")
+      .send({
+        pid,
+        presetId: "timeline",
+        title: "Preset Timeline",
+        notes: "Use this as the talk track.",
+        background: { fill: "#101412" },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      title: "Preset Timeline",
+      kind: "db",
+      notes: "Use this as the talk track.",
+      background: { fill: "#101412" },
+    });
+    expect(res.body.blocks).toHaveLength(8);
+    expect(res.body.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "shape", label: "1" }),
+        expect.objectContaining({ type: "shape", label: "2" }),
+        expect.objectContaining({ type: "shape", label: "3" }),
+        expect.objectContaining({ type: "text", markdown: expect.stringContaining("Start") }),
+      ]),
+    );
   });
 });
 

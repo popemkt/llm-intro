@@ -353,6 +353,40 @@ function createManualSlideAction(slidesService: SlidesService) {
   });
 }
 
+function createManualPresetSlideAction(slidesService: SlidesService) {
+  return defineAction({
+    description: "Create a manual slide from a reusable typed block preset.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      presetId: z.enum(MANUAL_PRESET_IDS),
+      title: z.string().optional(),
+      notes: z.string().optional(),
+      transition: transitionInput.optional(),
+      background: backgroundInput.optional(),
+    }),
+    http: {
+      method: "POST",
+      path: "create-manual-preset-slide",
+    },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Create manual preset slide",
+      description:
+        "Create a manual, PowerPoint-style slide from a reusable editable layout preset.",
+    },
+    run: ({ pid, presetId, ...input }) =>
+      slidesService.create(
+        pid,
+        parseSlideCreate({
+          ...input,
+          title: input.title ?? `${presetId} slide`,
+          blocks: buildManualPresetBlocks(presetId),
+        }),
+      ),
+  });
+}
+
 function createHtmlSlideAction(slidesService: SlidesService) {
   return defineAction({
     description: "Create an HTML slide from authored HTML, CSS, and optional JavaScript.",
@@ -754,6 +788,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "list-slides": createListSlidesAction(slidesService),
     "create-slide": createRawSlideAction(slidesService),
     "create-manual-slide": createManualSlideAction(slidesService),
+    "create-manual-preset-slide": createManualPresetSlideAction(slidesService),
     "create-html-slide": createHtmlSlideAction(slidesService),
     "create-normal-slide": createNormalSlideAction(slidesService),
     "create-normal-slides": createNormalSlidesAction(slidesService),

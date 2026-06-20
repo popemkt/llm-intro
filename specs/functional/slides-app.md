@@ -203,9 +203,10 @@ editing, themed presentation playback, and HTML export.
   `set-manual-block-lock`; locked blocks stay selectable but reject destructive
   or layout-changing actions such as delete, arrange, duplicate, and layer
   moves.
-- Agents can append reusable manual layout presets through
-  `insert-manual-preset`; presets resolve to ordinary typed blocks and can be
-  edited by later block actions.
+- Agents can create a complete editable manual slide from reusable layout
+  presets through `create-manual-preset-slide`, or append those same presets to
+  an existing slide through `insert-manual-preset`; presets resolve to ordinary
+  typed blocks and can be edited by later block actions.
 - Agents can create full-canvas HTML slides through `create-html-slide` by
   providing authored HTML/CSS/JS source.
 - Users can create a new deck from Home in either blank mode or outline mode.

@@ -210,7 +210,9 @@ editing, themed presentation playback, and HTML export.
 - Agents can move or resize one or more manual blocks by relative percentage
   deltas through `transform-manual-blocks`. The action can either apply the
   same deltas to each target block or proportionally scale the whole selected
-  bounds while preserving relative block placement. It clamps geometry to the
+  bounds while preserving relative block placement. The visual editor uses the
+  same proportional bounds model when a user corner-resizes a multi-selection.
+  It clamps geometry to the
   normalized slide canvas and rejects locked target blocks.
 - Agents can snap one or more manual blocks to a configurable percentage grid
   through `snap-manual-blocks-to-grid`, including optional size snapping. The

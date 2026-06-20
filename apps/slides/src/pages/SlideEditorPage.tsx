@@ -94,6 +94,11 @@ type DragState = {
   }>;
 };
 
+type SelectionResize = {
+  sourceBounds: RectPercent;
+  targetBounds: RectPercent;
+};
+
 type GuideAxis = "x" | "y";
 type ActiveGuide = { axis: GuideAxis; value: number };
 type RectPercent = { x: number; y: number; w: number; h: number };
@@ -235,6 +240,25 @@ function resizeRectForDrag(
   }
 }
 
+function dragOriginalRect(original: DragState["originals"][number]): RectPercent {
+  return {
+    x: original.origX,
+    y: original.origY,
+    w: original.origW,
+    h: original.origH,
+  };
+}
+
+function dragOriginalForBounds(bounds: RectPercent, id: string): DragState["originals"][number] {
+  return {
+    id,
+    origX: bounds.x,
+    origY: bounds.y,
+    origW: bounds.w,
+    origH: bounds.h,
+  };
+}
+
 function constrainResizeRectAspect(
   original: DragState["originals"][number],
   mode: DragMode,
@@ -285,6 +309,62 @@ function closestGuide(point: number, targets: number[], axis: GuideAxis): Active
     if (!best || distance < best.distance) best = { distance, guide: { axis, value: target } };
   }
   return best?.guide ?? null;
+}
+
+function resizeSelectionBoundsForDrag(
+  drag: DragState,
+  dx: number,
+  dy: number,
+  lockAspect: boolean,
+): RectPercent {
+  const sourceBounds = rectBounds(drag.originals.map(dragOriginalRect));
+  const original = dragOriginalForBounds(sourceBounds, drag.blockId);
+  const rawRect = resizeRectForDrag(original, drag.mode, dx, dy);
+  return lockAspect ? constrainResizeRectAspect(original, drag.mode, rawRect) : rawRect;
+}
+
+function scaleValueWithinBounds(
+  value: number,
+  sourceStart: number,
+  sourceSize: number,
+  targetStart: number,
+  targetSize: number,
+): number {
+  if (sourceSize <= 0) return targetStart;
+  return targetStart + ((value - sourceStart) / sourceSize) * targetSize;
+}
+
+function scaleRectWithinBounds(
+  rect: RectPercent,
+  sourceBounds: RectPercent,
+  targetBounds: RectPercent,
+): RectPercent {
+  return {
+    x: clamp(
+      scaleValueWithinBounds(
+        rect.x,
+        sourceBounds.x,
+        sourceBounds.w,
+        targetBounds.x,
+        targetBounds.w,
+      ),
+      0,
+      100,
+    ),
+    y: clamp(
+      scaleValueWithinBounds(
+        rect.y,
+        sourceBounds.y,
+        sourceBounds.h,
+        targetBounds.y,
+        targetBounds.h,
+      ),
+      0,
+      100,
+    ),
+    w: clamp((rect.w / sourceBounds.w) * targetBounds.w, 5, 100),
+    h: clamp((rect.h / sourceBounds.h) * targetBounds.h, 5, 100),
+  };
 }
 
 function snapResizeRect(
@@ -343,9 +423,10 @@ function applyDragToBlock(
     dy: number;
     moveDelta: { x: number; y: number };
     resizeRect: RectPercent | null;
+    selectionResize: SelectionResize | null;
   },
 ): Block {
-  const { drag, dx, dy, moveDelta, resizeRect } = context;
+  const { drag, dx, dy, moveDelta, resizeRect, selectionResize } = context;
   const original = drag.originals.find((entry) => entry.id === block.id);
   if (!original) return block;
   if (drag.mode === "move") {
@@ -353,6 +434,20 @@ function applyDragToBlock(
       ...block,
       x: clamp(original.origX + moveDelta.x, 0, 100 - original.origW),
       y: clamp(original.origY + moveDelta.y, 0, 100 - original.origH),
+    };
+  }
+  if (selectionResize) {
+    const nextRect = scaleRectWithinBounds(
+      dragOriginalRect(original),
+      selectionResize.sourceBounds,
+      selectionResize.targetBounds,
+    );
+    return {
+      ...block,
+      x: nextRect.x,
+      y: nextRect.y,
+      w: nextRect.w,
+      h: nextRect.h,
     };
   }
   if (block.id !== drag.blockId) return block;
@@ -1025,6 +1120,7 @@ export function SlideEditorPage() {
       const activeGridStep = snapToGrid ? gridStep : null;
       let moveDelta = { x: dx, y: dy };
       let resizeRect: RectPercent | null = null;
+      let selectionResize: SelectionResize | null = null;
       let guides: ActiveGuide[] = [];
 
       if (snapEnabled && drag.mode === "move") {
@@ -1045,7 +1141,8 @@ export function SlideEditorPage() {
       }
 
       if (drag.mode !== "move") {
-        const original = drag.originals.find((entry) => entry.id === drag.blockId);
+        const draggedOriginal = drag.originals.find((entry) => entry.id === drag.blockId);
+        const original = drag.originals.length > 1 ? null : draggedOriginal;
         if (original) {
           const rawRect = resizeRectForDrag(original, drag.mode, dx, dy);
           const constrainedRect = e.shiftKey
@@ -1067,12 +1164,40 @@ export function SlideEditorPage() {
             resizeRect = constrainedRect;
           }
         }
+        if (!original && draggedOriginal) {
+          const sourceBounds = rectBounds(drag.originals.map(dragOriginalRect));
+          const groupOriginal = dragOriginalForBounds(sourceBounds, drag.blockId);
+          const constrainedRect = resizeSelectionBoundsForDrag(drag, dx, dy, e.shiftKey);
+          if (snapEnabled) {
+            const snapped = snapResizeRect(
+              constrainedRect,
+              drag.mode,
+              currentBlocks,
+              draggedIds,
+              activeGridStep,
+            );
+            selectionResize = {
+              sourceBounds,
+              targetBounds: e.shiftKey
+                ? constrainResizeRectAspect(groupOriginal, drag.mode, snapped.rect)
+                : snapped.rect,
+            };
+            guides = snapped.guides;
+          } else {
+            selectionResize = {
+              sourceBounds,
+              targetBounds: constrainedRect,
+            };
+          }
+        }
       }
 
       setActiveGuides(guides);
 
       setBlocks((prev) =>
-        prev.map((block) => applyDragToBlock(block, { drag, dx, dy, moveDelta, resizeRect })),
+        prev.map((block) =>
+          applyDragToBlock(block, { drag, dx, dy, moveDelta, resizeRect, selectionResize }),
+        ),
       );
     };
     const onUp = () => {

@@ -37,6 +37,9 @@ export type TextBlock = {
   markdown: string;
   fontSize?: number;
   fontFamily?: string;
+  fontWeight?: number;
+  fontStyle?: "normal" | "italic";
+  lineHeight?: number;
   color?: string;
   background?: string;
   align?: "left" | "center" | "right";

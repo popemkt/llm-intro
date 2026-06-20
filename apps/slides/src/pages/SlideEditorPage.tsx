@@ -572,6 +572,9 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
           color: block.color,
           fontFamily: block.fontFamily,
           fontSize: block.fontSize,
+          fontStyle: block.fontStyle,
+          fontWeight: block.fontWeight,
+          lineHeight: block.lineHeight,
           padding: block.padding,
         } as Partial<Block>,
       };
@@ -3542,6 +3545,22 @@ function TextAppearanceEditor({
           onChange={(padding) => onUpdate({ padding })}
         />
       </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <NumberInput
+          label="Weight"
+          min={100}
+          max={900}
+          value={block.fontWeight}
+          onChange={(fontWeight) => onUpdate({ fontWeight })}
+        />
+        <NumberInput
+          label="Line height"
+          min={0.8}
+          max={3}
+          value={block.lineHeight}
+          onChange={(lineHeight) => onUpdate({ lineHeight })}
+        />
+      </div>
       <InspectorField label="Font family">
         <select
           value={block.fontFamily ?? ""}
@@ -3556,6 +3575,7 @@ function TextAppearanceEditor({
           <option value="Arial, Helvetica, sans-serif">Arial</option>
         </select>
       </InspectorField>
+      <TextStyleButtons block={block} onUpdate={onUpdate} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
         {alignButton("left", <AlignLeft size={14} />)}
         {alignButton("center", <AlignCenter size={14} />)}
@@ -3571,6 +3591,48 @@ function TextAppearanceEditor({
         value={block.background}
         onChange={(background) => onUpdate({ background })}
       />
+    </div>
+  );
+}
+
+function TextStyleButtons({
+  block,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: "text" }>;
+  onUpdate: (patch: Partial<Extract<Block, { type: "text" }>>) => void;
+}) {
+  const isBold = Boolean(block.fontWeight && block.fontWeight >= 700);
+  const isItalic = block.fontStyle === "italic";
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
+      <button
+        type="button"
+        aria-label="Toggle bold text"
+        title="Toggle bold text"
+        onClick={() => onUpdate({ fontWeight: isBold ? undefined : 700 })}
+        style={{
+          ...arrangeButton,
+          background: isBold ? C.accentSubtle : C.bg,
+          color: isBold ? C.accent : C.text,
+        }}
+      >
+        <Bold size={14} />
+      </button>
+      <button
+        type="button"
+        aria-label="Toggle italic text"
+        title="Toggle italic text"
+        onClick={() => onUpdate({ fontStyle: isItalic ? undefined : "italic" })}
+        style={{
+          ...arrangeButton,
+          background: isItalic ? C.accentSubtle : C.bg,
+          color: isItalic ? C.accent : C.text,
+        }}
+      >
+        <Italic size={14} />
+      </button>
     </div>
   );
 }
@@ -3849,7 +3911,9 @@ function CanvasTextBlock({ block }: { block: Extract<Block, { type: "text" }> })
         boxSizing: "border-box",
         fontSize: "clamp(0.6rem, 0.9vw, 0.85rem)",
         fontFamily: block.fontFamily,
-        lineHeight: 1.55,
+        fontWeight: block.fontWeight,
+        fontStyle: block.fontStyle,
+        lineHeight: block.lineHeight ?? 1.55,
         color: block.color ?? "var(--theme-text)",
         background: block.background,
         textAlign: block.align,

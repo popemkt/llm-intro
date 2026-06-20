@@ -112,6 +112,14 @@ function parseTextAlign(value: unknown) {
   return value as "left" | "center" | "right";
 }
 
+function parseFontStyle(value: unknown) {
+  if (value === undefined) return undefined;
+  if (!["normal", "italic"].includes(String(value))) {
+    throw new AppError(400, "text block fontStyle is invalid");
+  }
+  return value as "normal" | "italic";
+}
+
 function parseObjectFit(value: unknown) {
   if (value === undefined) return undefined;
   if (!["contain", "cover", "fill"].includes(String(value))) {
@@ -281,6 +289,12 @@ function validateTextBlock(id: string, value: JsonRecord, position: BlockPositio
     markdown: value.markdown,
     fontSize: parseBoundedNumber(value.fontSize, "text block fontSize", { min: 8, max: 180 }),
     fontFamily: parseOptionalBlockStyleString(value.fontFamily, "text block fontFamily"),
+    fontWeight: parseBoundedNumber(value.fontWeight, "text block fontWeight", {
+      min: 100,
+      max: 900,
+    }),
+    fontStyle: parseFontStyle(value.fontStyle),
+    lineHeight: parseBoundedNumber(value.lineHeight, "text block lineHeight", { min: 0.8, max: 3 }),
     color: parseOptionalColor(value.color, "text block color"),
     background: parseOptionalColor(value.background, "text block background"),
     align: parseTextAlign(value.align),

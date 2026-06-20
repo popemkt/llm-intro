@@ -31,6 +31,16 @@ type BlockPosition = {
   groupName?: string;
   displayName?: string;
 };
+const manualShapeKinds = [
+  "rect",
+  "pill",
+  "circle",
+  "triangle",
+  "diamond",
+  "parallelogram",
+  "hexagon",
+  "arrow-right",
+] as const;
 
 function asRecord(value: unknown): JsonRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -409,7 +419,7 @@ function validateIframeBlock(id: string, value: JsonRecord, position: BlockPosit
 }
 
 function validateShapeBlock(id: string, value: JsonRecord, position: BlockPosition): Block {
-  if (!["rect", "pill", "circle"].includes(String(value.shape))) {
+  if (!manualShapeKinds.includes(value.shape as (typeof manualShapeKinds)[number])) {
     throw new AppError(400, "shape block shape is invalid");
   }
   if (typeof value.color !== "string" || !value.color) {
@@ -421,7 +431,7 @@ function validateShapeBlock(id: string, value: JsonRecord, position: BlockPositi
   return {
     id,
     type: "shape",
-    shape: value.shape as "rect" | "pill" | "circle",
+    shape: value.shape as (typeof manualShapeKinds)[number],
     color: value.color,
     label: value.label as string | undefined,
     textColor: parseOptionalColor(value.textColor, "shape block textColor"),

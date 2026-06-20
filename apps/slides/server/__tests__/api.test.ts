@@ -615,7 +615,7 @@ describe("Manual slide actions", () => {
         sid: slide.id,
         patches: [
           { bid: "headline", patch: { markdown: "# Should not persist" } },
-          { bid: "badge", patch: { shape: "triangle" } },
+          { bid: "badge", patch: { shape: "freeform" } },
         ],
       });
     expect(rejectedInvalid.status).toBe(400);
@@ -624,6 +624,12 @@ describe("Manual slide actions", () => {
     const persisted = afterRejected.body.find((entry: { id: number }) => entry.id === slide.id);
     expect(persisted.blocks[0]).toMatchObject({ id: "headline", markdown: "# Final" });
     expect(persisted.blocks[1]).toMatchObject({ id: "badge", shape: "pill" });
+
+    const triangle = await request(app)
+      .put("/_agent-native/actions/update-manual-block")
+      .send({ pid, sid: slide.id, bid: "badge", patch: { shape: "triangle" } });
+    expect(triangle.status).toBe(200);
+    expect(triangle.body.blocks[1]).toMatchObject({ id: "badge", shape: "triangle" });
 
     const duplicateTarget = await request(app)
       .put("/_agent-native/actions/update-manual-blocks")

@@ -10,6 +10,7 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
+  ArrowRight,
   ArrowDown,
   ArrowUp,
   Bold,
@@ -36,11 +37,14 @@ import {
   Trash2,
   Circle,
   Check,
+  Diamond,
+  Hexagon,
   Maximize2,
   Quote,
   Scissors,
   StretchHorizontal,
   StretchVertical,
+  Triangle,
   Ungroup,
   Unlock,
   Redo2,
@@ -4790,8 +4794,6 @@ function CanvasIframeBlock({ block }: { block: Extract<Block, { type: "iframe" }
 }
 
 function CanvasShapeBlock({ block }: { block: Extract<Block, { type: "shape" }> }) {
-  const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 8;
-  const isCircle = block.shape === "circle";
   return (
     <div
       style={{
@@ -4802,37 +4804,111 @@ function CanvasShapeBlock({ block }: { block: Extract<Block, { type: "shape" }> 
         justifyContent: "center",
       }}
     >
-      <div
-        style={{
-          background: block.color,
-          borderRadius: radius,
-          border:
-            block.borderWidth && block.borderWidth > 0
-              ? `${block.borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`
-              : undefined,
-          width: block.width ?? (isCircle ? "70%" : "100%"),
-          height: block.height ?? (isCircle ? "70%" : "100%"),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: `0 2px 12px ${block.color}44`,
-        }}
-      >
-        {block.label && (
-          <span
-            style={{
-              fontSize: block.labelFontSize ?? 13,
-              fontWeight: block.labelFontWeight ?? 700,
-              color: block.textColor ?? getReadableTextColor(block.color),
-              fontFamily: "Inter, sans-serif",
-            }}
-          >
-            {block.label}
-          </span>
-        )}
-      </div>
+      {isRoundedShape(block.shape) ? (
+        <CanvasRoundedShape block={block} />
+      ) : (
+        <CanvasSvgShape block={block} />
+      )}
     </div>
   );
+}
+
+function isRoundedShape(shape: ShapeBlock["shape"]) {
+  return shape === "rect" || shape === "pill" || shape === "circle";
+}
+
+function CanvasRoundedShape({ block }: { block: Extract<Block, { type: "shape" }> }) {
+  const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 8;
+  const isCircle = block.shape === "circle";
+  return (
+    <div
+      style={{
+        alignItems: "center",
+        background: block.color,
+        border:
+          block.borderWidth && block.borderWidth > 0
+            ? `${block.borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`
+            : undefined,
+        borderRadius: radius,
+        boxShadow: `0 2px 12px ${block.color}44`,
+        display: "flex",
+        height: block.height ?? (isCircle ? "70%" : "100%"),
+        justifyContent: "center",
+        width: block.width ?? (isCircle ? "70%" : "100%"),
+      }}
+    >
+      {block.label && (
+        <span
+          style={{
+            color: block.textColor ?? getReadableTextColor(block.color),
+            fontFamily: "Inter, sans-serif",
+            fontSize: block.labelFontSize ?? 13,
+            fontWeight: block.labelFontWeight ?? 700,
+          }}
+        >
+          {block.label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CanvasSvgShape({ block }: { block: Extract<Block, { type: "shape" }> }) {
+  const strokeWidth = block.borderWidth ?? 0;
+  return (
+    <svg
+      aria-label={block.label || `${block.shape} shape`}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{
+        display: "block",
+        filter: `drop-shadow(0 2px 8px ${block.color}44)`,
+        height: block.height ?? "100%",
+        overflow: "visible",
+        width: block.width ?? "100%",
+      }}
+    >
+      <polygon
+        points={shapePolygonPoints(block.shape)}
+        fill={block.color}
+        stroke={strokeWidth > 0 ? (block.borderColor ?? "var(--theme-border)") : undefined}
+        strokeLinejoin="round"
+        strokeWidth={strokeWidth}
+        vectorEffect="non-scaling-stroke"
+      />
+      {block.label && (
+        <text
+          x="50"
+          y="52"
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fill={block.textColor ?? getReadableTextColor(block.color)}
+          fontFamily="Inter, sans-serif"
+          fontSize={block.labelFontSize ?? 13}
+          fontWeight={block.labelFontWeight ?? 700}
+        >
+          {block.label}
+        </text>
+      )}
+    </svg>
+  );
+}
+
+function shapePolygonPoints(shape: ShapeBlock["shape"]) {
+  switch (shape) {
+    case "arrow-right":
+      return "0,20 64,20 64,6 100,50 64,94 64,80 0,80";
+    case "diamond":
+      return "50,0 100,50 50,100 0,50";
+    case "hexagon":
+      return "24,0 76,0 100,50 76,100 24,100 0,50";
+    case "parallelogram":
+      return "18,0 100,0 82,100 0,100";
+    case "triangle":
+      return "50,0 100,100 0,100";
+    default:
+      return "0,0 100,0 100,100 0,100";
+  }
 }
 
 function CanvasLineBlock({ block }: { block: Extract<Block, { type: "line" }> }) {
@@ -5010,13 +5086,21 @@ function ShapeTypeControls({
     fontFamily: "Inter, sans-serif",
     fontWeight: 600,
   };
+  const shapeOptions: Array<{ value: ShapeBlock["shape"]; icon: React.ReactNode; label: string }> =
+    [
+      { value: "rect", icon: <Square size={12} />, label: "Rect" },
+      { value: "pill", icon: <Pill size={12} />, label: "Pill" },
+      { value: "circle", icon: <Circle size={12} />, label: "Circle" },
+      { value: "triangle", icon: <Triangle size={12} />, label: "Tri" },
+      { value: "diamond", icon: <Diamond size={12} />, label: "Dia" },
+      { value: "parallelogram", icon: <Square size={12} />, label: "Para" },
+      { value: "hexagon", icon: <Hexagon size={12} />, label: "Hex" },
+      { value: "arrow-right", icon: <ArrowRight size={12} />, label: "Arrow" },
+    ];
+
   return (
-    <div style={{ display: "flex", gap: 6 }}>
-      {[
-        { value: "rect" as const, icon: <Square size={12} />, label: "Rect" },
-        { value: "pill" as const, icon: <Pill size={12} />, label: "Pill" },
-        { value: "circle" as const, icon: <Circle size={12} />, label: "Circle" },
-      ].map(({ value, icon, label }) => (
+    <div style={{ display: "grid", gap: 6, gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+      {shapeOptions.map(({ value, icon, label }) => (
         <button
           key={value}
           onClick={() => onUpdate({ shape: value })}

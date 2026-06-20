@@ -21,6 +21,7 @@ export type {
   DeckAssetKind,
   LayoutInput,
   ManualBlockAnimationPreset,
+  ManualShapeKind,
   ShapeBlock,
   ThemeName,
 } from "@llm-intro/api-contract";

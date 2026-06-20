@@ -402,9 +402,6 @@ function ShapeBlockView({
   block: Extract<Block, { type: "shape" }>;
   canvas?: boolean;
 }) {
-  const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 10;
-  const isCircle = block.shape === "circle";
-
   return (
     <div
       style={{
@@ -413,39 +410,126 @@ function ShapeBlockView({
         ...(canvas ? { width: "100%", height: "100%", alignItems: "center" } : {}),
       }}
     >
-      <div
-        style={{
-          background: block.color,
-          borderRadius: radius,
-          border:
-            block.borderWidth && block.borderWidth > 0
-              ? `${block.borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`
-              : undefined,
-          width: block.width ?? (isCircle ? 120 : "100%"),
-          height: block.height ?? (isCircle ? 120 : canvas ? "100%" : "auto"),
-          padding: isCircle || canvas ? 0 : "14px 28px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: isCircle && !canvas ? 120 : undefined,
-          boxShadow: `0 2px 12px ${block.color}44`,
-        }}
-      >
-        {block.label && (
-          <span
-            style={{
-              fontSize: block.labelFontSize ?? 15,
-              fontWeight: block.labelFontWeight ?? 700,
-              color: block.textColor ?? getReadableTextColor(block.color),
-              fontFamily: "Inter, sans-serif",
-            }}
-          >
-            {block.label}
-          </span>
-        )}
-      </div>
+      {isRoundedShape(block.shape) ? (
+        <RoundedShapeBlock block={block} canvas={canvas} />
+      ) : (
+        <SvgShapeBlock block={block} />
+      )}
     </div>
   );
+}
+
+function isRoundedShape(shape: Extract<Block, { type: "shape" }>["shape"]) {
+  return shape === "rect" || shape === "pill" || shape === "circle";
+}
+
+function RoundedShapeBlock({
+  block,
+  canvas,
+}: {
+  block: Extract<Block, { type: "shape" }>;
+  canvas?: boolean;
+}) {
+  const radius = block.shape === "circle" ? "50%" : block.shape === "pill" ? 9999 : 10;
+  const isCircle = block.shape === "circle";
+  return (
+    <div
+      style={{
+        alignItems: "center",
+        background: block.color,
+        border:
+          block.borderWidth && block.borderWidth > 0
+            ? `${block.borderWidth}px solid ${block.borderColor ?? "var(--theme-border)"}`
+            : undefined,
+        borderRadius: radius,
+        boxShadow: `0 2px 12px ${block.color}44`,
+        display: "flex",
+        height: block.height ?? (isCircle ? 120 : canvas ? "100%" : "auto"),
+        justifyContent: "center",
+        minHeight: isCircle && !canvas ? 120 : undefined,
+        padding: isCircle || canvas ? 0 : "14px 28px",
+        width: block.width ?? (isCircle ? 120 : "100%"),
+      }}
+    >
+      {block.label && <ShapeHtmlLabel block={block} />}
+    </div>
+  );
+}
+
+function ShapeHtmlLabel({ block }: { block: Extract<Block, { type: "shape" }> }) {
+  return (
+    <span
+      style={{
+        color: block.textColor ?? getReadableTextColor(block.color),
+        fontFamily: "Inter, sans-serif",
+        fontSize: block.labelFontSize ?? 15,
+        fontWeight: block.labelFontWeight ?? 700,
+      }}
+    >
+      {block.label}
+    </span>
+  );
+}
+
+function SvgShapeBlock({ block }: { block: Extract<Block, { type: "shape" }> }) {
+  const strokeWidth = block.borderWidth ?? 0;
+  const points = shapePolygonPoints(block.shape);
+  return (
+    <svg
+      aria-label={block.label || `${block.shape} shape`}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{
+        display: "block",
+        filter: `drop-shadow(0 2px 8px ${block.color}44)`,
+        height: block.height ?? "100%",
+        overflow: "visible",
+        width: block.width ?? "100%",
+      }}
+    >
+      <polygon
+        points={points}
+        fill={block.color}
+        stroke={strokeWidth > 0 ? (block.borderColor ?? "var(--theme-border)") : undefined}
+        strokeLinejoin="round"
+        strokeWidth={strokeWidth}
+        vectorEffect="non-scaling-stroke"
+      />
+      {block.label && (
+        <text
+          x="50"
+          y="52"
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fill={block.textColor ?? getReadableTextColor(block.color)}
+          fontFamily="Inter, sans-serif"
+          fontSize={block.labelFontSize ?? 15}
+          fontWeight={block.labelFontWeight ?? 700}
+          paintOrder="stroke"
+          stroke="transparent"
+        >
+          {block.label}
+        </text>
+      )}
+    </svg>
+  );
+}
+
+function shapePolygonPoints(shape: Extract<Block, { type: "shape" }>["shape"]) {
+  switch (shape) {
+    case "arrow-right":
+      return "0,20 64,20 64,6 100,50 64,94 64,80 0,80";
+    case "diamond":
+      return "50,0 100,50 50,100 0,50";
+    case "hexagon":
+      return "24,0 76,0 100,50 76,100 24,100 0,50";
+    case "parallelogram":
+      return "18,0 100,0 82,100 0,100";
+    case "triangle":
+      return "50,0 100,100 0,100";
+    default:
+      return "0,0 100,0 100,100 0,100";
+  }
 }
 
 function LineBlockView({ block }: { block: Extract<Block, { type: "line" }> }) {

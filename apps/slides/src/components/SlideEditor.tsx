@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   BarChart3,
+  ArrowRight,
   X,
   Trash2,
   GripVertical,
@@ -11,8 +12,11 @@ import {
   Minus,
   Square,
   Circle,
+  Diamond,
+  Hexagon,
   Pill,
   Table2,
+  Triangle,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useActionMutation } from "@agent-native/core/client";
@@ -510,12 +514,17 @@ function ShapeEditor({
     { value: "rect", icon: <Square size={12} />, label: "Rect" },
     { value: "pill", icon: <Pill size={12} />, label: "Pill" },
     { value: "circle", icon: <Circle size={12} />, label: "Circle" },
+    { value: "triangle", icon: <Triangle size={12} />, label: "Tri" },
+    { value: "diamond", icon: <Diamond size={12} />, label: "Dia" },
+    { value: "parallelogram", icon: <Square size={12} />, label: "Para" },
+    { value: "hexagon", icon: <Hexagon size={12} />, label: "Hex" },
+    { value: "arrow-right", icon: <ArrowRight size={12} />, label: "Arrow" },
   ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Shape selector */}
-      <div style={{ display: "flex", gap: 6 }}>
+      <div style={{ display: "grid", gap: 6, gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
         {shapeOptions.map(({ value, icon, label }) => (
           <button
             key={value}

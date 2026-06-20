@@ -35,6 +35,16 @@ export interface ManualBlockAnimation {
   iterationCount?: number;
 }
 
+export type ManualShapeKind =
+  | "rect"
+  | "pill"
+  | "circle"
+  | "triangle"
+  | "diamond"
+  | "parallelogram"
+  | "hexagon"
+  | "arrow-right";
+
 type BlockPos = {
   x?: number;
   y?: number;
@@ -88,7 +98,7 @@ export type IframeBlock = { id: string; type: "iframe"; url: string; height?: nu
 export type ShapeBlock = {
   id: string;
   type: "shape";
-  shape: "rect" | "pill" | "circle";
+  shape: ManualShapeKind;
   color: string;
   label?: string;
   textColor?: string;

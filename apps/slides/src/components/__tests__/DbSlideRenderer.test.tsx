@@ -103,7 +103,7 @@ describe("DbSlideRenderer", () => {
       {
         id: "2",
         type: "shape",
-        shape: "pill",
+        shape: "diamond",
         color: "#25d366",
         label: "Badge",
         borderColor: "#ffffff",
@@ -177,13 +177,13 @@ describe("DbSlideRenderer", () => {
     expect(text.style.background).toBe("rgb(18, 52, 86)");
     expect(text.style.textAlign).toBe("center");
 
-    const badge = screen.getByText("Badge").parentElement as HTMLElement;
-    expect(badge.style.border).toBe("2px solid rgb(255, 255, 255)");
-    expect(screen.getByText("Badge")).toHaveStyle({
-      color: "rgb(13, 15, 14)",
-      fontSize: "18px",
-      fontWeight: "800",
-    });
+    const badge = screen.getByText("Badge");
+    const diamond = container.querySelector('polygon[points="50,0 100,50 50,100 0,50"]');
+    expect(diamond).toBeInTheDocument();
+    expect(diamond).toHaveAttribute("stroke-width", "2");
+    expect(badge).toHaveAttribute("fill", "#0d0f0e");
+    expect(badge).toHaveAttribute("font-size", "18");
+    expect(badge).toHaveAttribute("font-weight", "800");
 
     const line = container.querySelector('line[stroke="#ffd93d"]') as SVGLineElement;
     expect(line).toBeInTheDocument();

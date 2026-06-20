@@ -264,6 +264,8 @@ editing, themed presentation playback, and HTML export.
   matrices, schedules, scorecards, and structured summaries.
 - Users and agents can create editable manual chart blocks for bar, line, and
   pie charts from structured categories and series data.
+- Users and agents can create common editable manual shapes: rectangles, pills,
+  circles, triangles, diamonds, parallelograms, hexagons, and right arrows.
 - The manual preset catalog includes title, bullets, quote, metric, two-column,
   comparison, timeline, image-left, process, and section-divider layouts.
   Preset-created blocks include semantic display names so the layer list and
@@ -323,8 +325,8 @@ editing, themed presentation playback, and HTML export.
 - The selected block inspector can edit common appearance, including rotation,
   opacity, and shadow presets/freeform CSS shadow, plus text appearance
   including font family, size, weight, style, and line height, image
-  fitting/position/radius, and shape border/label typography styling using the
-  same typed block fields available to agent actions.
+  fitting/position/radius, and shape kind, border, fill, and label typography
+  styling using the same typed block fields available to agent actions.
 - Users can copy appearance formatting from the selected manual block and paste
   it onto another selected block. Format paste copies common opacity/rotation/
   shadow/animation and matching block-type appearance fields, including text

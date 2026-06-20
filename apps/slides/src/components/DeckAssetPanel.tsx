@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { callAction, useActionMutation, useActionQuery } from "@agent-native/core/client";
-import { Download, Image as ImageIcon, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Download, Image as ImageIcon, Link, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import type { ApiDeckAsset, ApiLogoAssetCandidate } from "@/types";
 import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
@@ -18,7 +18,9 @@ type SearchLogoAssetsResult = {
 type ImportDeckAssetInput = {
   pid: number;
   name: string;
+  content?: string;
   svgUrl?: string;
+  mimeType?: string;
   sourceUrl?: string | null;
   sourceName?: string | null;
   license?: string | null;
@@ -77,6 +79,23 @@ const inputStyle: React.CSSProperties = {
   color: C.text,
   fontSize: 12,
   outline: "none",
+};
+
+const panelStyle: React.CSSProperties = {
+  padding: "14px 16px",
+  borderBottom: `1px solid ${C.border}`,
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+  flexShrink: 0,
+};
+
+const textareaStyle: React.CSSProperties = {
+  ...inputStyle,
+  minHeight: 58,
+  resize: "vertical",
+  lineHeight: 1.35,
+  fontFamily: "JetBrains Mono, monospace",
 };
 
 function svgDataUrl(content: string) {
@@ -368,6 +387,132 @@ function AssetSearchControls({
   );
 }
 
+function CustomAssetImportControls({
+  busy,
+  disabled,
+  name,
+  onContentChange,
+  onImport,
+  onNameChange,
+  onUrlChange,
+  svgContent,
+  svgUrl,
+}: {
+  busy: boolean;
+  disabled: boolean;
+  name: string;
+  onContentChange: (value: string) => void;
+  onImport: () => void;
+  onNameChange: (value: string) => void;
+  onUrlChange: (value: string) => void;
+  svgContent: string;
+  svgUrl: string;
+}) {
+  const hasSvgUrl = Boolean(svgUrl.trim());
+  const hasSvgContent = Boolean(svgContent.trim());
+  const canImport = !disabled && !busy && Boolean(name.trim()) && (hasSvgUrl || hasSvgContent);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={sectionLabel}>Import SVG</span>
+      <input
+        value={name}
+        onChange={(event) => onNameChange(event.target.value)}
+        placeholder="Asset name"
+        disabled={disabled}
+        style={{ ...inputStyle, opacity: disabled ? 0.55 : 1 }}
+      />
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          value={svgUrl}
+          onChange={(event) => onUrlChange(event.target.value)}
+          placeholder="SVG URL"
+          disabled={disabled || hasSvgContent}
+          style={{ ...inputStyle, opacity: disabled || hasSvgContent ? 0.55 : 1 }}
+        />
+        <button
+          type="button"
+          title="Import SVG"
+          aria-label="Import SVG"
+          onClick={onImport}
+          disabled={!canImport}
+          style={{ ...primaryIconButton, opacity: canImport ? 1 : 0.55 }}
+        >
+          <Link size={13} />
+        </button>
+      </div>
+      <textarea
+        value={svgContent}
+        onChange={(event) => onContentChange(event.target.value)}
+        placeholder="<svg ...>"
+        disabled={disabled || hasSvgUrl}
+        style={{ ...textareaStyle, opacity: disabled || hasSvgUrl ? 0.55 : 1 }}
+      />
+    </div>
+  );
+}
+
+function CustomAssetImportPanel({
+  disabled,
+  onError,
+  onImported,
+  pid,
+}: {
+  disabled: boolean;
+  onError: (error: string | null) => void;
+  onImported: (asset: ApiDeckAsset) => void | Promise<void>;
+  pid: number;
+}) {
+  const [name, setName] = useState("");
+  const [svgUrl, setSvgUrl] = useState("");
+  const [svgContent, setSvgContent] = useState("");
+  const importAsset = useActionMutation<ApiDeckAsset, ImportDeckAssetInput>("import-deck-asset", {
+    onSuccess: async (asset) => {
+      await onImported(asset);
+    },
+  });
+
+  async function importCustomAsset() {
+    const trimmedName = name.trim();
+    const trimmedUrl = svgUrl.trim();
+    const trimmedContent = svgContent.trim();
+    if (!trimmedName || (!trimmedUrl && !trimmedContent)) return;
+
+    onError(null);
+    try {
+      await importAsset.mutateAsync({
+        pid,
+        name: trimmedName,
+        content: trimmedContent || undefined,
+        svgUrl: trimmedUrl || undefined,
+        sourceUrl: trimmedUrl || null,
+        sourceName: trimmedUrl ? "custom-url" : "inline-svg",
+        license: null,
+        usage: "manual-slide",
+        metadata: { provider: trimmedUrl ? "custom-url" : "inline-svg" },
+      });
+      setName("");
+      setSvgUrl("");
+      setSvgContent("");
+    } catch (err) {
+      onError(getErrorMessage(err));
+    }
+  }
+
+  return (
+    <CustomAssetImportControls
+      busy={importAsset.isPending}
+      disabled={disabled}
+      name={name}
+      onContentChange={setSvgContent}
+      onImport={() => void importCustomAsset()}
+      onNameChange={setName}
+      onUrlChange={setSvgUrl}
+      svgContent={svgContent}
+      svgUrl={svgUrl}
+    />
+  );
+}
+
 export function DeckAssetPanel({ enabled, onInsertAsset, pid }: DeckAssetPanelProps) {
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<ApiLogoAssetCandidate[]>([]);
@@ -447,16 +592,7 @@ export function DeckAssetPanel({ enabled, onInsertAsset, pid }: DeckAssetPanelPr
   const busy = searching || importAsset.isPending || deleteAsset.isPending;
 
   return (
-    <div
-      style={{
-        padding: "14px 16px",
-        borderBottom: `1px solid ${C.border}`,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        flexShrink: 0,
-      }}
-    >
+    <div style={panelStyle}>
       <AssetPanelHeader
         disabled={!enabled}
         fetching={assetsQuery.isFetching}
@@ -468,6 +604,15 @@ export function DeckAssetPanel({ enabled, onInsertAsset, pid }: DeckAssetPanelPr
         onSearch={() => void searchLogos()}
         query={query}
         searching={searching}
+      />
+      <CustomAssetImportPanel
+        disabled={!enabled}
+        onError={setError}
+        onImported={async (asset) => {
+          await assetsQuery.refetch();
+          onInsertAsset(asset);
+        }}
+        pid={pid}
       />
 
       {error && <div style={{ color: "#ff8a8a", fontSize: 11, lineHeight: 1.4 }}>{error}</div>}

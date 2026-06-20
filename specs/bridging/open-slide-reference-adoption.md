@@ -113,14 +113,15 @@ First runtime slice:
 - `import-deck-asset` can import inline SVG content or fetch an SVG URL into the local deck asset library.
 - Framework resource probes expose imported assets as `slides://deck/:deckId/asset/:assetId` resources under their deck.
 - The visual slide editor includes a deck asset manager that searches SVGL,
-  imports logos, lists deck assets, deletes assets, and inserts imported assets
-  into manual slides as first-class `assetId` image blocks.
+  imports direct SVG URLs or pasted inline SVG content, lists deck assets,
+  deletes assets, and inserts imported assets into manual slides as first-class
+  `assetId` image blocks.
 - `list-deck-assets` accepts `includeContent=true` so browser editor flows can
   fetch local SVG content for insertion without using a separate raw API route.
 
 Still future work:
 
-- richer provider adapters beyond SVGL.
+- richer provider adapters beyond SVGL/custom SVG import.
 
 ## Transitions
 

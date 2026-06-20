@@ -130,7 +130,7 @@ framework boundary.
 | Import asset | `import-deck-asset` stores inline or fetched SVG content with source/license/usage metadata |
 | List assets | `list-deck-assets` returns metadata by default and accepts `includeContent=true` for editor insertion flows |
 | Manage assets | `update-deck-asset-metadata` and `delete-deck-asset` actions |
-| Editor insertion | `DeckAssetPanel` in `SlideEditorPage` inserts imported assets as image blocks with `assetId` plus the deck asset content URL |
+| Editor import/insertion | `DeckAssetPanel` in `SlideEditorPage` imports SVGL results, direct SVG URLs, or pasted inline SVG content, then inserts imported assets as image blocks with `assetId` plus the deck asset content URL |
 | Agent resources | Framework resource routes expose deck assets as `slides://deck/:deckId/asset/:assetId` |
 
 Manual image blocks can reference deck assets through `assetId`. Live app

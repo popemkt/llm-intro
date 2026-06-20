@@ -203,6 +203,10 @@ editing, themed presentation playback, and HTML export.
   `set-manual-block-lock`; locked blocks stay selectable but reject destructive
   or layout-changing actions such as delete, arrange, duplicate, and layer
   moves.
+- Agents can copy appearance formatting from one manual block to other blocks
+  through `apply-manual-block-format`. The action preserves target content,
+  geometry, display names, grouping, lock state, and IDs, while applying common
+  opacity/rotation/shadow and matching block-type appearance fields.
 - Agents can create a complete editable manual slide from reusable layout
   presets through `create-manual-preset-slide`, or append those same presets to
   an existing slide through `insert-manual-preset`; presets resolve to ordinary
@@ -273,7 +277,8 @@ editing, themed presentation playback, and HTML export.
   it onto another selected block. Format paste copies common opacity/rotation/
   shadow and matching block-type appearance fields, including text typography,
   without copying content, geometry, display names, group membership, lock state,
-  or IDs.
+  or IDs. Agents can perform the same operation through
+  `apply-manual-block-format`.
 - Users can undo and redo manual slide edits from toolbar controls or keyboard
   shortcuts. The local history covers title, speaker notes, blocks, transition,
   and background metadata while preserving native text-field undo inside inputs.

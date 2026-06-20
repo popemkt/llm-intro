@@ -131,6 +131,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Create manual preset slide",
         }),
         expect.objectContaining({
+          id: "apply-manual-block-format",
+          name: "Apply manual block format",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -592,6 +596,118 @@ describe("Manual slide actions", () => {
       .send({ pid, sid: slide.id, blockIds: ["locked"], action: "fit-slide" });
     expect(arranged.status).toBe(200);
     expect(arranged.body.blocks[0]).toMatchObject({ id: "locked", x: 5, y: 5, w: 90, h: 90 });
+  });
+
+  it("copies manual block formatting without changing content or geometry", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Format Painter",
+          blocks: [
+            {
+              id: "source",
+              type: "text",
+              markdown: "Source",
+              x: 5,
+              y: 5,
+              w: 30,
+              h: 12,
+              opacity: 0.7,
+              rotation: 3,
+              shadow: "0 12px 24px rgba(0,0,0,0.32)",
+              fontSize: 38,
+              fontFamily: "Georgia, serif",
+              fontWeight: 800,
+              color: "#ffffff",
+              background: "#123456",
+              align: "center",
+              padding: 18,
+            },
+            {
+              id: "target",
+              type: "text",
+              markdown: "Keep content",
+              displayName: "Target name",
+              groupId: "group-a",
+              x: 50,
+              y: 20,
+              w: 20,
+              h: 10,
+              fontSize: 12,
+              color: "#25d366",
+            },
+            {
+              id: "shape",
+              type: "shape",
+              shape: "pill",
+              label: "Shape",
+              color: "#25d366",
+              x: 10,
+              y: 70,
+              w: 20,
+              h: 10,
+            },
+          ],
+        })
+    ).body;
+
+    const formatted = await request(app)
+      .put("/_agent-native/actions/apply-manual-block-format")
+      .send({
+        pid,
+        sid: slide.id,
+        sourceBlockId: "source",
+        targetBlockIds: ["target", "shape"],
+      });
+
+    expect(formatted.status).toBe(200);
+    expect(formatted.body.blocks[1]).toMatchObject({
+      id: "target",
+      markdown: "Keep content",
+      displayName: "Target name",
+      groupId: "group-a",
+      x: 50,
+      y: 20,
+      w: 20,
+      h: 10,
+      opacity: 0.7,
+      rotation: 3,
+      shadow: "0 12px 24px rgba(0,0,0,0.32)",
+      fontSize: 38,
+      fontFamily: "Georgia, serif",
+      fontWeight: 800,
+      color: "#ffffff",
+      background: "#123456",
+      align: "center",
+      padding: 18,
+    });
+    expect(formatted.body.blocks[2]).toMatchObject({
+      id: "shape",
+      type: "shape",
+      label: "Shape",
+      color: "#25d366",
+      opacity: 0.7,
+      rotation: 3,
+      shadow: "0 12px 24px rgba(0,0,0,0.32)",
+    });
+
+    const locked = await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ pid, sid: slide.id, blockIds: ["target"], locked: true });
+    expect(locked.status).toBe(200);
+
+    const rejected = await request(app)
+      .put("/_agent-native/actions/apply-manual-block-format")
+      .send({
+        pid,
+        sid: slide.id,
+        sourceBlockId: "source",
+        targetBlockIds: ["target"],
+      });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error).toContain("block is locked");
   });
 
   it("inserts reusable manual presets as typed blocks", async () => {

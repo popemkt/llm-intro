@@ -11,6 +11,7 @@ import {
 } from "../server/validation.js";
 import { AppError } from "../server/errors.js";
 import { buildManualPresetBlocks, MANUAL_PRESET_IDS } from "../shared/manual-presets.js";
+import { applyManualBlockFormat, copyManualBlockFormat } from "./manual-block-format.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -599,6 +600,40 @@ function createSetManualBlockLockAction(slidesService: SlidesService) {
   });
 }
 
+function createApplyManualBlockFormatAction(slidesService: SlidesService) {
+  return defineAction({
+    description:
+      "Copy appearance formatting from one manual slide block to other blocks without changing content or geometry.",
+    schema: z.object({
+      pid: z.coerce.number().int().positive(),
+      sid: z.coerce.number().int().positive(),
+      sourceBlockId: z.string().min(1),
+      targetBlockIds: z.array(z.string().min(1)).min(1),
+    }),
+    http: { method: "PUT", path: "apply-manual-block-format" },
+    requiresAuth: false,
+    publicAgent: {
+      ...publicWriteAction,
+      title: "Apply manual block format",
+      description:
+        "Copy appearance formatting from one manual slide block to other blocks without changing content or geometry.",
+    },
+    run: ({ pid, sid, sourceBlockId, targetBlockIds }) => {
+      const slide = getManualSlide(slidesService, pid, sid);
+      assertBlockIdsExist(slide.blocks, [sourceBlockId, ...targetBlockIds]);
+      assertBlocksUnlocked(slide.blocks, targetBlockIds);
+      const source = slide.blocks.find((block) => block.id === sourceBlockId);
+      if (!source) throw new AppError(404, "source block not found");
+      const targets = new Set(targetBlockIds);
+      const clipboard = copyManualBlockFormat(source);
+      const blocks = slide.blocks.map((block) =>
+        targets.has(block.id) ? applyManualBlockFormat(block, clipboard) : block,
+      );
+      return updateManualSlideBlocks(slidesService, pid, sid, blocks);
+    },
+  });
+}
+
 function createGroupManualBlocksAction(slidesService: SlidesService) {
   return defineAction({
     description: "Group existing manual slide blocks so they select and move together.",
@@ -799,6 +834,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "update-manual-block": createUpdateManualBlockAction(slidesService),
     "delete-manual-block": createDeleteManualBlockAction(slidesService),
     "set-manual-block-lock": createSetManualBlockLockAction(slidesService),
+    "apply-manual-block-format": createApplyManualBlockFormatAction(slidesService),
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),
     "arrange-manual-blocks": createArrangeManualBlocksAction(slidesService),

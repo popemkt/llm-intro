@@ -657,6 +657,7 @@ function applyBlockFormat(block: Block, clipboard: BlockFormatClipboard): Block 
   const common = {
     opacity: clipboard.patch.opacity,
     rotation: clipboard.patch.rotation,
+    shadow: clipboard.patch.shadow,
   };
   if (block.type !== clipboard.sourceType) return { ...block, ...common } as Block;
   return { ...block, ...clipboard.patch } as Block;

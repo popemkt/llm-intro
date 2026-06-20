@@ -29,6 +29,10 @@ const manualPresetSlideTitles: Record<ManualPresetId, string> = {
   timeline: "Timeline",
   "image-left": "Visual story",
   process: "Process",
+  dashboard: "Dashboard",
+  "decision-matrix": "Decision matrix",
+  "architecture-map": "Architecture",
+  "callout-stack": "Callouts",
   "section-divider": "Section",
 };
 

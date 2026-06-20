@@ -13,6 +13,10 @@ export type ManualPresetId =
   | "timeline"
   | "image-left"
   | "process"
+  | "dashboard"
+  | "decision-matrix"
+  | "architecture-map"
+  | "callout-stack"
   | "section-divider";
 
 export type ManualPresetIcon =
@@ -99,6 +103,34 @@ export const MANUAL_PRESET_META: ManualPresetMeta[] = [
     description: "Three connected process stages.",
   },
   {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: "bar-chart",
+    commands: ["dashboard", "scorecard", "kpi-grid"],
+    description: "KPI tiles with a chart and action panel.",
+  },
+  {
+    id: "decision-matrix",
+    label: "Decision Matrix",
+    icon: "split",
+    commands: ["decision", "matrix", "decision-matrix"],
+    description: "Criteria table plus recommendation callout.",
+  },
+  {
+    id: "architecture-map",
+    label: "Architecture",
+    icon: "route",
+    commands: ["architecture", "system-map", "diagram"],
+    description: "Editable system map with boxes and elbow connectors.",
+  },
+  {
+    id: "callout-stack",
+    label: "Callouts",
+    icon: "quote",
+    commands: ["callouts", "stack", "progressive"],
+    description: "Stacked callouts for progressive explanation.",
+  },
+  {
     id: "section-divider",
     label: "Section",
     icon: "type",
@@ -179,6 +211,52 @@ function lineBlock(
 
 function imageBlock(alt: string, rect: Rect, createId: () => string): Block {
   return { id: createId(), type: "image", url: "", alt, displayName: alt, ...rect };
+}
+
+function tableBlock(
+  displayName: string,
+  rows: string[][],
+  rect: Rect,
+  createId: () => string,
+  extra: Partial<Extract<Block, { type: "table" }>> = {},
+): Block {
+  return {
+    id: createId(),
+    type: "table",
+    rows,
+    displayName,
+    headerRows: 1,
+    fontSize: 13,
+    borderColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    cellPadding: 7,
+    align: "left",
+    ...rect,
+    ...extra,
+  };
+}
+
+function chartBlock(
+  displayName: string,
+  rect: Rect,
+  createId: () => string,
+  extra: Partial<Extract<Block, { type: "chart" }>> = {},
+): Block {
+  return {
+    id: createId(),
+    type: "chart",
+    chart: "bar",
+    title: displayName,
+    categories: ["Now", "Next", "Later"],
+    series: [{ name: "Value", values: [32, 58, 44], color: "#25d366" }],
+    displayName,
+    showLegend: false,
+    showValues: true,
+    labelColor: "#ffffff",
+    axisColor: "#8aa39b",
+    ...rect,
+    ...extra,
+  };
 }
 
 export function getManualPresetMeta(id: string) {
@@ -312,6 +390,177 @@ function processPreset(createId: () => string) {
   ];
 }
 
+function dashboardPreset(createId: () => string) {
+  return [
+    textBlock(
+      "## Operating dashboard\nCurrent signals and next actions",
+      { x: 6, y: 7, w: 54, h: 13 },
+      createId,
+      {
+        fontSize: 22,
+      },
+    ),
+    shapeBlock("North Star", { x: 6, y: 24, w: 25, h: 15 }, createId, {
+      color: "#123456",
+      labelFontSize: 13,
+      textColor: "#ffffff",
+    }),
+    textBlock("# 72%\nAdoption", { x: 9, y: 27, w: 19, h: 9 }, createId, {
+      align: "center",
+      fontSize: 20,
+    }),
+    shapeBlock("Risk", { x: 34, y: 24, w: 25, h: 15 }, createId, {
+      color: "#ffd93d",
+      labelFontSize: 13,
+      textColor: "#0d0f0e",
+    }),
+    textBlock("# 3\nOpen decisions", { x: 37, y: 27, w: 19, h: 9 }, createId, {
+      align: "center",
+      color: "#0d0f0e",
+      fontSize: 20,
+    }),
+    chartBlock("Trend", { x: 6, y: 44, w: 52, h: 35 }, createId, {
+      categories: ["Q1", "Q2", "Q3", "Q4"],
+      series: [{ name: "Progress", values: [18, 32, 51, 72], color: "#4c9fff" }],
+    }),
+    tableBlock(
+      "Action queue",
+      [
+        ["Action", "Owner", "Status"],
+        ["Clarify scope", "PM", "Now"],
+        ["Ship prototype", "Eng", "Next"],
+        ["Measure usage", "Data", "Later"],
+      ],
+      { x: 64, y: 22, w: 30, h: 57 },
+      createId,
+      { headerBackground: "#123456" },
+    ),
+  ];
+}
+
+function decisionMatrixPreset(createId: () => string) {
+  return [
+    textBlock(
+      "## Decision matrix\nCompare options with explicit criteria.",
+      { x: 7, y: 8, w: 58, h: 13 },
+      createId,
+    ),
+    tableBlock(
+      "Criteria matrix",
+      [
+        ["Criteria", "Option A", "Option B", "Option C"],
+        ["Impact", "High", "Medium", "High"],
+        ["Effort", "Medium", "Low", "High"],
+        ["Risk", "Low", "Medium", "Medium"],
+        ["Verdict", "Pick", "Hold", "Explore"],
+      ],
+      { x: 7, y: 26, w: 60, h: 48 },
+      createId,
+      { align: "center", headerBackground: "#123456" },
+    ),
+    shapeBlock("Recommendation", { x: 72, y: 26, w: 20, h: 9 }, createId, {
+      color: "#25d366",
+      textColor: "#0d0f0e",
+    }),
+    textBlock(
+      "### Pick Option A\nBest balance of impact, effort, and implementation risk.\n\n- Revisit in 2 weeks\n- Track leading metric",
+      { x: 72, y: 40, w: 20, h: 34 },
+      createId,
+    ),
+  ];
+}
+
+function architectureMapPreset(createId: () => string) {
+  return [
+    textBlock(
+      "## System map\nEditable boxes and routed connectors.",
+      { x: 7, y: 7, w: 58, h: 12 },
+      createId,
+    ),
+    shapeBlock("User", { x: 8, y: 36, w: 18, h: 12 }, createId, { shape: "rect" }),
+    lineBlock({ x: 26, y: 40, w: 13, h: 14 }, createId, {
+      color: "#8aa39b",
+      connector: "elbow",
+      endArrow: true,
+      endY: 82,
+      startY: 22,
+    }),
+    shapeBlock("App Shell", { x: 39, y: 28, w: 20, h: 12 }, createId, {
+      color: "#4c9fff",
+      shape: "rect",
+    }),
+    lineBlock({ x: 59, y: 33, w: 11, h: 2 }, createId, {
+      color: "#8aa39b",
+      endArrow: true,
+    }),
+    shapeBlock("Agent API", { x: 70, y: 28, w: 20, h: 12 }, createId, {
+      color: "#ffd93d",
+      shape: "rect",
+      textColor: "#0d0f0e",
+    }),
+    lineBlock({ x: 49, y: 40, w: 31, h: 18 }, createId, {
+      color: "#8aa39b",
+      connector: "curve",
+      endArrow: true,
+      endY: 75,
+      startY: 0,
+    }),
+    shapeBlock("Slide Store", { x: 40, y: 60, w: 20, h: 12 }, createId, {
+      color: "#123456",
+      shape: "rect",
+      textColor: "#ffffff",
+    }),
+    shapeBlock("Assets", { x: 70, y: 60, w: 20, h: 12 }, createId, {
+      color: "#a29bfe",
+      shape: "rect",
+    }),
+  ];
+}
+
+function calloutStackPreset(createId: () => string) {
+  return [
+    textBlock("# Explain the idea in layers", { x: 7, y: 8, w: 58, h: 14 }, createId),
+    shapeBlock("1", { x: 9, y: 29, w: 8, h: 8 }, createId, { shape: "circle" }),
+    textBlock(
+      "### Start simple\nName the mental model in one sentence.",
+      { x: 20, y: 27, w: 64, h: 12 },
+      createId,
+    ),
+    lineBlock({ x: 12, y: 37, w: 1, h: 10 }, createId, {
+      color: "#8aa39b",
+      connector: "straight",
+      endY: 100,
+      endX: 50,
+      startX: 50,
+      startY: 0,
+    }),
+    shapeBlock("2", { x: 9, y: 47, w: 8, h: 8 }, createId, { color: "#4c9fff", shape: "circle" }),
+    textBlock(
+      "### Add structure\nBreak the concept into parts the audience can track.",
+      { x: 20, y: 45, w: 64, h: 12 },
+      createId,
+    ),
+    lineBlock({ x: 12, y: 55, w: 1, h: 10 }, createId, {
+      color: "#8aa39b",
+      connector: "straight",
+      endY: 100,
+      endX: 50,
+      startX: 50,
+      startY: 0,
+    }),
+    shapeBlock("3", { x: 9, y: 65, w: 8, h: 8 }, createId, {
+      color: "#ffd93d",
+      shape: "circle",
+      textColor: "#0d0f0e",
+    }),
+    textBlock(
+      "### Land the transfer\nShow how the model changes the next decision.",
+      { x: 20, y: 63, w: 64, h: 12 },
+      createId,
+    ),
+  ];
+}
+
 function sectionDividerPreset(createId: () => string) {
   return [
     shapeBlock("Next", { x: 8, y: 14, w: 16, h: 8 }, createId),
@@ -333,6 +582,10 @@ const presetBuilders: Record<ManualPresetId, PresetBuilder> = {
   timeline: timelinePreset,
   "image-left": imageLeftPreset,
   process: processPreset,
+  dashboard: dashboardPreset,
+  "decision-matrix": decisionMatrixPreset,
+  "architecture-map": architectureMapPreset,
+  "callout-stack": calloutStackPreset,
   "section-divider": sectionDividerPreset,
 };
 

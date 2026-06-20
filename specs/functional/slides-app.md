@@ -268,14 +268,15 @@ editing, themed presentation playback, and HTML export.
 - Users and agents can create common editable manual shapes: rectangles, pills,
   circles, triangles, diamonds, parallelograms, hexagons, and right arrows.
 - The manual preset catalog includes title, bullets, quote, metric, two-column,
-  comparison, timeline, image-left, process, and section-divider layouts.
+  comparison, timeline, image-left, process, dashboard, decision matrix,
+  architecture map, callout stack, and section-divider layouts.
   Preset-created blocks include semantic display names so the layer list and
   agent follow-up edits can target them without inferring labels from content.
 - Users can insert visual editor blocks from the keyboard with slash commands:
   `/title`, `/bullets`, `/quote`, `/metric`, `/text`, `/image`, `/iframe`,
   `/embed`, `/shape`, `/line`, `/arrow`, `/connector`, `/table`, `/chart`, and
   preset aliases such as `/comparison`, `/timeline`, `/image-left`, `/process`,
-  and `/section`.
+  `/dashboard`, `/decision`, `/architecture`, `/callouts`, and `/section`.
 - Users can edit text blocks directly on the slide canvas and use the selected
   block menu to edit text, duplicate blocks, move layer order, and delete blocks.
 - Users can multi-select manual slide blocks from the canvas or layer list,

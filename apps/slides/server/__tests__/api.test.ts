@@ -1202,6 +1202,33 @@ describe("Manual slide actions", () => {
       ]),
     );
   });
+
+  it("creates richer manual presets with charts, tables, and routed connectors", async () => {
+    const dashboard = await request(app)
+      .post("/_agent-native/actions/create-manual-preset-slide")
+      .send({ pid, presetId: "dashboard", title: "Dashboard Preset" });
+
+    expect(dashboard.status).toBe(200);
+    expect(dashboard.body.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "chart", displayName: "Trend" }),
+        expect.objectContaining({ type: "table", displayName: "Action queue" }),
+      ]),
+    );
+
+    const architecture = await request(app)
+      .post("/_agent-native/actions/create-manual-preset-slide")
+      .send({ pid, presetId: "architecture-map", title: "Architecture Preset" });
+
+    expect(architecture.status).toBe(200);
+    expect(architecture.body.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "shape", label: "App Shell" }),
+        expect.objectContaining({ type: "line", connector: "elbow", endArrow: true }),
+        expect.objectContaining({ type: "line", connector: "curve", endArrow: true }),
+      ]),
+    );
+  });
 });
 
 describe("Deck asset actions", () => {

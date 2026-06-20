@@ -85,7 +85,9 @@ const normalSlideQuickLayouts: Array<{ layout: NormalSlideQuickLayout; label: st
   { layout: "metrics", label: "Metrics" },
 ];
 const manualSlideQuickPresets = MANUAL_PRESET_META.filter((preset) =>
-  ["title", "bullets", "comparison", "timeline", "image-left"].includes(preset.id),
+  ["title", "bullets", "comparison", "timeline", "dashboard", "architecture-map"].includes(
+    preset.id,
+  ),
 );
 const quickAddButtonStyle: React.CSSProperties = {
   minWidth: 0,
@@ -740,7 +742,7 @@ function AddCard({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
               gap: 6,
             }}
           >

@@ -111,7 +111,7 @@ export function SlideBlockInsertPanel({ onAddBlock, onAddBlocks }: SlideBlockIns
         onKeyDown={(event) => {
           if (event.key === "Enter") runCommand();
         }}
-        placeholder="/title, /bullets, /quote, /metric"
+        placeholder="/title, /bullets, /dashboard, /architecture"
         style={{
           width: "100%",
           boxSizing: "border-box",

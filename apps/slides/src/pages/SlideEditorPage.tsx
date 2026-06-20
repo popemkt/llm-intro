@@ -21,6 +21,7 @@ import {
   Copy,
   Edit3,
   Globe,
+  Grid3X3,
   Group,
   Image as ImageIcon,
   Lock,
@@ -85,6 +86,14 @@ type RectPercent = { x: number; y: number; w: number; h: number };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const SNAP_THRESHOLD = 1;
 
+function gridValues(step: number) {
+  const safeStep = clamp(step, 1, 25);
+  const values: number[] = [];
+  for (let value = 0; value <= 100; value += safeStep) values.push(value);
+  if (values[values.length - 1] !== 100) values.push(100);
+  return values;
+}
+
 function blockRect(block: Block): RectPercent {
   const defaults = BLOCK_DEFAULTS[block.type];
   return {
@@ -103,8 +112,14 @@ function rectBounds(rects: RectPercent[]): RectPercent {
   return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
-function guideValues(blocks: Block[], excludeIds: Set<string>, axis: GuideAxis) {
+function guideValues(
+  blocks: Block[],
+  excludeIds: Set<string>,
+  axis: GuideAxis,
+  gridStep: number | null = null,
+) {
   const values = [0, 50, 100];
+  if (gridStep !== null) values.push(...gridValues(gridStep));
   for (const block of blocks) {
     if (excludeIds.has(block.id)) continue;
     const rect = blockRect(block);
@@ -140,9 +155,10 @@ function snapRect(
   rect: RectPercent,
   allBlocks: Block[],
   excludeIds: Set<string>,
+  gridStep: number | null = null,
 ): { rect: RectPercent; guides: ActiveGuide[] } {
-  const xSnap = snapDeltaForRect(rect, guideValues(allBlocks, excludeIds, "x"), "x");
-  const ySnap = snapDeltaForRect(rect, guideValues(allBlocks, excludeIds, "y"), "y");
+  const xSnap = snapDeltaForRect(rect, guideValues(allBlocks, excludeIds, "x", gridStep), "x");
+  const ySnap = snapDeltaForRect(rect, guideValues(allBlocks, excludeIds, "y", gridStep), "y");
   return {
     rect: {
       ...rect,
@@ -219,11 +235,12 @@ function snapResizeRect(
   mode: DragMode,
   allBlocks: Block[],
   excludeIds: Set<string>,
+  gridStep: number | null = null,
 ): { rect: RectPercent; guides: ActiveGuide[] } {
   const next = { ...rect };
   const guides: ActiveGuide[] = [];
-  const xTargets = guideValues(allBlocks, excludeIds, "x");
-  const yTargets = guideValues(allBlocks, excludeIds, "y");
+  const xTargets = guideValues(allBlocks, excludeIds, "x", gridStep);
+  const yTargets = guideValues(allBlocks, excludeIds, "y", gridStep);
   const right = rect.x + rect.w;
   const bottom = rect.y + rect.h;
 
@@ -700,6 +717,8 @@ export function SlideEditorPage() {
   const [formatClipboard, setFormatClipboard] = useState<BlockFormatClipboard | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [activeGuides, setActiveGuides] = useState<ActiveGuide[]>([]);
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  const [gridStep, setGridStep] = useState(5);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -856,6 +875,7 @@ export function SlideEditorPage() {
       const currentBlocks = blocksRef.current;
       const draggedIds = new Set(drag.originals.map((entry) => entry.id));
       const snapEnabled = !e.altKey;
+      const activeGridStep = snapToGrid ? gridStep : null;
       let moveDelta = { x: dx, y: dy };
       let resizeRect: RectPercent | null = null;
       let guides: ActiveGuide[] = [];
@@ -869,7 +889,7 @@ export function SlideEditorPage() {
             h: entry.origH,
           })),
         );
-        const snapped = snapRect(nextGroupRect, currentBlocks, draggedIds);
+        const snapped = snapRect(nextGroupRect, currentBlocks, draggedIds, activeGridStep);
         moveDelta = {
           x: dx + (snapped.rect.x - nextGroupRect.x),
           y: dy + (snapped.rect.y - nextGroupRect.y),
@@ -881,7 +901,13 @@ export function SlideEditorPage() {
         const original = drag.originals.find((entry) => entry.id === drag.blockId);
         if (original) {
           const rawRect = resizeRectForDrag(original, drag.mode, dx, dy);
-          const snapped = snapResizeRect(rawRect, drag.mode, currentBlocks, draggedIds);
+          const snapped = snapResizeRect(
+            rawRect,
+            drag.mode,
+            currentBlocks,
+            draggedIds,
+            activeGridStep,
+          );
           resizeRect = snapped.rect;
           guides = snapped.guides;
         }
@@ -971,7 +997,7 @@ export function SlideEditorPage() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, []);
+  }, [gridStep, snapToGrid]);
 
   // Auto-save: trigger on content/title/notes changes after initial load
   useEffect(() => {
@@ -1801,6 +1827,40 @@ export function SlideEditorPage() {
             <ClipboardPaste size={14} />
           </button>
           <button
+            type="button"
+            onClick={() => setSnapToGrid((value) => !value)}
+            title={snapToGrid ? "Disable grid snap" : "Enable grid snap"}
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              color: snapToGrid ? C.accent : C.textDim,
+              background: snapToGrid ? C.accentSubtle : C.bg,
+            }}
+          >
+            <Grid3X3 size={14} />
+          </button>
+          <input
+            type="number"
+            min={1}
+            max={25}
+            step={1}
+            value={gridStep}
+            disabled={!snapToGrid}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setGridStep(clamp(Number.isFinite(next) ? next : 5, 1, 25));
+            }}
+            title="Grid step (%)"
+            style={{
+              ...inp,
+              width: 48,
+              height: 32,
+              padding: "4px 6px",
+              opacity: snapToGrid ? 1 : 0.45,
+            }}
+          />
+          <button
             onClick={() => navigate(`/p/${pid}/settings`)}
             style={{
               color: C.textDim,
@@ -1893,6 +1953,20 @@ export function SlideEditorPage() {
                   boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
                 }}
               >
+                {snapToGrid && (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      pointerEvents: "none",
+                      backgroundImage:
+                        "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
+                      backgroundSize: `${gridStep}% ${gridStep}%`,
+                    }}
+                  />
+                )}
+
                 {blocks.length === 0 && (
                   <div
                     style={{

@@ -266,6 +266,9 @@ editing, themed presentation playback, and HTML export.
 - Dragging and resizing manual slide blocks snaps to slide edges, centerlines,
   and neighboring block edges/centers, with visible guide lines during pointer
   interaction. Holding Alt bypasses snapping for fine placement.
+- Users can enable a visible manual editor grid with configurable percentage
+  spacing. When enabled, dragging and resizing blocks snaps to grid lines in
+  addition to slide and block guides.
 - Users can align multi-selected manual slide blocks to their shared selection
   bounds and distribute selected blocks horizontally or vertically.
 - Text block editors include markdown formatting controls for headings, bold,

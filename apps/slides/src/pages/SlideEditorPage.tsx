@@ -70,6 +70,7 @@ import { getReadableTextColor } from "@/lib/color";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
+import { BLOCK_ANIMATION_TIMING, blockAnimationKeyframes } from "@/components/DbSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 import { ChartBlockView } from "@/components/ChartBlockView";
 import {
@@ -660,6 +661,10 @@ const BLOCK_ANIMATION_PRESETS: Array<{ label: string; value: ManualBlockAnimatio
   { label: "Slide left", value: "slide-left" },
   { label: "Slide right", value: "slide-right" },
   { label: "Wipe right", value: "wipe-right" },
+  { label: "Blur reveal", value: "blur-reveal" },
+  { label: "Mask up", value: "mask-up" },
+  { label: "Spring up", value: "spring-up" },
+  { label: "Tilt in", value: "tilt-in" },
   { label: "Pulse", value: "pulse" },
 ];
 type SlideHistorySnapshot = {
@@ -2968,6 +2973,11 @@ const TRANSITION_PRESETS = [
   { value: "reveal", label: "Reveal" },
   { value: "wipe", label: "Wipe" },
   { value: "flip", label: "Flip" },
+  { value: "blur", label: "Blur" },
+  { value: "rise", label: "Rise" },
+  { value: "glide", label: "Glide" },
+  { value: "zoom", label: "Zoom" },
+  { value: "swoop", label: "Swoop" },
   { value: "none", label: "None" },
   { value: "custom", label: "Custom" },
 ] as const;
@@ -4131,13 +4141,29 @@ function BlockAnimationEditor({
     if (disabled) return;
     onUpdate({
       animation: {
-        duration: animation?.duration ?? 480,
         preset: animation?.preset ?? "fade-in",
         ...animation,
         ...patch,
       },
     } as Partial<Block>);
   };
+
+  const previewRef = useRef<HTMLDivElement>(null);
+  const playPreview = useCallback(() => {
+    const el = previewRef.current;
+    if (!animation || !el || typeof el.animate !== "function") return;
+    el.getAnimations().forEach((existing) => existing.cancel());
+    el.animate(blockAnimationKeyframes(animation.preset, "none"), {
+      delay: animation.delay ?? 0,
+      duration: animation.duration ?? BLOCK_ANIMATION_TIMING[animation.preset]?.duration ?? 480,
+      easing:
+        animation.easing ??
+        BLOCK_ANIMATION_TIMING[animation.preset]?.easing ??
+        "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "both",
+      iterations: animation.iterationCount ?? 1,
+    });
+  }, [animation]);
 
   return (
     <InspectorField label="Animation">
@@ -4216,6 +4242,59 @@ function BlockAnimationEditor({
             style={{ ...inp, opacity: disabled || !animation ? 0.45 : 1 }}
           />
         </InspectorField>
+      </div>
+      <div
+        style={{
+          border: `1px solid ${C.border}`,
+          borderRadius: 8,
+          marginTop: 6,
+          opacity: animation ? 1 : 0.45,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            background: "linear-gradient(135deg, rgba(37,211,102,0.12), rgba(255,255,255,0.05))",
+            display: "grid",
+            height: 92,
+            placeItems: "center",
+          }}
+        >
+          <div
+            ref={previewRef}
+            style={{
+              background: C.accent,
+              borderRadius: 6,
+              color: C.bg,
+              display: "grid",
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: 11,
+              fontWeight: 800,
+              height: 40,
+              placeItems: "center",
+              width: 64,
+            }}
+          >
+            Aa
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={playPreview}
+          disabled={!animation}
+          style={{
+            ...arrangeButton,
+            border: "none",
+            borderRadius: 0,
+            borderTop: `1px solid ${C.border}`,
+            justifyContent: "center",
+            opacity: animation ? 1 : 0.45,
+            padding: "8px 10px",
+            width: "100%",
+          }}
+        >
+          ▶ Preview
+        </button>
       </div>
     </InspectorField>
   );

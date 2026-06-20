@@ -130,6 +130,159 @@ function flipPreset(direction: number): Pick<ResolvedSlideTransition, "enter" | 
   };
 }
 
+function blurPreset(): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  return {
+    enter: {
+      keyframes: [
+        { opacity: 0, transform: "scale(1.2)", filter: "blur(32px) brightness(1.4)" },
+        { opacity: 1, transform: "scale(1)", filter: "blur(0px) brightness(1)" },
+      ],
+      duration: 780,
+      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    },
+    exit: {
+      keyframes: [
+        { opacity: 1, transform: "scale(1)", filter: "blur(0px)" },
+        { opacity: 0, transform: "scale(0.9)", filter: "blur(24px)" },
+      ],
+      duration: 460,
+      easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+    },
+  };
+}
+
+function risePreset(): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  return {
+    enter: {
+      keyframes: [
+        {
+          offset: 0,
+          opacity: 0,
+          transform: "translate3d(0, 110px, 0) scale(0.88)",
+          filter: "blur(18px)",
+        },
+        {
+          offset: 0.7,
+          opacity: 1,
+          transform: "translate3d(0, -10px, 0) scale(1.01)",
+          filter: "blur(0px)",
+        },
+        { offset: 1, opacity: 1, transform: "translate3d(0, 0, 0) scale(1)", filter: "blur(0px)" },
+      ],
+      duration: 860,
+      easing: "cubic-bezier(0.34, 1.3, 0.5, 1)",
+    },
+    exit: {
+      keyframes: [
+        { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)", filter: "blur(0px)" },
+        { opacity: 0, transform: "translate3d(0, -70px, 0) scale(0.94)", filter: "blur(14px)" },
+      ],
+      duration: 480,
+      easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+    },
+  };
+}
+
+function glidePreset(direction: number): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  const enterX = direction > 0 ? "26%" : "-26%";
+  const exitX = direction > 0 ? "-26%" : "26%";
+  const enterRot = direction > 0 ? "-14deg" : "14deg";
+  const exitRot = direction > 0 ? "14deg" : "-14deg";
+  return {
+    enter: {
+      keyframes: [
+        {
+          opacity: 0,
+          transform: `perspective(1600px) translate3d(${enterX}, 0, 0) rotateY(${enterRot}) scale(0.9)`,
+          filter: "blur(10px)",
+        },
+        {
+          opacity: 1,
+          transform: "perspective(1600px) translate3d(0, 0, 0) rotateY(0deg) scale(1)",
+          filter: "blur(0px)",
+        },
+      ],
+      duration: 820,
+      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    },
+    exit: {
+      keyframes: [
+        {
+          opacity: 1,
+          transform: "perspective(1600px) translate3d(0, 0, 0) rotateY(0deg) scale(1)",
+          filter: "blur(0px)",
+        },
+        {
+          opacity: 0,
+          transform: `perspective(1600px) translate3d(${exitX}, 0, 0) rotateY(${exitRot}) scale(0.9)`,
+          filter: "blur(8px)",
+        },
+      ],
+      duration: 540,
+      easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+    },
+  };
+}
+
+function zoomPreset(): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  return {
+    enter: {
+      keyframes: [
+        { offset: 0, opacity: 0, transform: "scale(0.55)", filter: "blur(14px)" },
+        { offset: 0.65, opacity: 1, transform: "scale(1.06)", filter: "blur(0px)" },
+        { offset: 1, opacity: 1, transform: "scale(1)", filter: "blur(0px)" },
+      ],
+      duration: 700,
+      easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+    },
+    exit: {
+      keyframes: [
+        { opacity: 1, transform: "scale(1)", filter: "blur(0px)" },
+        { opacity: 0, transform: "scale(1.35)", filter: "blur(10px)" },
+      ],
+      duration: 420,
+      easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+    },
+  };
+}
+
+function swoopPreset(direction: number): Pick<ResolvedSlideTransition, "enter" | "exit"> {
+  const enterX = direction > 0 ? "60%" : "-60%";
+  const exitX = direction > 0 ? "-60%" : "60%";
+  const enterRot = direction > 0 ? "38deg" : "-38deg";
+  const exitRot = direction > 0 ? "-38deg" : "38deg";
+  return {
+    enter: {
+      keyframes: [
+        {
+          opacity: 0,
+          transform: `perspective(1400px) translate3d(${enterX}, 12%, 0) rotateY(${enterRot}) scale(0.82)`,
+        },
+        {
+          opacity: 1,
+          transform: "perspective(1400px) translate3d(0, 0, 0) rotateY(0deg) scale(1)",
+        },
+      ],
+      duration: 840,
+      easing: "cubic-bezier(0.22, 1.2, 0.36, 1)",
+    },
+    exit: {
+      keyframes: [
+        {
+          opacity: 1,
+          transform: "perspective(1400px) translate3d(0, 0, 0) rotateY(0deg) scale(1)",
+        },
+        {
+          opacity: 0,
+          transform: `perspective(1400px) translate3d(${exitX}, 12%, 0) rotateY(${exitRot}) scale(0.82)`,
+        },
+      ],
+      duration: 520,
+      easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+    },
+  };
+}
+
 function nonePreset(): Pick<ResolvedSlideTransition, "enter" | "exit"> {
   return {
     enter: { keyframes: [{ opacity: 1 }] },
@@ -147,6 +300,11 @@ function resolvePreset(
   if (name === "reveal") return revealPreset(direction);
   if (name === "wipe") return wipePreset(direction);
   if (name === "flip") return flipPreset(direction);
+  if (name === "blur") return blurPreset();
+  if (name === "rise") return risePreset();
+  if (name === "glide") return glidePreset(direction);
+  if (name === "zoom") return zoomPreset();
+  if (name === "swoop") return swoopPreset(direction);
   if (name === "none") return nonePreset();
   return slidePreset(direction);
 }

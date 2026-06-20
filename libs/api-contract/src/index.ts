@@ -18,14 +18,21 @@ export const THEME_META: Record<ThemeName, { label: string; desc: string }> = {
   ocean: { label: "Ocean", desc: "Deep teal seabed" },
 };
 
-export type ManualBlockAnimationPreset =
-  | "fade-in"
-  | "rise"
-  | "scale-in"
-  | "slide-left"
-  | "slide-right"
-  | "wipe-right"
-  | "pulse";
+export const MANUAL_BLOCK_ANIMATION_PRESETS = [
+  "fade-in",
+  "rise",
+  "scale-in",
+  "slide-left",
+  "slide-right",
+  "wipe-right",
+  "blur-reveal",
+  "mask-up",
+  "spring-up",
+  "tilt-in",
+  "pulse",
+] as const;
+
+export type ManualBlockAnimationPreset = (typeof MANUAL_BLOCK_ANIMATION_PRESETS)[number];
 
 export interface ManualBlockAnimation {
   preset: ManualBlockAnimationPreset;
@@ -170,6 +177,11 @@ export type SlideTransitionPreset =
   | "reveal"
   | "wipe"
   | "flip"
+  | "blur"
+  | "rise"
+  | "glide"
+  | "zoom"
+  | "swoop"
   | "none";
 
 export type SlideTransitionKeyframe = Record<string, string | number | boolean | null>;

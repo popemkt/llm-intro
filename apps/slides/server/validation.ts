@@ -1,4 +1,5 @@
 import {
+  MANUAL_BLOCK_ANIMATION_PRESETS,
   THEME_NAMES,
   type ApiSlideBackground,
   type ApiSlideTransition,
@@ -308,11 +309,7 @@ function parseBlockAnimation(value: unknown) {
   if (value === undefined) return undefined;
   const animation = asRecord(value);
   const preset = animation.preset;
-  if (
-    !["fade-in", "rise", "scale-in", "slide-left", "slide-right", "wipe-right", "pulse"].includes(
-      String(preset),
-    )
-  ) {
+  if (!(MANUAL_BLOCK_ANIMATION_PRESETS as readonly string[]).includes(String(preset))) {
     throw new AppError(400, "block.animation.preset is invalid");
   }
   return {

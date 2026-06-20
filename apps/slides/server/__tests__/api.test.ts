@@ -608,8 +608,8 @@ describe("Manual slide actions", () => {
     expect(res.status).toBe(200);
     expect(res.body.blocks).toHaveLength(4);
     expect(res.body.blocks).toEqual([
-      expect.objectContaining({ type: "shape", label: "Option A" }),
-      expect.objectContaining({ type: "shape", label: "Option B" }),
+      expect.objectContaining({ type: "shape", label: "Option A", displayName: "Option A" }),
+      expect.objectContaining({ type: "shape", label: "Option B", displayName: "Option B" }),
       expect.objectContaining({ type: "text", markdown: expect.stringContaining("Current") }),
       expect.objectContaining({ type: "text", markdown: expect.stringContaining("Target") }),
     ]);
@@ -640,7 +640,11 @@ describe("Manual slide actions", () => {
         expect.objectContaining({ type: "shape", label: "1" }),
         expect.objectContaining({ type: "shape", label: "2" }),
         expect.objectContaining({ type: "shape", label: "3" }),
-        expect.objectContaining({ type: "text", markdown: expect.stringContaining("Start") }),
+        expect.objectContaining({
+          type: "text",
+          displayName: "Start",
+          markdown: expect.stringContaining("Start"),
+        }),
       ]),
     );
   });

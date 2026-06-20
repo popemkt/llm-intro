@@ -232,6 +232,8 @@ editing, themed presentation playback, and HTML export.
   pie charts from structured categories and series data.
 - The manual preset catalog includes title, bullets, quote, metric, two-column,
   comparison, timeline, image-left, process, and section-divider layouts.
+  Preset-created blocks include semantic display names so the layer list and
+  agent follow-up edits can target them without inferring labels from content.
 - Users can insert visual editor blocks from the keyboard with slash commands:
   `/title`, `/bullets`, `/quote`, `/metric`, `/text`, `/image`, `/iframe`,
   `/embed`, `/shape`, `/line`, `/arrow`, `/connector`, `/table`, `/chart`, and

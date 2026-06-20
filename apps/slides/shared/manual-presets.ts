@@ -112,13 +112,31 @@ export const MANUAL_PRESET_IDS = MANUAL_PRESET_META.map((preset) => preset.id) a
   ...ManualPresetId[],
 ];
 
+function textDisplayName(markdown: string) {
+  const firstLine = markdown
+    .split("\n")
+    .find((line) => line.trim())
+    ?.replace(/^#+\s*/, "")
+    .replace(/^>\s*/, "")
+    .replace(/^[-*]\s*/, "")
+    .trim();
+  return firstLine || "Text";
+}
+
 function textBlock(
   markdown: string,
   rect: Rect,
   createId: () => string,
   extra: Partial<Extract<Block, { type: "text" }>> = {},
 ): Block {
-  return { id: createId(), type: "text", markdown, ...rect, ...extra };
+  return {
+    id: createId(),
+    type: "text",
+    markdown,
+    displayName: textDisplayName(markdown),
+    ...rect,
+    ...extra,
+  };
 }
 
 function shapeBlock(
@@ -133,6 +151,7 @@ function shapeBlock(
     shape: "pill",
     color: "#25d366",
     label,
+    displayName: label,
     ...rect,
     ...extra,
   };
@@ -152,13 +171,14 @@ function lineBlock(
     startY: 50,
     endX: 100,
     endY: 50,
+    displayName: extra.endArrow || extra.startArrow ? "Arrow" : "Connector",
     ...rect,
     ...extra,
   };
 }
 
 function imageBlock(alt: string, rect: Rect, createId: () => string): Block {
-  return { id: createId(), type: "image", url: "", alt, ...rect };
+  return { id: createId(), type: "image", url: "", alt, displayName: alt, ...rect };
 }
 
 export function getManualPresetMeta(id: string) {

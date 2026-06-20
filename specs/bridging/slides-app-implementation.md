@@ -58,7 +58,7 @@ framework boundary.
 | Fine-grained manual block actions | `add-manual-block`, `update-manual-block`, `delete-manual-block`, `group-manual-blocks`, and `ungroup-manual-blocks` reuse server block validation and `slidesService.update` so agents can safely edit manual slides incrementally | Vitest/API |
 | Manual block layout actions | `arrange-manual-blocks`, `duplicate-manual-blocks`, and `move-manual-block-layer` mirror visual editor alignment, distribution, duplication, and layer ordering behavior for agents | Vitest/API |
 | Manual block locking action | `set-manual-block-lock` updates the shared typed block `locked` field; destructive/layout actions reject locked blocks while update can still unlock them | Vitest/API |
-| Manual preset actions | `create-manual-preset-slide` creates a manual slide from shared preset blocks, while `insert-manual-preset` appends the same preset blocks to an existing manual slide so agents and the visual editor use the same reusable layouts | Vitest/API |
+| Manual preset actions | `create-manual-preset-slide` creates a manual slide from shared preset blocks, while `insert-manual-preset` appends the same preset blocks to an existing manual slide; `shared/manual-presets` seeds semantic `displayName` values so agents and the visual editor use the same reusable layouts | Vitest/API |
 | Create HTML slide | `create-html-slide` action persists `kind: "html"` slides with authored HTML source | Vitest/API plus renderer tests |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |

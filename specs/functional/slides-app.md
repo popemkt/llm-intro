@@ -207,6 +207,9 @@ editing, themed presentation playback, and HTML export.
   `move-manual-block-layer`, including multi-block alignment/distribution,
   match width/height/size, block duplication with fresh ids, and layer stack
   changes.
+- Agents can move or resize one or more manual blocks by relative percentage
+  deltas through `transform-manual-blocks`. The action clamps geometry to the
+  normalized slide canvas and rejects locked target blocks.
 - Agents can lock or unlock manual slide blocks through
   `set-manual-block-lock`; locked blocks stay selectable but reject destructive
   or layout-changing actions such as delete, arrange, duplicate, and layer

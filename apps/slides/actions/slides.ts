@@ -14,6 +14,7 @@ import { buildManualPresetBlocks, MANUAL_PRESET_IDS } from "../shared/manual-pre
 import { createArrangeManualBlocksAction } from "./manual-block-arrange.js";
 import { applyManualBlockFormat, copyManualBlockFormat } from "./manual-block-format.js";
 import { createUpdateManualBlocksAction } from "./manual-block-batch.js";
+import { createTransformManualBlocksAction } from "./manual-block-geometry.js";
 import { createNormalSlideAction, createNormalSlidesAction } from "./normal-slide-action.js";
 import { z } from "zod";
 
@@ -736,6 +737,7 @@ export function createSlideActions(slidesService: SlidesService) {
     "group-manual-blocks": createGroupManualBlocksAction(slidesService),
     "ungroup-manual-blocks": createUngroupManualBlocksAction(slidesService),
     "arrange-manual-blocks": createArrangeManualBlocksAction(slidesService),
+    "transform-manual-blocks": createTransformManualBlocksAction(slidesService),
     "duplicate-manual-blocks": createDuplicateManualBlocksAction(slidesService),
     "move-manual-block-layer": createMoveManualBlockLayerAction(slidesService),
     "update-deck-layout": createUpdateDeckLayoutAction(slidesService),

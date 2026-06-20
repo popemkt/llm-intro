@@ -139,6 +139,10 @@ describe("Agent Native A2A exposure", () => {
           name: "Update manual blocks",
         }),
         expect.objectContaining({
+          id: "transform-manual-blocks",
+          name: "Transform manual blocks",
+        }),
+        expect.objectContaining({
           id: "create-html-slide",
           name: "Create HTML slide",
         }),
@@ -671,6 +675,47 @@ describe("Manual slide actions", () => {
       .send({ pid, sid: slide.id, blockIds: ["a"], direction: "front" });
     expect(layered.status).toBe(200);
     expect(layered.body.blocks.at(-1)).toMatchObject({ id: "a" });
+  });
+
+  it("transforms manual block geometry by relative deltas", async () => {
+    const slide = (
+      await request(app)
+        .post("/_agent-native/actions/create-manual-slide")
+        .send({
+          pid,
+          title: "Transform Blocks",
+          blocks: [
+            { id: "box", type: "shape", shape: "rect", color: "#25d366", x: 92, y: 88, w: 7, h: 9 },
+            { id: "text", type: "text", markdown: "Move me", x: 10, y: 10, w: 20, h: 8 },
+          ],
+        })
+    ).body;
+
+    const transformed = await request(app)
+      .put("/_agent-native/actions/transform-manual-blocks")
+      .send({
+        pid,
+        sid: slide.id,
+        blockIds: ["box", "text"],
+        dx: 5,
+        dy: 6,
+        dw: 10,
+        dh: 4,
+      });
+    expect(transformed.status).toBe(200);
+    expect(transformed.body.blocks).toEqual([
+      expect.objectContaining({ id: "box", x: 83, y: 87, w: 17, h: 13 }),
+      expect.objectContaining({ id: "text", x: 15, y: 16, w: 30, h: 12 }),
+    ]);
+
+    await request(app)
+      .put("/_agent-native/actions/set-manual-block-lock")
+      .send({ pid, sid: slide.id, blockIds: ["text"], locked: true });
+    const rejected = await request(app)
+      .put("/_agent-native/actions/transform-manual-blocks")
+      .send({ pid, sid: slide.id, blockIds: ["text"], dx: 1 });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error).toContain("block is locked");
   });
 
   it("manual block locks protect layout edits and can be toggled", async () => {

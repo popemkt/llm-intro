@@ -66,6 +66,7 @@ export function copyManualBlockFormat(block: Block): ManualBlockFormatClipboard 
         sourceType: block.type,
         patch: {
           ...common,
+          connector: block.connector,
           color: block.color,
           dash: block.dash,
           endArrow: block.endArrow,

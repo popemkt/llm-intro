@@ -536,6 +536,7 @@ function LineBlockView({ block }: { block: Extract<Block, { type: "line" }> }) {
   const markerId = `line-arrow-${block.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const strokeWidth = block.strokeWidth ?? 3;
   const dashArray = block.dash === "dash" ? "10 8" : block.dash === "dot" ? "2 7" : undefined;
+  const pathD = lineConnectorPath(block);
   return (
     <svg
       viewBox="0 0 100 100"
@@ -558,21 +559,51 @@ function LineBlockView({ block }: { block: Extract<Block, { type: "line" }> }) {
           </marker>
         </defs>
       )}
-      <line
-        x1={block.startX ?? 0}
-        y1={block.startY ?? 50}
-        x2={block.endX ?? 100}
-        y2={block.endY ?? 50}
-        stroke={block.color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={dashArray}
-        vectorEffect="non-scaling-stroke"
-        markerStart={block.startArrow ? `url(#${markerId})` : undefined}
-        markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
-      />
+      {pathD ? (
+        <path
+          d={pathD}
+          fill="none"
+          stroke={block.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={dashArray}
+          vectorEffect="non-scaling-stroke"
+          markerStart={block.startArrow ? `url(#${markerId})` : undefined}
+          markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
+        />
+      ) : (
+        <line
+          x1={block.startX ?? 0}
+          y1={block.startY ?? 50}
+          x2={block.endX ?? 100}
+          y2={block.endY ?? 50}
+          stroke={block.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={dashArray}
+          vectorEffect="non-scaling-stroke"
+          markerStart={block.startArrow ? `url(#${markerId})` : undefined}
+          markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
+        />
+      )}
     </svg>
   );
+}
+
+function lineConnectorPath(block: Extract<Block, { type: "line" }>) {
+  const startX = block.startX ?? 0;
+  const startY = block.startY ?? 50;
+  const endX = block.endX ?? 100;
+  const endY = block.endY ?? 50;
+  const midX = (startX + endX) / 2;
+  if (block.connector === "curve") {
+    return `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+  }
+  if (block.connector === "elbow") {
+    return `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+  }
+  return null;
 }
 
 function TableBlockView({

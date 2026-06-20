@@ -120,6 +120,7 @@ describe("DbSlideRenderer", () => {
         id: "3",
         type: "line",
         color: "#ffd93d",
+        connector: "elbow",
         strokeWidth: 5,
         dash: "dash",
         endArrow: true,
@@ -185,8 +186,9 @@ describe("DbSlideRenderer", () => {
     expect(badge).toHaveAttribute("font-size", "18");
     expect(badge).toHaveAttribute("font-weight", "800");
 
-    const line = container.querySelector('line[stroke="#ffd93d"]') as SVGLineElement;
+    const line = container.querySelector('path[stroke="#ffd93d"]') as SVGPathElement;
     expect(line).toBeInTheDocument();
+    expect(line.getAttribute("d")).toContain("L");
     expect(line.getAttribute("stroke-width")).toBe("5");
     expect(line.getAttribute("stroke-dasharray")).toBe("10 8");
     expect(line.getAttribute("marker-end")).toContain("line-arrow-3");

@@ -44,6 +44,7 @@ export type ManualShapeKind =
   | "parallelogram"
   | "hexagon"
   | "arrow-right";
+export type ManualConnectorKind = "straight" | "elbow" | "curve";
 
 type BlockPos = {
   x?: number;
@@ -113,6 +114,7 @@ export type LineBlock = {
   id: string;
   type: "line";
   color: string;
+  connector?: ManualConnectorKind;
   strokeWidth?: number;
   dash?: "solid" | "dash" | "dot";
   startX?: number;

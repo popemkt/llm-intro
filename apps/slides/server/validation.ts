@@ -182,6 +182,14 @@ function parseLineDash(value: unknown) {
   return value as "solid" | "dash" | "dot";
 }
 
+function parseLineConnector(value: unknown) {
+  if (value === undefined) return undefined;
+  if (!["straight", "elbow", "curve"].includes(String(value))) {
+    throw new AppError(400, "line block connector is invalid");
+  }
+  return value as NonNullable<Extract<Block, { type: "line" }>["connector"]>;
+}
+
 function parseTableRows(value: unknown) {
   if (!Array.isArray(value) || value.length === 0) {
     throw new AppError(400, "table block rows must be a non-empty array");
@@ -462,6 +470,7 @@ function validateLineBlock(id: string, value: JsonRecord, position: BlockPositio
     id,
     type: "line",
     color: value.color,
+    connector: parseLineConnector(value.connector),
     strokeWidth: parseBoundedNumber(value.strokeWidth, "line block strokeWidth", {
       min: 1,
       max: 32,

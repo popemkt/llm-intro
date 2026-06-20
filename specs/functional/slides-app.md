@@ -258,8 +258,9 @@ editing, themed presentation playback, and HTML export.
 - Users can insert primitive blocks and common content presets in the visual
   slide editor. Presets still write ordinary typed blocks so themes, export, and
   agent actions keep using the same slide model.
-- Users and agents can create editable manual line blocks for connectors,
-  arrows, dashed or dotted rules, and process/timeline diagrams.
+- Users and agents can create editable manual line blocks for straight, elbow,
+  and curved connectors, arrows, dashed or dotted rules, and process/timeline
+  diagrams.
 - Users and agents can create editable manual table blocks for comparison
   matrices, schedules, scorecards, and structured summaries.
 - Users and agents can create editable manual chart blocks for bar, line, and

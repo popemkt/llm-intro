@@ -346,6 +346,7 @@ describe("Manual slide actions", () => {
             id: "arrow",
             type: "line",
             color: "#ffd93d",
+            connector: "elbow",
             strokeWidth: 5,
             dash: "dash",
             startX: 4,
@@ -448,6 +449,7 @@ describe("Manual slide actions", () => {
           id: "arrow",
           type: "line",
           color: "#ffd93d",
+          connector: "elbow",
           strokeWidth: 5,
           dash: "dash",
           endArrow: true,
@@ -567,6 +569,16 @@ describe("Manual slide actions", () => {
               w: 20,
               h: 10,
             },
+            {
+              id: "connector",
+              type: "line",
+              color: "#ffd93d",
+              connector: "straight",
+              x: 40,
+              y: 10,
+              w: 16,
+              h: 10,
+            },
             { id: "footer", type: "text", markdown: "Keep", x: 10, y: 82, w: 40, h: 8 },
           ],
         })
@@ -585,6 +597,10 @@ describe("Manual slide actions", () => {
           {
             bid: "badge",
             patch: { label: "Ready", textColor: "#0d0f0e", rotation: -3 },
+          },
+          {
+            bid: "connector",
+            patch: { connector: "curve" },
           },
         ],
       });
@@ -605,6 +621,7 @@ describe("Manual slide actions", () => {
         rotation: -3,
         textColor: "#0d0f0e",
       }),
+      expect.objectContaining({ id: "connector", connector: "curve" }),
       expect.objectContaining({ id: "footer", markdown: "Keep" }),
     ]);
 
@@ -615,7 +632,7 @@ describe("Manual slide actions", () => {
         sid: slide.id,
         patches: [
           { bid: "headline", patch: { markdown: "# Should not persist" } },
-          { bid: "badge", patch: { shape: "freeform" } },
+          { bid: "connector", patch: { connector: "zigzag" } },
         ],
       });
     expect(rejectedInvalid.status).toBe(400);
@@ -624,6 +641,7 @@ describe("Manual slide actions", () => {
     const persisted = afterRejected.body.find((entry: { id: number }) => entry.id === slide.id);
     expect(persisted.blocks[0]).toMatchObject({ id: "headline", markdown: "# Final" });
     expect(persisted.blocks[1]).toMatchObject({ id: "badge", shape: "pill" });
+    expect(persisted.blocks[2]).toMatchObject({ id: "connector", connector: "curve" });
 
     const triangle = await request(app)
       .put("/_agent-native/actions/update-manual-block")

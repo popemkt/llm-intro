@@ -692,6 +692,7 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
         sourceType: block.type,
         patch: {
           ...common,
+          connector: block.connector,
           color: block.color,
           dash: block.dash,
           endArrow: block.endArrow,
@@ -4915,6 +4916,7 @@ function CanvasLineBlock({ block }: { block: Extract<Block, { type: "line" }> })
   const markerId = `editor-line-arrow-${block.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const strokeWidth = block.strokeWidth ?? 3;
   const dashArray = block.dash === "dash" ? "10 8" : block.dash === "dot" ? "2 7" : undefined;
+  const pathD = lineConnectorPath(block);
   return (
     <svg
       viewBox="0 0 100 100"
@@ -4936,21 +4938,51 @@ function CanvasLineBlock({ block }: { block: Extract<Block, { type: "line" }> })
           </marker>
         </defs>
       )}
-      <line
-        x1={block.startX ?? 0}
-        y1={block.startY ?? 50}
-        x2={block.endX ?? 100}
-        y2={block.endY ?? 50}
-        stroke={block.color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={dashArray}
-        vectorEffect="non-scaling-stroke"
-        markerStart={block.startArrow ? `url(#${markerId})` : undefined}
-        markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
-      />
+      {pathD ? (
+        <path
+          d={pathD}
+          fill="none"
+          stroke={block.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={dashArray}
+          vectorEffect="non-scaling-stroke"
+          markerStart={block.startArrow ? `url(#${markerId})` : undefined}
+          markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
+        />
+      ) : (
+        <line
+          x1={block.startX ?? 0}
+          y1={block.startY ?? 50}
+          x2={block.endX ?? 100}
+          y2={block.endY ?? 50}
+          stroke={block.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={dashArray}
+          vectorEffect="non-scaling-stroke"
+          markerStart={block.startArrow ? `url(#${markerId})` : undefined}
+          markerEnd={block.endArrow ? `url(#${markerId})` : undefined}
+        />
+      )}
     </svg>
   );
+}
+
+function lineConnectorPath(block: Extract<Block, { type: "line" }>) {
+  const startX = block.startX ?? 0;
+  const startY = block.startY ?? 50;
+  const endX = block.endX ?? 100;
+  const endY = block.endY ?? 50;
+  const midX = (startX + endX) / 2;
+  if (block.connector === "curve") {
+    return `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+  }
+  if (block.connector === "elbow") {
+    return `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+  }
+  return null;
 }
 
 function CanvasTableBlock({ block }: { block: Extract<Block, { type: "table" }> }) {
@@ -5208,6 +5240,30 @@ function ShapeLabelControls({
 
 // ─── Line property editor ─────────────────────────────────────────────────────
 
+function LineOptionButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...arrangeButton,
+        background: active ? C.accentSubtle : C.bg,
+        color: active ? C.accent : C.text,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function LinePropEditor({
   block,
   onUpdate,
@@ -5215,24 +5271,6 @@ function LinePropEditor({
   block: Extract<Block, { type: "line" }>;
   onUpdate: (p: Partial<Extract<Block, { type: "line" }>>) => void;
 }) {
-  const dashButton = (
-    dash: NonNullable<Extract<Block, { type: "line" }>["dash"]>,
-    label: string,
-  ) => (
-    <button
-      key={dash}
-      type="button"
-      onClick={() => onUpdate({ dash })}
-      style={{
-        ...arrangeButton,
-        background: (block.dash ?? "solid") === dash ? C.accentSubtle : C.bg,
-        color: (block.dash ?? "solid") === dash ? C.accent : C.text,
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <ColorInput
@@ -5248,9 +5286,24 @@ function LinePropEditor({
         onChange={(strokeWidth) => onUpdate({ strokeWidth })}
       />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-        {dashButton("solid", "Solid")}
-        {dashButton("dash", "Dash")}
-        {dashButton("dot", "Dot")}
+        {(["straight", "elbow", "curve"] as const).map((connector) => (
+          <LineOptionButton
+            key={connector}
+            active={(block.connector ?? "straight") === connector}
+            label={connector[0].toUpperCase() + connector.slice(1)}
+            onClick={() => onUpdate({ connector })}
+          />
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {(["solid", "dash", "dot"] as const).map((dash) => (
+          <LineOptionButton
+            key={dash}
+            active={(block.dash ?? "solid") === dash}
+            label={dash[0].toUpperCase() + dash.slice(1)}
+            onClick={() => onUpdate({ dash })}
+          />
+        ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <button

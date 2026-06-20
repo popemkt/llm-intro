@@ -497,8 +497,9 @@ export function PresentationPage() {
         ) : mode === "presentation" ? (
           <PresentationView
             key="presentation"
-            slides={slides}
             activeIndex={activeIndex}
+            presentationId={presentation.id}
+            slides={slides}
             onExit={() => setMode("overview")}
             onNavigate={setActiveIndex}
             onGoHome={() => navigate("/")}

@@ -85,6 +85,7 @@ export function SlideShell({ children, className }: SlideShellProps) {
             style={{
               width: SLIDE_CANVAS_WIDTH,
               height: SLIDE_CANVAS_HEIGHT,
+              position: "relative",
               transform: `scale(${measuredScale})`,
               transformOrigin: "top left",
             }}

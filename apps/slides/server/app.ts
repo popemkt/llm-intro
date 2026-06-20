@@ -4,6 +4,7 @@ import { AppError } from "./errors.js";
 import { createPresentationsRouter } from "./routes/presentations.js";
 import { createSlidesRouter } from "./routes/slides.js";
 import { createGroupsRouter } from "./routes/groups.js";
+import { createSlideFeedbackRouter } from "./routes/slide-feedback.js";
 import { createExportHandler } from "./routes/export.js";
 import { createApplicationStateRouter } from "./routes/application-state.js";
 import { createFrameworkCoreRouter } from "./routes/framework-core.js";
@@ -18,6 +19,7 @@ import type { createPresentationsService } from "./services/presentations.js";
 import type { createSlidesService } from "./services/slides.js";
 import type { createGroupsService } from "./services/groups.js";
 import type { createAssetsService } from "./services/assets.js";
+import type { createSlideFeedbackService } from "./services/slide-feedback.js";
 import type { AgentTerminalBridge } from "./agent-terminal.js";
 import type { LocalDeckModelProvider } from "./local-model-provider.js";
 
@@ -25,12 +27,14 @@ type PresentationsService = ReturnType<typeof createPresentationsService>;
 type SlidesService = ReturnType<typeof createSlidesService>;
 type GroupsService = ReturnType<typeof createGroupsService>;
 type AssetsService = ReturnType<typeof createAssetsService>;
+type SlideFeedbackService = ReturnType<typeof createSlideFeedbackService>;
 
 export function createApp(services: {
   presentationsService: PresentationsService;
   slidesService: SlidesService;
   groupsService: GroupsService;
   assetsService: AssetsService;
+  feedbackService: SlideFeedbackService;
   actions: SlideDeckActions;
   agentTerminalBridge?: AgentTerminalBridge;
   localModelProvider?: LocalDeckModelProvider;
@@ -73,6 +77,10 @@ export function createApp(services: {
     }
   });
   app.use("/api/presentations/:pid/slides", createSlidesRouter(services.slidesService));
+  app.use(
+    "/api/presentations/:pid/slide-feedback",
+    createSlideFeedbackRouter(services.feedbackService),
+  );
   app.use("/api/presentations/:pid/groups", createGroupsRouter(services.groupsService));
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));

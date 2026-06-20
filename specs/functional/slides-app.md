@@ -26,6 +26,12 @@ editing, themed presentation playback, and HTML export.
   module.
 - Users can edit HTML slide source in the browser slide editor with a live
   full-canvas preview and speaker notes.
+- Users can toggle a source-linked feedback inspector in presentation mode for
+  code-backed and HTML slides, click rendered content, and add feedback that is
+  persisted as Open Slide-style source markers.
+- Agents can list and resolve source-linked slide feedback through product
+  actions. Code-backed feedback writes markers into local TSX source files;
+  HTML feedback writes markers into the slide's authored HTML source.
 - Manual database-backed slides contain editable block data.
 - Users can create, duplicate, rename, reorder, edit, and delete manual slides.
 - Reorder operations preserve every slide exactly once.
@@ -249,6 +255,12 @@ editing, themed presentation playback, and HTML export.
   typed blocks and can be edited by later block actions.
 - Agents can create full-canvas HTML slides through `create-html-slide` by
   providing authored HTML/CSS/JS source.
+- Agents can create, list, and resolve source-linked feedback for code-backed
+  and HTML slides through `create-slide-feedback`, `list-slide-feedback`, and
+  `resolve-slide-feedback`. The first adapter uses source markers so local CLI
+  agents can read unresolved comments without a hosted service. A later adapter
+  should support external/session-backed feedback to avoid Vite refreshes when
+  code-backed TSX files are touched.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.

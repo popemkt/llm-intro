@@ -16,6 +16,7 @@ export type {
   ApiDeckAsset,
   ApiLogoAssetCandidate,
   ApiSlideBackground,
+  ApiSlideFeedback,
   ApiSlideTransition,
   Block,
   DeckAssetKind,
@@ -23,6 +24,8 @@ export type {
   ManualBlockAnimationPreset,
   ManualShapeKind,
   ShapeBlock,
+  SlideFeedbackRect,
+  SlideFeedbackSourceLocation,
   ThemeName,
 } from "@llm-intro/api-contract";
 export { THEME_NAMES, THEME_META } from "@llm-intro/api-contract";
@@ -36,6 +39,7 @@ export type UnifiedSlide =
   | {
       kind: "code";
       id: number;
+      codeId: string | null;
       groupId: number | null;
       title: string;
       notes: string;

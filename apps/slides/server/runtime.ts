@@ -11,6 +11,7 @@ import { createSlidesService } from "./services/slides.js";
 import { createGroupsService } from "./services/groups.js";
 import { createSnapshotsService } from "./services/snapshots.js";
 import { createAssetsService } from "./services/assets.js";
+import { createSlideFeedbackService } from "./services/slide-feedback.js";
 import { createSlideDeckActions } from "../actions/index.js";
 import { createAgentTerminalBridge } from "./agent-terminal.js";
 import {
@@ -30,6 +31,7 @@ export function buildRuntime(
   const presentationsService = createPresentationsService(presentationsRepo);
   const slidesService = createSlidesService(presentationsRepo, slidesRepo);
   const groupsService = createGroupsService(presentationsRepo, groupsRepo);
+  const feedbackService = createSlideFeedbackService(presentationsRepo, slidesRepo);
   const snapshotsService = createSnapshotsService(
     presentationsService,
     slidesService,
@@ -44,6 +46,7 @@ export function buildRuntime(
     groupsService,
     snapshotsService,
     assetsService,
+    feedbackService,
     localModelProvider,
   });
   const agentTerminalBridge = createAgentTerminalBridge({ appDir: process.cwd() });
@@ -54,6 +57,7 @@ export function buildRuntime(
       slidesService,
       groupsService,
       assetsService,
+      feedbackService,
       actions,
       agentTerminalBridge,
       localModelProvider,

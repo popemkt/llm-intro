@@ -14,8 +14,10 @@ import { createThemeDesignActions } from "./theme-design.js";
 import { createSnapshotActions } from "./snapshots.js";
 import { createLocalHarnessActions } from "./local-harness.js";
 import { createAssetActions } from "./assets.js";
+import { createSlideFeedbackActions } from "./slide-feedback.js";
 import type { createSnapshotsService } from "../server/services/snapshots.js";
 import type { createAssetsService } from "../server/services/assets.js";
+import type { createSlideFeedbackService } from "../server/services/slide-feedback.js";
 import type { LocalDeckModelProvider } from "../server/local-model-provider.js";
 
 type PresentationsService = ReturnType<typeof createPresentationsService>;
@@ -23,6 +25,7 @@ type SlidesService = ReturnType<typeof createSlidesService>;
 type GroupsService = ReturnType<typeof createGroupsService>;
 type SnapshotsService = ReturnType<typeof createSnapshotsService>;
 type AssetsService = ReturnType<typeof createAssetsService>;
+type SlideFeedbackService = ReturnType<typeof createSlideFeedbackService>;
 
 export function createSlideDeckActions(services: {
   presentationsService: PresentationsService;
@@ -30,6 +33,7 @@ export function createSlideDeckActions(services: {
   groupsService: GroupsService;
   snapshotsService: SnapshotsService;
   assetsService: AssetsService;
+  feedbackService: SlideFeedbackService;
   localModelProvider?: LocalDeckModelProvider;
 }) {
   return {
@@ -53,6 +57,7 @@ export function createSlideDeckActions(services: {
     ...createGroupActions(services.groupsService),
     ...createSnapshotActions(services.snapshotsService),
     ...createAssetActions(services.assetsService),
+    ...createSlideFeedbackActions(services.feedbackService),
   };
 }
 

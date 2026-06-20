@@ -27,6 +27,7 @@ export function toUnifiedSlide(
     return {
       kind: "code",
       id: slide.id,
+      codeId: slide.code_id,
       groupId,
       title: slide.title,
       notes: slide.notes,

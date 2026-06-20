@@ -3,8 +3,10 @@ import type {
   ApiPresentation,
   ApiSlide,
   ApiSlideBackground,
+  ApiSlideFeedback,
   ApiSlideGroup,
   ApiSlideTransition,
+  SlideFeedbackSourceLocation,
   LayoutInput,
   ThemeName,
 } from "@/types";
@@ -69,5 +71,28 @@ export const api = {
     delete: async (pid: number, gid: number) => {
       await callAction<null>("delete-group", { pid, gid }, { method: "DELETE" });
     },
+  },
+
+  feedback: {
+    list: (pid: number, slideId?: number) =>
+      callAction<ApiSlideFeedback[]>("list-slide-feedback", slideId ? { pid, slideId } : { pid }, {
+        method: "GET",
+      }),
+    create: (
+      pid: number,
+      slideId: number,
+      input: { text: string; location?: Partial<SlideFeedbackSourceLocation> },
+    ) =>
+      callAction<ApiSlideFeedback>(
+        "create-slide-feedback",
+        { pid, slideId, ...input },
+        { method: "POST" },
+      ),
+    resolve: (pid: number, slideId: number, feedbackId: string) =>
+      callAction<ApiSlideFeedback>(
+        "resolve-slide-feedback",
+        { pid, slideId, feedbackId },
+        { method: "POST" },
+      ),
   },
 };

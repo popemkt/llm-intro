@@ -174,6 +174,18 @@ describe("Agent Native A2A exposure", () => {
           id: "duplicate-slide",
           name: "Duplicate slide",
         }),
+        expect.objectContaining({
+          id: "list-slide-feedback",
+          name: "List slide feedback",
+        }),
+        expect.objectContaining({
+          id: "create-slide-feedback",
+          name: "Create slide feedback",
+        }),
+        expect.objectContaining({
+          id: "resolve-slide-feedback",
+          name: "Resolve slide feedback",
+        }),
       ]),
     );
   });

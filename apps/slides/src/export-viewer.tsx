@@ -46,6 +46,7 @@ function resolve(
     return {
       kind: "code",
       id: apiSlide.id,
+      codeId: apiSlide.code_id,
       groupId,
       title: apiSlide.title,
       notes: apiSlide.notes,

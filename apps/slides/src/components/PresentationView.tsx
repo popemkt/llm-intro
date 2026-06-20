@@ -8,6 +8,7 @@ import {
   Home,
   Keyboard,
   Maximize2,
+  MessageSquare,
   MonitorUp,
   RotateCcw,
 } from "lucide-react";
@@ -16,8 +17,10 @@ import { SlideShell } from "./SlideShell";
 import { DbSlideRenderer } from "./DbSlideRenderer";
 import { HtmlSlideRenderer } from "./HtmlSlideRenderer";
 import { SlideTransitionStage } from "./SlideTransitionStage";
+import { SlideFeedbackInspector } from "./SlideFeedbackInspector";
 
 interface PresentationViewProps {
+  presentationId?: number;
   slides: UnifiedSlide[];
   activeIndex: number;
   onExit: () => void;
@@ -113,17 +116,41 @@ function MiniSlidePreview({ slide }: { slide: UnifiedSlide | undefined }) {
   );
 }
 
-function RenderSlide({ slide, isActive }: { slide: UnifiedSlide; isActive: boolean }) {
+function RenderSlide({
+  feedbackEnabled,
+  isActive,
+  onCloseFeedback,
+  presentationId,
+  slide,
+}: {
+  feedbackEnabled: boolean;
+  isActive: boolean;
+  onCloseFeedback: () => void;
+  presentationId: number;
+  slide: UnifiedSlide;
+}) {
   if (slide.kind === "code") {
     return (
       <SlideShell>
         <slide.component isActive={isActive} />
+        <SlideFeedbackInspector
+          enabled={feedbackEnabled}
+          onClose={onCloseFeedback}
+          presentationId={presentationId}
+          slide={slide}
+        />
       </SlideShell>
     );
   }
   return slide.kind === "html" ? (
     <SlideShell>
       <HtmlSlideRenderer html={slide.html} title={slide.title} />
+      <SlideFeedbackInspector
+        enabled={feedbackEnabled}
+        onClose={onCloseFeedback}
+        presentationId={presentationId}
+        slide={slide}
+      />
     </SlideShell>
   ) : (
     <DbSlideRenderer
@@ -232,6 +259,7 @@ function PresenterHud({
 }
 
 export function PresentationView({
+  presentationId,
   slides,
   activeIndex,
   onExit,
@@ -246,6 +274,7 @@ export function PresentationView({
   const isTransitioning = useRef(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [feedbackEnabled, setFeedbackEnabled] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -306,10 +335,16 @@ export function PresentationView({
   const next = useCallback(() => go(activeIndex + 1), [go, activeIndex]);
 
   const activeSlide = slides[activeIndex];
+  const feedbackAvailable =
+    Boolean(presentationId) && (activeSlide?.kind === "code" || activeSlide?.kind === "html");
   const openExternalDisplay = useCallback(() => {
     if (!externalDisplayUrl) return;
     window.open(externalDisplayUrl, "llm-intro-display")?.focus();
   }, [externalDisplayUrl]);
+
+  useEffect(() => {
+    setFeedbackEnabled(false);
+  }, [activeSlide?.id]);
 
   if (!activeSlide) {
     return (
@@ -398,7 +433,15 @@ export function PresentationView({
               onTransitionEnd={() => {
                 isTransitioning.current = false;
               }}
-              renderItem={(slide, isActive) => <RenderSlide slide={slide} isActive={isActive} />}
+              renderItem={(slide, isActive) => (
+                <RenderSlide
+                  feedbackEnabled={feedbackEnabled && isActive}
+                  isActive={isActive}
+                  onCloseFeedback={() => setFeedbackEnabled(false)}
+                  presentationId={presentationId ?? 0}
+                  slide={slide}
+                />
+              )}
             />
           </div>
         </div>
@@ -525,6 +568,19 @@ export function PresentationView({
                   </span>
                 )}
               </div>
+            )}
+
+            {feedbackAvailable && (
+              <button
+                onClick={() => setFeedbackEnabled((value) => !value)}
+                className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
+                style={{
+                  color: feedbackEnabled ? "var(--color-accent)" : "var(--color-text-dim)",
+                }}
+                title="Slide feedback"
+              >
+                <MessageSquare size={14} />
+              </button>
             )}
 
             {/* Keyboard shortcuts toggle */}

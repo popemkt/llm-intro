@@ -49,4 +49,20 @@ describe("toUnifiedSlide", () => {
         .transition,
     ).toEqual(slideTransition);
   });
+
+  it("preserves the code slide id for source-linked tooling", () => {
+    const unified = toUnifiedSlide(
+      {
+        ...baseSlide,
+        kind: "code",
+        code_id: "01-opener",
+      },
+      "dark-green",
+    );
+
+    expect(unified).toMatchObject({
+      kind: "code",
+      codeId: "01-opener",
+    });
+  });
 });

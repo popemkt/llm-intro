@@ -236,6 +236,45 @@ export interface ApiSlide {
   updated_at: string;
 }
 
+export type SlideFeedbackStatus = "open" | "resolved";
+export type SlideFeedbackStorage = "source-marker";
+export type SlideFeedbackSourceKind = "code" | "html" | "manual";
+
+export interface SlideFeedbackRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface SlideFeedbackSourceLocation {
+  sourceKind: SlideFeedbackSourceKind;
+  sourcePath?: string;
+  codeId?: string;
+  blockId?: string;
+  domPath?: string;
+  elementLabel?: string;
+  selector?: string;
+  line?: number;
+  column?: number;
+  rect?: SlideFeedbackRect;
+}
+
+export interface ApiSlideFeedback {
+  id: string;
+  presentation_id: number;
+  slide_id: number;
+  slide_kind: ApiSlide["kind"];
+  slide_title: string;
+  status: SlideFeedbackStatus;
+  text: string;
+  location: SlideFeedbackSourceLocation;
+  storage: SlideFeedbackStorage;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
 export interface ApiSlideGroup {
   id: number;
   presentation_id: number;

@@ -36,6 +36,7 @@ import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sort
 import { CSS } from "@dnd-kit/utilities";
 import { callAction } from "@agent-native/core/client";
 import type { UnifiedSlide, ApiSlideGroup, LayoutInput, ThemeName } from "@/types";
+import { MANUAL_PRESET_META, type ManualPresetId } from "../../shared/manual-presets";
 import { DbSlideRenderer } from "./DbSlideRenderer";
 import { HtmlSlideRenderer } from "./HtmlSlideRenderer";
 import { Breadcrumb, type BreadcrumbSegment } from "./Breadcrumb";
@@ -49,6 +50,7 @@ interface OverviewGridProps {
   onSelectSlide: (index: number) => void;
   onAddSlide: () => void;
   onAddNormalSlide?: (layout: NormalSlideQuickLayout) => void;
+  onAddManualPresetSlide?: (presetId: ManualPresetId) => void;
   onAddSlideToGroup: (groupId: number) => void;
   onLayoutChange: (layout: LayoutInput) => void;
   onCreateGroup: () => void;
@@ -80,6 +82,30 @@ const normalSlideQuickLayouts: Array<{ layout: NormalSlideQuickLayout; label: st
   { layout: "quote", label: "Quote" },
   { layout: "metrics", label: "Metrics" },
 ];
+const manualSlideQuickPresets = MANUAL_PRESET_META.filter((preset) =>
+  ["title", "bullets", "comparison", "timeline", "image-left"].includes(preset.id),
+);
+const quickAddButtonStyle: React.CSSProperties = {
+  minWidth: 0,
+  height: 28,
+  border: "1px solid var(--color-border)",
+  borderRadius: 7,
+  background: "var(--color-surface)",
+  color: "var(--color-text-dim)",
+  fontSize: 10,
+  fontFamily: "Inter, sans-serif",
+  cursor: "pointer",
+  padding: "0 4px",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+const manualQuickAddButtonStyle: React.CSSProperties = {
+  ...quickAddButtonStyle,
+  height: 26,
+  background: "var(--color-bg)",
+  color: "var(--color-accent)",
+};
 
 function ThumbnailCell({
   slide,
@@ -605,9 +631,11 @@ function PickSlideDialog({
 function AddCard({
   onClick,
   onAddNormalSlide,
+  onAddManualPresetSlide,
 }: {
   onClick: () => void;
   onAddNormalSlide?: (layout: NormalSlideQuickLayout) => void;
+  onAddManualPresetSlide?: (presetId: ManualPresetId) => void;
 }) {
   return (
     <div style={{ paddingBottom: "56.25%", position: "relative", width: "100%" }}>
@@ -665,20 +693,30 @@ function AddCard({
                 type="button"
                 onClick={() => onAddNormalSlide(item.layout)}
                 title={`Add ${item.label.toLowerCase()} slide`}
-                style={{
-                  minWidth: 0,
-                  height: 28,
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 7,
-                  background: "var(--color-surface)",
-                  color: "var(--color-text-dim)",
-                  fontSize: 10,
-                  fontFamily: "Inter, sans-serif",
-                  cursor: "pointer",
-                  padding: "0 4px",
-                }}
+                style={quickAddButtonStyle}
               >
                 {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {onAddManualPresetSlide && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+              gap: 6,
+            }}
+          >
+            {manualSlideQuickPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onAddManualPresetSlide(preset.id)}
+                title={`Add manual ${preset.label.toLowerCase()} slide`}
+                style={manualQuickAddButtonStyle}
+              >
+                {preset.label}
               </button>
             ))}
           </div>
@@ -1260,6 +1298,7 @@ export function OverviewGrid({
   onSelectSlide,
   onAddSlide,
   onAddNormalSlide,
+  onAddManualPresetSlide,
   onAddSlideToGroup,
   onLayoutChange,
   onCreateGroup,
@@ -1764,7 +1803,11 @@ export function OverviewGrid({
                     );
                   })}
                   {!selectMode && !readonly && (
-                    <AddCard onClick={onAddSlide} onAddNormalSlide={onAddNormalSlide} />
+                    <AddCard
+                      onClick={onAddSlide}
+                      onAddNormalSlide={onAddNormalSlide}
+                      onAddManualPresetSlide={onAddManualPresetSlide}
+                    />
                   )}
                 </BucketDrop>
               </SortableContext>

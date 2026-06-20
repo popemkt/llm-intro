@@ -62,6 +62,7 @@ framework boundary.
 | Create HTML slide | `create-html-slide` action persists `kind: "html"` slides with authored HTML source | Vitest/API plus renderer tests |
 | Create normal slide | `create-normal-slide` action maps reference layouts to typed DB blocks | Vitest/API plus browser flow |
 | Quick normal slide UI | Overview add tile exposes title, bullets, two-column, quote, and metrics layout creation | Browser smoke plus action tests |
+| Quick manual preset slide UI | `PresentationPage` calls `create-manual-preset-slide` from overview quick-add buttons, and `OverviewGrid` exposes common manual preset layouts beside normal quick layouts | Browser smoke plus typecheck |
 | Create normal slide sequence | `create-normal-slides` action maps a structured outline to multiple typed DB slides | Vitest/API |
 | Create deck from outline | `create-deck-from-outline` action creates a deck and typed normal slides from an outline | Vitest/API plus App Mode and Home UI smoke |
 | Create deck from prompt | `draft-deck-from-prompt`, `create-deck-from-prompt`, Home prompt mode, and App Mode prompt routing | Vitest/API plus browser smoke |

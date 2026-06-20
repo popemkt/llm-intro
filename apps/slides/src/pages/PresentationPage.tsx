@@ -9,6 +9,7 @@ import { getErrorMessage } from "@/api/client";
 import { toUnifiedSlide } from "@/lib/presentationSlides";
 import { writePresenterSyncState } from "@/lib/presenterSync";
 import type { UnifiedSlide, ApiSlide, ApiSlideGroup, ApiPresentation, LayoutInput } from "@/types";
+import type { ManualPresetId } from "../../shared/manual-presets";
 
 const normalSlideTitles: Record<NormalSlideQuickLayout, string> = {
   title: "Title slide",
@@ -16,6 +17,19 @@ const normalSlideTitles: Record<NormalSlideQuickLayout, string> = {
   "two-column": "Compare ideas",
   quote: "Quote",
   metrics: "Metrics",
+};
+
+const manualPresetSlideTitles: Record<ManualPresetId, string> = {
+  title: "Title slide",
+  bullets: "Key points",
+  quote: "Quote",
+  metric: "Metric",
+  "two-column": "Two column",
+  comparison: "Compare ideas",
+  timeline: "Timeline",
+  "image-left": "Visual story",
+  process: "Process",
+  "section-divider": "Section",
 };
 
 export function PresentationPage() {
@@ -49,6 +63,10 @@ export function PresentationPage() {
     ApiSlide,
     { pid: number; layout: NormalSlideQuickLayout; title?: string }
   >("create-normal-slide");
+  const createManualPresetSlide = useActionMutation<
+    ApiSlide,
+    { pid: number; presetId: ManualPresetId; title?: string }
+  >("create-manual-preset-slide");
   const updateSlide = useActionMutation<
     ApiSlide,
     { pid: number; sid: number; title?: string; blocks?: unknown[] }
@@ -154,6 +172,26 @@ export function PresentationPage() {
       }
     },
     [createNormalSlide, presentation, showNotice],
+  );
+
+  const handleAddManualPresetSlide = useCallback(
+    async (presetId: ManualPresetId) => {
+      if (!presentation) return;
+      try {
+        const slide = await createManualPresetSlide.mutateAsync({
+          pid: presentation.id,
+          presetId,
+          title: manualPresetSlideTitles[presetId],
+        });
+        setSlides((prev) => [
+          ...prev,
+          toUnifiedSlide(slide, presentation.theme, presentation.defaultTransition),
+        ]);
+      } catch (err) {
+        showNotice(getErrorMessage(err));
+      }
+    },
+    [createManualPresetSlide, presentation, showNotice],
   );
 
   const handleLayoutChange = useCallback(
@@ -416,6 +454,7 @@ export function PresentationPage() {
             }}
             onAddSlide={handleAddSlide}
             onAddNormalSlide={handleAddNormalSlide}
+            onAddManualPresetSlide={handleAddManualPresetSlide}
             onAddSlideToGroup={handleAddSlideToGroup}
             onLayoutChange={handleLayoutChange}
             onCreateGroup={handleCreateGroup}

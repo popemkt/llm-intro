@@ -91,6 +91,7 @@ export function DbSlideRenderer({ background, blocks, theme }: Props) {
                 overflow: "hidden",
                 transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
                 opacity: block.opacity,
+                boxShadow: block.shadow,
               }}
             >
               <BlockView block={block} canvas />

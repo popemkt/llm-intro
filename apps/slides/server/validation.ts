@@ -18,6 +18,7 @@ type BlockPosition = {
   h?: number;
   rotation?: number;
   opacity?: number;
+  shadow?: string;
   locked?: boolean;
   groupId?: string;
   groupName?: string;
@@ -226,6 +227,15 @@ function parseOptionalBlockGroupString(value: unknown, field: string) {
   return trimmed;
 }
 
+function parseOptionalBlockStyleString(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new AppError(400, `${field} must be a string`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new AppError(400, `${field} cannot be empty`);
+  if (trimmed.length > 160) throw new AppError(400, `${field} must be 160 characters or less`);
+  return trimmed;
+}
+
 function parseOptionalBoolean(value: unknown, field: string) {
   if (value === undefined) return undefined;
   if (typeof value !== "boolean") throw new AppError(400, `${field} must be a boolean`);
@@ -246,6 +256,7 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     h: parsePosition(value.h, "block.h"),
     rotation: parseBoundedNumber(value.rotation, "block.rotation", { min: -360, max: 360 }),
     opacity: parseBoundedNumber(value.opacity, "block.opacity", { min: 0, max: 1 }),
+    shadow: parseOptionalBlockStyleString(value.shadow, "block.shadow"),
     locked: parseOptionalBoolean(value.locked, "block.locked"),
     groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),
     groupName: parseOptionalBlockGroupString(value.groupName, "block.groupName"),

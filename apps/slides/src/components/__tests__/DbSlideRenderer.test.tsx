@@ -81,6 +81,7 @@ describe("DbSlideRenderer", () => {
         h: 20,
         rotation: 6,
         opacity: 0.7,
+        shadow: "0 12px 32px rgba(0,0,0,0.35)",
         fontSize: 36,
         color: "#ffffff",
         background: "#123456",
@@ -151,6 +152,7 @@ describe("DbSlideRenderer", () => {
     const wrapper = container.querySelector('[style*="rotate(6deg)"]') as HTMLElement;
     expect(wrapper).toBeInTheDocument();
     expect(wrapper.style.opacity).toBe("0.7");
+    expect(wrapper.style.boxShadow).toBe("0 12px 32px rgba(0,0,0,0.35)");
 
     const text = screen.getByText("Styled text").closest(".prose-block") as HTMLElement;
     expect(text.style.fontSize).toBe("36px");

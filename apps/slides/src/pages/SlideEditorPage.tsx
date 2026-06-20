@@ -560,6 +560,7 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
   const common: Partial<Block> = {
     opacity: block.opacity,
     rotation: block.rotation,
+    shadow: block.shadow,
   };
 
   switch (block.type) {
@@ -1948,6 +1949,7 @@ export function SlideEditorPage() {
                         cursor: "move",
                         transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
                         opacity: block.opacity,
+                        boxShadow: block.shadow,
                         outline: isSelected
                           ? block.locked
                             ? "2px dashed #f6c85f"
@@ -3372,36 +3374,78 @@ function CommonAppearanceEditor({
   block: Block;
   onUpdate: (patch: Partial<Block>) => void;
 }) {
+  const shadowPresets = [
+    { label: "None", value: undefined },
+    { label: "Soft", value: "0 10px 28px rgba(0,0,0,0.28)" },
+    { label: "Lift", value: "0 18px 42px rgba(0,0,0,0.38)" },
+    { label: "Glow", value: "0 0 28px rgba(37,211,102,0.35)" },
+  ];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-      <button
-        type="button"
-        aria-label={block.locked ? "Unlock block" : "Lock block"}
-        title={block.locked ? "Unlock block" : "Lock block"}
-        onClick={() => onUpdate({ locked: !block.locked } as Partial<Block>)}
-        style={{
-          ...arrangeButton,
-          background: block.locked ? C.accentSubtle : C.bg,
-          color: block.locked ? "#f6c85f" : C.text,
-        }}
-      >
-        {block.locked ? <Lock size={13} /> : <Unlock size={13} />}
-      </button>
-      <NumberInput
-        label="Rotate"
-        min={-360}
-        max={360}
-        value={block.rotation}
-        onChange={(rotation) => !block.locked && onUpdate({ rotation } as Partial<Block>)}
-      />
-      <NumberInput
-        label="Opacity"
-        min={0}
-        max={1}
-        step={0.05}
-        value={block.opacity}
-        onChange={(opacity) => !block.locked && onUpdate({ opacity } as Partial<Block>)}
-      />
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <button
+          type="button"
+          aria-label={block.locked ? "Unlock block" : "Lock block"}
+          title={block.locked ? "Unlock block" : "Lock block"}
+          onClick={() => onUpdate({ locked: !block.locked } as Partial<Block>)}
+          style={{
+            ...arrangeButton,
+            background: block.locked ? C.accentSubtle : C.bg,
+            color: block.locked ? "#f6c85f" : C.text,
+          }}
+        >
+          {block.locked ? <Lock size={13} /> : <Unlock size={13} />}
+        </button>
+        <NumberInput
+          label="Rotate"
+          min={-360}
+          max={360}
+          value={block.rotation}
+          onChange={(rotation) => !block.locked && onUpdate({ rotation } as Partial<Block>)}
+        />
+        <NumberInput
+          label="Opacity"
+          min={0}
+          max={1}
+          step={0.05}
+          value={block.opacity}
+          onChange={(opacity) => !block.locked && onUpdate({ opacity } as Partial<Block>)}
+        />
+      </div>
+      <InspectorField label="Shadow">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4 }}>
+          {shadowPresets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => !block.locked && onUpdate({ shadow: preset.value } as Partial<Block>)}
+              disabled={block.locked}
+              style={{
+                ...arrangeButton,
+                height: 26,
+                fontSize: 10,
+                background: block.shadow === preset.value ? C.accentSubtle : C.bg,
+                color: block.shadow === preset.value ? C.accent : C.textDim,
+                opacity: block.locked ? 0.45 : 1,
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <input
+          value={block.shadow ?? ""}
+          onChange={(event) =>
+            !block.locked &&
+            onUpdate({
+              shadow: event.target.value.trim() ? event.target.value : undefined,
+            } as Partial<Block>)
+          }
+          disabled={block.locked}
+          placeholder="0 12px 32px rgba(0,0,0,.35)"
+          style={{ ...inp, marginTop: 6, opacity: block.locked ? 0.45 : 1 }}
+        />
+      </InspectorField>
     </div>
   );
 }

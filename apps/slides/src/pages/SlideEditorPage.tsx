@@ -2636,6 +2636,55 @@ const DEFAULT_CUSTOM_EXIT = [
   { opacity: 0, transform: "translate3d(0, -18px, 0) scale(1.02)", filter: "blur(8px)" },
 ];
 
+const CUSTOM_TRANSITION_TEMPLATES = [
+  {
+    value: "rise-blur",
+    label: "Rise blur",
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    enter: DEFAULT_CUSTOM_ENTER,
+    exit: DEFAULT_CUSTOM_EXIT,
+  },
+  {
+    value: "zoom-blur",
+    label: "Zoom blur",
+    easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    enter: [
+      { opacity: 0, transform: "scale(0.86)", filter: "blur(14px)" },
+      { opacity: 1, transform: "scale(1)", filter: "blur(0)" },
+    ],
+    exit: [
+      { opacity: 1, transform: "scale(1)", filter: "blur(0)" },
+      { opacity: 0, transform: "scale(1.08)", filter: "blur(14px)" },
+    ],
+  },
+  {
+    value: "depth-flip",
+    label: "Depth flip",
+    easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    enter: [
+      { opacity: 0, transform: "perspective(1400px) rotateX(28deg) translate3d(0, 36px, -80px)" },
+      { opacity: 1, transform: "perspective(1400px) rotateX(0deg) translate3d(0, 0, 0)" },
+    ],
+    exit: [
+      { opacity: 1, transform: "perspective(1400px) rotateX(0deg) translate3d(0, 0, 0)" },
+      { opacity: 0, transform: "perspective(1400px) rotateX(-24deg) translate3d(0, -32px, -80px)" },
+    ],
+  },
+  {
+    value: "diagonal-wipe",
+    label: "Diagonal wipe",
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    enter: [
+      { opacity: 1, clipPath: "polygon(0 0, 0 0, 0 100%, 0 100%)" },
+      { opacity: 1, clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" },
+    ],
+    exit: [
+      { opacity: 1, clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" },
+      { opacity: 1, clipPath: "polygon(100% 0, 100% 0, 100% 100%, 100% 100%)" },
+    ],
+  },
+] as const;
+
 function makePresetTransition(name: string, duration: number): ApiSlideTransition | null {
   if (name === "default") return null;
   if (name === "custom") return makeCustomTransition(duration);
@@ -2648,13 +2697,24 @@ function makePresetTransition(name: string, duration: number): ApiSlideTransitio
 }
 
 function makeCustomTransition(duration: number): ApiSlideTransition {
+  return makeCustomTransitionFromTemplate("rise-blur", duration);
+}
+
+function makeCustomTransitionFromTemplate(
+  value: (typeof CUSTOM_TRANSITION_TEMPLATES)[number]["value"],
+  duration: number,
+): ApiSlideTransition {
+  const template =
+    CUSTOM_TRANSITION_TEMPLATES.find((candidate) => candidate.value === value) ??
+    CUSTOM_TRANSITION_TEMPLATES[0];
+
   return {
     engine: "waapi",
     name: "custom",
     duration: Math.max(0, Math.min(5000, Math.round(duration))),
-    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-    enter: { keyframes: DEFAULT_CUSTOM_ENTER },
-    exit: { keyframes: DEFAULT_CUSTOM_EXIT },
+    easing: template.easing,
+    enter: { keyframes: template.enter.map((frame) => ({ ...frame })) },
+    exit: { keyframes: template.exit.map((frame) => ({ ...frame })) },
   };
 }
 
@@ -2846,6 +2906,10 @@ function SlideTransitionEditor({
       )}
       {customTransition && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <CustomTransitionTemplatePicker
+            duration={duration}
+            onTransition={(nextTransition) => onTransition(nextTransition)}
+          />
           <TransitionKeyframeEditor
             label="Enter keyframes"
             phase={customTransition.enter ?? { keyframes: DEFAULT_CUSTOM_ENTER }}
@@ -2859,6 +2923,35 @@ function SlideTransitionEditor({
         </div>
       )}
     </div>
+  );
+}
+
+function CustomTransitionTemplatePicker({
+  duration,
+  onTransition,
+}: {
+  duration: number;
+  onTransition: (transition: ApiSlideTransition) => void;
+}) {
+  return (
+    <select
+      defaultValue=""
+      onChange={(event) => {
+        const value = event.target.value as (typeof CUSTOM_TRANSITION_TEMPLATES)[number]["value"];
+        if (!value) return;
+        onTransition(makeCustomTransitionFromTemplate(value, duration));
+        event.target.value = "";
+      }}
+      style={inp}
+      aria-label="Apply custom transition template"
+    >
+      <option value="">Apply template...</option>
+      {CUSTOM_TRANSITION_TEMPLATES.map((template) => (
+        <option key={template.value} value={template.value}>
+          {template.label}
+        </option>
+      ))}
+    </select>
   );
 }
 

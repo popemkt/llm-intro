@@ -261,8 +261,8 @@ function ShapeBlockView({
         {block.label && (
           <span
             style={{
-              fontSize: 15,
-              fontWeight: 700,
+              fontSize: block.labelFontSize ?? 15,
+              fontWeight: block.labelFontWeight ?? 700,
               color: block.textColor ?? getReadableTextColor(block.color),
               fontFamily: "Inter, sans-serif",
             }}

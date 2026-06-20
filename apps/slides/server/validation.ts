@@ -359,6 +359,14 @@ function validateShapeBlock(id: string, value: JsonRecord, position: BlockPositi
     color: value.color,
     label: value.label as string | undefined,
     textColor: parseOptionalColor(value.textColor, "shape block textColor"),
+    labelFontSize: parseBoundedNumber(value.labelFontSize, "shape block labelFontSize", {
+      min: 8,
+      max: 96,
+    }),
+    labelFontWeight: parseBoundedNumber(value.labelFontWeight, "shape block labelFontWeight", {
+      min: 100,
+      max: 900,
+    }),
     borderColor: parseOptionalColor(value.borderColor, "shape block borderColor"),
     borderWidth: parseBoundedNumber(value.borderWidth, "shape block borderWidth", {
       min: 0,

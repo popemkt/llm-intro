@@ -602,6 +602,8 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
           borderWidth: block.borderWidth,
           color: block.color,
           height: block.height,
+          labelFontSize: block.labelFontSize,
+          labelFontWeight: block.labelFontWeight,
           shape: block.shape,
           textColor: block.textColor,
           width: block.width,
@@ -4132,8 +4134,8 @@ function CanvasShapeBlock({ block }: { block: Extract<Block, { type: "shape" }> 
         {block.label && (
           <span
             style={{
-              fontSize: 13,
-              fontWeight: 700,
+              fontSize: block.labelFontSize ?? 13,
+              fontWeight: block.labelFontWeight ?? 700,
               color: block.textColor ?? getReadableTextColor(block.color),
               fontFamily: "Inter, sans-serif",
             }}
@@ -4281,6 +4283,22 @@ function ShapePropEditor({
         value={block.textColor}
         onChange={(textColor) => onUpdate({ textColor })}
       />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <NumberInput
+          label="Label size"
+          min={8}
+          max={96}
+          value={block.labelFontSize}
+          onChange={(labelFontSize) => onUpdate({ labelFontSize })}
+        />
+        <NumberInput
+          label="Label weight"
+          min={100}
+          max={900}
+          value={block.labelFontWeight}
+          onChange={(labelFontWeight) => onUpdate({ labelFontWeight })}
+        />
+      </div>
     </div>
   );
 }

@@ -286,6 +286,8 @@ describe("Manual slide actions", () => {
             color: "#25d366",
             label: "Ready",
             textColor: "#0d0f0e",
+            labelFontSize: 18,
+            labelFontWeight: 800,
             borderColor: "#ffffff",
             borderWidth: 2,
             x: 10,
@@ -383,6 +385,8 @@ describe("Manual slide actions", () => {
         expect.objectContaining({
           id: "badge",
           textColor: "#0d0f0e",
+          labelFontSize: 18,
+          labelFontWeight: 800,
           borderColor: "#ffffff",
           borderWidth: 2,
         }),

@@ -259,8 +259,8 @@ editing, themed presentation playback, and HTML export.
 - The selected block inspector can edit common appearance, including rotation,
   opacity, and shadow presets/freeform CSS shadow, plus text appearance
   including font family, size, weight, style, and line height, image
-  fitting/position/radius, and shape border/label styling using the same typed
-  block fields available to agent actions.
+  fitting/position/radius, and shape border/label typography styling using the
+  same typed block fields available to agent actions.
 - Users can copy appearance formatting from the selected manual block and paste
   it onto another selected block. Format paste copies common opacity/rotation/
   shadow and matching block-type appearance fields, including text typography,

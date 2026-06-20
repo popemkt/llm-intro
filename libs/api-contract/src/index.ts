@@ -63,6 +63,8 @@ export type ShapeBlock = {
   color: string;
   label?: string;
   textColor?: string;
+  labelFontSize?: number;
+  labelFontWeight?: number;
   borderColor?: string;
   borderWidth?: number;
   width?: string;

@@ -109,6 +109,8 @@ describe("DbSlideRenderer", () => {
         borderColor: "#ffffff",
         borderWidth: 2,
         textColor: "#0d0f0e",
+        labelFontSize: 18,
+        labelFontWeight: 800,
         x: 10,
         y: 40,
         w: 20,
@@ -177,7 +179,11 @@ describe("DbSlideRenderer", () => {
 
     const badge = screen.getByText("Badge").parentElement as HTMLElement;
     expect(badge.style.border).toBe("2px solid rgb(255, 255, 255)");
-    expect(screen.getByText("Badge")).toHaveStyle({ color: "rgb(13, 15, 14)" });
+    expect(screen.getByText("Badge")).toHaveStyle({
+      color: "rgb(13, 15, 14)",
+      fontSize: "18px",
+      fontWeight: "800",
+    });
 
     const line = container.querySelector('line[stroke="#ffd93d"]') as SVGLineElement;
     expect(line).toBeInTheDocument();

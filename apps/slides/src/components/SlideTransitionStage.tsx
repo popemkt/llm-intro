@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  getTransitionLayerZIndex,
   getTransitionPhaseTiming,
   resolveSlideTransition,
   type ResolvedSlideTransition,
@@ -68,6 +69,10 @@ function runWaapiPhase(
 function AnimatedLayer({ phase, direction, transition, onDone, children }: AnimatedLayerProps) {
   const ref = useRef<HTMLDivElement>(null);
   const onDoneRef = useRef(onDone);
+  const resolved = useMemo(
+    () => resolveSlideTransition(transition, direction),
+    [direction, transition],
+  );
 
   useEffect(() => {
     onDoneRef.current = onDone;
@@ -78,10 +83,9 @@ function AnimatedLayer({ phase, direction, transition, onDone, children }: Anima
     const el = ref.current;
     if (!el) return;
 
-    const resolved = resolveSlideTransition(transition, direction);
     const transitionPhase = phase === "enter" ? resolved.enter : resolved.exit;
     return runWaapiPhase(el, resolved, transitionPhase, () => onDoneRef.current());
-  }, [direction, phase, transition]);
+  }, [phase, resolved]);
 
   return (
     <div
@@ -90,6 +94,7 @@ function AnimatedLayer({ phase, direction, transition, onDone, children }: Anima
       style={{
         position: "absolute",
         inset: 0,
+        zIndex: getTransitionLayerZIndex(resolved, phase),
         willChange: phase === "present" ? undefined : "opacity, transform, filter, clip-path",
       }}
     >

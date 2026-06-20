@@ -179,3 +179,12 @@ export function getTransitionPhaseTiming(
     fill: "both",
   };
 }
+
+export function getTransitionLayerZIndex(
+  resolved: Pick<ResolvedSlideTransition, "name">,
+  phase: "enter" | "exit" | "present",
+) {
+  if (phase === "present") return 1;
+  if (resolved.name === "reveal") return phase === "exit" ? 2 : 1;
+  return phase === "enter" ? 2 : 1;
+}

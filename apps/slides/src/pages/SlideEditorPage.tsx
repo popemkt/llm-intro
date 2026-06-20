@@ -63,7 +63,11 @@ import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 import { ChartBlockView } from "@/components/ChartBlockView";
-import { getTransitionPhaseTiming, resolveSlideTransition } from "@/lib/slideTransitions";
+import {
+  getTransitionLayerZIndex,
+  getTransitionPhaseTiming,
+  resolveSlideTransition,
+} from "@/lib/slideTransitions";
 
 type DragMode = "move" | "resize-tl" | "resize-tr" | "resize-bl" | "resize-br";
 
@@ -3013,6 +3017,7 @@ function SlideTransitionEditor({
 function TransitionPreview({ transition }: { transition: ApiSlideTransition | null }) {
   const previewIncomingRef = useRef<HTMLDivElement>(null);
   const previewOutgoingRef = useRef<HTMLDivElement>(null);
+  const previewResolved = resolveSlideTransition(transition ?? undefined, 1);
 
   const previewTransition = useCallback(() => {
     const incoming = previewIncomingRef.current;
@@ -3074,6 +3079,7 @@ function TransitionPreview({ transition }: { transition: ApiSlideTransition | nu
             inset: 12,
             placeItems: "center",
             position: "absolute",
+            zIndex: getTransitionLayerZIndex(previewResolved, "exit"),
           }}
         >
           A
@@ -3091,6 +3097,7 @@ function TransitionPreview({ transition }: { transition: ApiSlideTransition | nu
             inset: 12,
             placeItems: "center",
             position: "absolute",
+            zIndex: getTransitionLayerZIndex(previewResolved, "enter"),
           }}
         >
           B

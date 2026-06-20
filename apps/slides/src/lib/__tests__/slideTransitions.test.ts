@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getTransitionPhaseTiming, resolveSlideTransition } from "../slideTransitions";
+import {
+  getTransitionLayerZIndex,
+  getTransitionPhaseTiming,
+  resolveSlideTransition,
+} from "../slideTransitions";
 
 describe("slideTransitions", () => {
   it("resolves the default slide preset by direction", () => {
@@ -83,5 +87,17 @@ describe("slideTransitions", () => {
       delay: 20,
       fill: "both",
     });
+  });
+
+  it("puts reveal exits above entering slides", () => {
+    const reveal = resolveSlideTransition({ name: "reveal", duration: 300 }, 1);
+    const fade = resolveSlideTransition({ name: "fade", duration: 300 }, 1);
+
+    expect(getTransitionLayerZIndex(reveal, "exit")).toBeGreaterThan(
+      getTransitionLayerZIndex(reveal, "enter"),
+    );
+    expect(getTransitionLayerZIndex(fade, "enter")).toBeGreaterThan(
+      getTransitionLayerZIndex(fade, "exit"),
+    );
   });
 });

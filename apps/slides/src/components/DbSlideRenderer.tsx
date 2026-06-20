@@ -174,12 +174,14 @@ function ImageBlockView({
         width: "100%",
         height: "100%",
         objectFit: block.objectFit ?? "contain",
+        objectPosition: block.objectPosition,
         borderRadius: block.borderRadius,
       }
     : {
         maxWidth: "100%",
         maxHeight: 360,
         objectFit: block.objectFit ?? "contain",
+        objectPosition: block.objectPosition,
         borderRadius: block.borderRadius ?? 8,
       };
 

@@ -317,6 +317,10 @@ function validateImageBlock(id: string, value: JsonRecord, position: BlockPositi
     assetId: parsePositiveInteger(value.assetId, "image block assetId"),
     alt: value.alt,
     objectFit: parseObjectFit(value.objectFit),
+    objectPosition: parseOptionalBlockStyleString(
+      value.objectPosition,
+      "image block objectPosition",
+    ),
     borderRadius: parseBoundedNumber(value.borderRadius, "image block borderRadius", {
       min: 0,
       max: 120,

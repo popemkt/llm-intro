@@ -23,12 +23,14 @@ describe("DbSlideRenderer", () => {
         url: "/api/presentations/1/assets/2/content",
         assetId: 2,
         alt: "test image",
+        objectPosition: "center top",
       },
     ];
     render(<DbSlideRenderer blocks={blocks} theme="dark-green" />);
     const img = screen.getByAltText("test image") as HTMLImageElement;
     expect(img).toBeInTheDocument();
     expect(img.getAttribute("src")).toBe("/api/presentations/1/assets/2/content");
+    expect(img.style.objectPosition).toBe("center top");
   });
 
   it("renders iframe block", () => {

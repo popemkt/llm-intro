@@ -52,6 +52,7 @@ export type ImageBlock = {
   assetId?: number;
   alt?: string;
   objectFit?: "contain" | "cover" | "fill";
+  objectPosition?: string;
   borderRadius?: number;
 } & BlockPos;
 export type IframeBlock = { id: string; type: "iframe"; url: string; height?: number } & BlockPos;

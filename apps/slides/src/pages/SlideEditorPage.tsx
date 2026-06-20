@@ -585,6 +585,7 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
           ...common,
           borderRadius: block.borderRadius,
           objectFit: block.objectFit,
+          objectPosition: block.objectPosition,
         } as Partial<Block>,
       };
     case "iframe":
@@ -3765,6 +3766,14 @@ function ImageAppearanceEditor({
         value={block.borderRadius}
         onChange={(borderRadius) => onUpdate({ borderRadius })}
       />
+      <InspectorField label="Position">
+        <input
+          value={block.objectPosition ?? ""}
+          onChange={(event) => onUpdate({ objectPosition: event.target.value || undefined })}
+          placeholder="center center"
+          style={inp}
+        />
+      </InspectorField>
     </div>
   );
 }
@@ -4034,6 +4043,7 @@ function CanvasImageBlock({ block }: { block: Extract<Block, { type: "image" }> 
         width: "100%",
         height: "100%",
         objectFit: block.objectFit ?? "contain",
+        objectPosition: block.objectPosition,
         borderRadius: block.borderRadius,
         display: "block",
       }}

@@ -56,6 +56,10 @@ export type ImageBlock = {
   objectFit?: "contain" | "cover" | "fill";
   objectPosition?: string;
   borderRadius?: number;
+  cropX?: number;
+  cropY?: number;
+  cropW?: number;
+  cropH?: number;
 } & BlockPos;
 export type IframeBlock = { id: string; type: "iframe"; url: string; height?: number } & BlockPos;
 export type ShapeBlock = {

@@ -329,6 +329,10 @@ function validateImageBlock(id: string, value: JsonRecord, position: BlockPositi
       min: 0,
       max: 120,
     }),
+    cropX: parseBoundedNumber(value.cropX, "image block cropX", { min: 0, max: 100 }),
+    cropY: parseBoundedNumber(value.cropY, "image block cropY", { min: 0, max: 100 }),
+    cropW: parseBoundedNumber(value.cropW, "image block cropW", { min: 1, max: 100 }),
+    cropH: parseBoundedNumber(value.cropH, "image block cropH", { min: 1, max: 100 }),
     ...position,
   };
 }

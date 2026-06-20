@@ -639,6 +639,10 @@ function copyBlockFormat(block: Block): BlockFormatClipboard {
         patch: {
           ...common,
           borderRadius: block.borderRadius,
+          cropH: block.cropH,
+          cropW: block.cropW,
+          cropX: block.cropX,
+          cropY: block.cropY,
           objectFit: block.objectFit,
           objectPosition: block.objectPosition,
         } as Partial<Block>,
@@ -4083,6 +4087,52 @@ function ImageAppearanceEditor({
           style={inp}
         />
       </InspectorField>
+      <InspectorField label="Crop %">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6 }}>
+          <NumberInput
+            label="X"
+            min={0}
+            max={100}
+            value={block.cropX}
+            onChange={(cropX) => onUpdate({ cropX })}
+          />
+          <NumberInput
+            label="Y"
+            min={0}
+            max={100}
+            value={block.cropY}
+            onChange={(cropY) => onUpdate({ cropY })}
+          />
+          <NumberInput
+            label="W"
+            min={1}
+            max={100}
+            value={block.cropW}
+            onChange={(cropW) => onUpdate({ cropW })}
+          />
+          <NumberInput
+            label="H"
+            min={1}
+            max={100}
+            value={block.cropH}
+            onChange={(cropH) => onUpdate({ cropH })}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onUpdate({
+              cropH: undefined,
+              cropW: undefined,
+              cropX: undefined,
+              cropY: undefined,
+            })
+          }
+          style={{ ...arrangeButton, height: 26, marginTop: 6, fontSize: 10 }}
+        >
+          Reset crop
+        </button>
+      </InspectorField>
     </div>
   );
 }
@@ -4358,19 +4408,30 @@ function CanvasTextBlock({ block }: { block: Extract<Block, { type: "text" }> })
 }
 
 function CanvasImageBlock({ block }: { block: Extract<Block, { type: "image" }> }) {
+  const crop = getEditorImageCrop(block);
   return block.url ? (
-    <img
-      src={block.url}
-      alt={block.alt ?? ""}
+    <div
       style={{
         width: "100%",
         height: "100%",
-        objectFit: block.objectFit ?? "contain",
-        objectPosition: block.objectPosition,
         borderRadius: block.borderRadius,
-        display: "block",
+        overflow: crop ? "hidden" : undefined,
       }}
-    />
+    >
+      <img
+        src={block.url}
+        alt={block.alt ?? ""}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: block.objectFit ?? "contain",
+          objectPosition: block.objectPosition,
+          borderRadius: crop ? undefined : block.borderRadius,
+          display: "block",
+          ...crop,
+        }}
+      />
+    </div>
   ) : (
     <div
       style={{
@@ -4388,6 +4449,29 @@ function CanvasImageBlock({ block }: { block: Extract<Block, { type: "image" }> 
       <ImageIcon size={14} /> no image
     </div>
   );
+}
+
+function getEditorImageCrop(block: Extract<Block, { type: "image" }>): React.CSSProperties | null {
+  if (
+    block.cropX === undefined &&
+    block.cropY === undefined &&
+    block.cropW === undefined &&
+    block.cropH === undefined
+  ) {
+    return null;
+  }
+  const cropW = Math.max(1, Math.min(100, block.cropW ?? 100));
+  const cropH = Math.max(1, Math.min(100, block.cropH ?? 100));
+  const cropX = Math.max(0, Math.min(100 - cropW, block.cropX ?? 0));
+  const cropY = Math.max(0, Math.min(100 - cropH, block.cropY ?? 0));
+  return {
+    height: `${10000 / cropH}%`,
+    left: `${(-cropX * 100) / cropW}%`,
+    objectFit: "fill",
+    position: "relative",
+    top: `${(-cropY * 100) / cropH}%`,
+    width: `${10000 / cropW}%`,
+  };
 }
 
 function CanvasIframeBlock({ block }: { block: Extract<Block, { type: "iframe" }> }) {

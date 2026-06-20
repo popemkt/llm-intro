@@ -173,6 +173,7 @@ function ImageBlockView({
   block: Extract<Block, { type: "image" }>;
   canvas?: boolean;
 }) {
+  const crop = getImageCrop(block);
   const imgStyle: React.CSSProperties = canvas
     ? {
         width: "100%",
@@ -192,14 +193,45 @@ function ImageBlockView({
   return (
     <div
       style={{
-        display: "flex",
-        justifyContent: "center",
+        display: crop ? "block" : "flex",
+        justifyContent: crop ? undefined : "center",
+        overflow: crop ? "hidden" : undefined,
+        borderRadius: crop ? block.borderRadius : undefined,
         ...(canvas ? { width: "100%", height: "100%" } : {}),
       }}
     >
-      <img src={block.url || ""} alt={block.alt ?? ""} style={imgStyle} />
+      <img
+        src={block.url || ""}
+        alt={block.alt ?? ""}
+        style={crop ? { ...imgStyle, ...crop } : imgStyle}
+      />
     </div>
   );
+}
+
+function getImageCrop(block: Extract<Block, { type: "image" }>): React.CSSProperties | null {
+  if (
+    block.cropX === undefined &&
+    block.cropY === undefined &&
+    block.cropW === undefined &&
+    block.cropH === undefined
+  ) {
+    return null;
+  }
+  const cropW = Math.max(1, Math.min(100, block.cropW ?? 100));
+  const cropH = Math.max(1, Math.min(100, block.cropH ?? 100));
+  const cropX = Math.max(0, Math.min(100 - cropW, block.cropX ?? 0));
+  const cropY = Math.max(0, Math.min(100 - cropH, block.cropY ?? 0));
+  return {
+    height: `${10000 / cropH}%`,
+    left: `${(-cropX * 100) / cropW}%`,
+    maxHeight: undefined,
+    maxWidth: undefined,
+    objectFit: "fill",
+    position: "relative",
+    top: `${(-cropY * 100) / cropH}%`,
+    width: `${10000 / cropW}%`,
+  };
 }
 
 function IframeBlockView({

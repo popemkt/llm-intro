@@ -275,6 +275,10 @@ editing, themed presentation playback, and HTML export.
 - Users can assign a human-readable display name to each manual slide block.
   The layer list prefers that name, making dense slides easier to inspect and
   giving agents a stable semantic label alongside the block id.
+- Image blocks can store an optional percentage crop rectangle. The editor,
+  presentation, fullscreen, snapshot, and export renderers preserve that crop
+  while keeping existing image fit, position, and radius behavior for uncropped
+  images.
 - Users can lock manual slide blocks from the selected block menu or inspector.
   Locked blocks remain selectable and unlockable, but resist drag, resize,
   keyboard nudge, delete, arrange, layer, and numeric geometry edits.

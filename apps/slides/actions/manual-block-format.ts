@@ -32,6 +32,10 @@ export function copyManualBlockFormat(block: Block): ManualBlockFormatClipboard 
         patch: {
           ...common,
           borderRadius: block.borderRadius,
+          cropH: block.cropH,
+          cropW: block.cropW,
+          cropX: block.cropX,
+          cropY: block.cropY,
           objectFit: block.objectFit,
           objectPosition: block.objectPosition,
         } as Partial<Block>,

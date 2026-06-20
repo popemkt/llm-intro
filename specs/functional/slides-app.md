@@ -243,6 +243,9 @@ editing, themed presentation playback, and HTML export.
   `groupId`/`groupName` metadata in the typed block model, select together,
   drag together, duplicate with a fresh copied group id, and can be created or
   updated through the same agent action block payloads.
+- Users can assign a human-readable display name to each manual slide block.
+  The layer list prefers that name, making dense slides easier to inspect and
+  giving agents a stable semantic label alongside the block id.
 - Users can lock manual slide blocks from the selected block menu or inspector.
   Locked blocks remain selectable and unlockable, but resist drag, resize,
   keyboard nudge, delete, arrange, layer, and numeric geometry edits.
@@ -264,7 +267,8 @@ editing, themed presentation playback, and HTML export.
 - Users can copy appearance formatting from the selected manual block and paste
   it onto another selected block. Format paste copies common opacity/rotation/
   shadow and matching block-type appearance fields, including text typography,
-  without copying content, geometry, group membership, lock state, or IDs.
+  without copying content, geometry, display names, group membership, lock state,
+  or IDs.
 - Users can undo and redo manual slide edits from toolbar controls or keyboard
   shortcuts. The local history covers title, speaker notes, blocks, transition,
   and background metadata while preserving native text-field undo inside inputs.

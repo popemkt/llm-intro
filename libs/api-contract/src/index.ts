@@ -29,6 +29,7 @@ type BlockPos = {
   locked?: boolean;
   groupId?: string;
   groupName?: string;
+  displayName?: string;
 };
 
 export type TextBlock = {

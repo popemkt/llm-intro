@@ -662,6 +662,21 @@ function applyBlockFormat(block: Block, clipboard: BlockFormatClipboard): Block 
   return { ...block, ...clipboard.patch } as Block;
 }
 
+function getBlockLayerName(block: Block) {
+  if (block.displayName?.trim()) return block.displayName.trim();
+  if (block.type === "text") return block.markdown.slice(0, 22) || "(empty)";
+  if (block.type === "image") return block.alt?.trim() || block.url.slice(0, 22) || "(no url)";
+  if (block.type === "iframe") return block.url.slice(0, 22) || "(no url)";
+  if (block.type === "line") return `${block.dash ?? "solid"} ${block.color}`;
+  if (block.type === "table") {
+    const columns = Math.max(0, ...block.rows.map((row) => row.length));
+    return `${block.rows.length}x${columns}`;
+  }
+  if (block.type === "chart")
+    return block.title?.trim() || `${block.chart} ${block.categories.length}`;
+  return block.label?.trim() || `${block.shape} ${block.color}`;
+}
+
 export function SlideEditorPage() {
   const { id: pidStr, sid: sidStr } = useParams<{ id: string; sid: string }>();
   const navigate = useNavigate();
@@ -2571,19 +2586,7 @@ export function SlideEditorPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {b.type === "text"
-                          ? b.markdown.slice(0, 22) || "(empty)"
-                          : b.type === "image"
-                            ? b.url.slice(0, 22) || "(no url)"
-                            : b.type === "iframe"
-                              ? b.url.slice(0, 22) || "(no url)"
-                              : b.type === "line"
-                                ? `${b.dash ?? "solid"} ${b.color}`
-                                : b.type === "table"
-                                  ? `${b.rows.length}x${Math.max(...b.rows.map((row) => row.length))}`
-                                  : b.type === "chart"
-                                    ? `${b.chart} ${b.categories.length}`
-                                    : `${b.shape} ${b.color}`}
+                        {getBlockLayerName(b)}
                       </span>
                       <button
                         onClick={(e) => {
@@ -3484,6 +3487,18 @@ function CommonAppearanceEditor({
   ];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <InspectorField label="Name">
+        <input
+          value={block.displayName ?? ""}
+          onChange={(event) =>
+            onUpdate({
+              displayName: event.target.value.trim() ? event.target.value : undefined,
+            } as Partial<Block>)
+          }
+          placeholder="Layer name"
+          style={inp}
+        />
+      </InspectorField>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <button
           type="button"

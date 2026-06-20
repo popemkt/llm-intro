@@ -252,6 +252,7 @@ describe("Manual slide actions", () => {
             shadow: "0 12px 32px rgba(0,0,0,0.35)",
             groupId: "hero-group",
             groupName: "Hero",
+            displayName: "Hero headline",
             locked: true,
             fontSize: 42,
             fontFamily: "Georgia, serif",
@@ -278,6 +279,7 @@ describe("Manual slide actions", () => {
             h: 12,
             groupId: "hero-group",
             groupName: "Hero",
+            displayName: "Logo mark",
           },
           {
             id: "badge",
@@ -371,6 +373,7 @@ describe("Manual slide actions", () => {
           opacity: 0.85,
           groupId: "hero-group",
           groupName: "Hero",
+          displayName: "Hero headline",
           locked: true,
         }),
         expect.objectContaining({
@@ -381,6 +384,7 @@ describe("Manual slide actions", () => {
           borderRadius: 18,
           groupId: "hero-group",
           groupName: "Hero",
+          displayName: "Logo mark",
         }),
         expect.objectContaining({
           id: "badge",

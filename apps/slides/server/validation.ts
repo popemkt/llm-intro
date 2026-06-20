@@ -22,6 +22,7 @@ type BlockPosition = {
   locked?: boolean;
   groupId?: string;
   groupName?: string;
+  displayName?: string;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -276,6 +277,7 @@ function parseBlockPosition(value: JsonRecord): BlockPosition {
     locked: parseOptionalBoolean(value.locked, "block.locked"),
     groupId: parseOptionalBlockGroupString(value.groupId, "block.groupId"),
     groupName: parseOptionalBlockGroupString(value.groupName, "block.groupName"),
+    displayName: parseOptionalBlockGroupString(value.displayName, "block.displayName"),
   };
 }
 

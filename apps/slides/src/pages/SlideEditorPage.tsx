@@ -26,6 +26,7 @@ import {
   Image as ImageIcon,
   Lock,
   Pill,
+  Play,
   Settings,
   Square,
   Trash2,
@@ -62,6 +63,7 @@ import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 import { ChartBlockView } from "@/components/ChartBlockView";
+import { getTransitionPhaseTiming, resolveSlideTransition } from "@/lib/slideTransitions";
 
 type DragMode = "move" | "resize-tl" | "resize-tr" | "resize-bl" | "resize-br";
 
@@ -2985,6 +2987,7 @@ function SlideTransitionEditor({
           />
         </div>
       )}
+      <TransitionPreview transition={transition} />
       {customTransition && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
           <CustomTransitionTemplatePicker
@@ -3003,6 +3006,111 @@ function SlideTransitionEditor({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function TransitionPreview({ transition }: { transition: ApiSlideTransition | null }) {
+  const previewIncomingRef = useRef<HTMLDivElement>(null);
+  const previewOutgoingRef = useRef<HTMLDivElement>(null);
+
+  const previewTransition = useCallback(() => {
+    const incoming = previewIncomingRef.current;
+    const outgoing = previewOutgoingRef.current;
+    if (!incoming || !outgoing || typeof incoming.animate !== "function") return;
+    const resolved = resolveSlideTransition(transition ?? undefined, 1);
+    incoming.getAnimations().forEach((animation) => animation.cancel());
+    outgoing.getAnimations().forEach((animation) => animation.cancel());
+    Object.assign(incoming.style, {
+      clipPath: "none",
+      filter: "none",
+      opacity: "1",
+      transform: "none",
+    });
+    Object.assign(outgoing.style, {
+      clipPath: "none",
+      filter: "none",
+      opacity: "1",
+      transform: "none",
+    });
+    outgoing.animate(
+      resolved.exit.keyframes as Keyframe[],
+      getTransitionPhaseTiming(resolved, resolved.exit),
+    );
+    incoming.animate(
+      resolved.enter.keyframes as Keyframe[],
+      getTransitionPhaseTiming(resolved, resolved.enter),
+    );
+  }, [transition]);
+
+  return (
+    <div
+      style={{
+        background: C.bg,
+        border: `1px solid ${C.border}`,
+        borderRadius: 8,
+        marginTop: 8,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          background: "linear-gradient(135deg, rgba(37,211,102,0.12), rgba(255,255,255,0.05))",
+          height: 92,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        <div
+          ref={previewOutgoingRef}
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 6,
+            color: C.textDim,
+            display: "grid",
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 10,
+            inset: 12,
+            placeItems: "center",
+            position: "absolute",
+          }}
+        >
+          A
+        </div>
+        <div
+          ref={previewIncomingRef}
+          style={{
+            background: C.accent,
+            borderRadius: 6,
+            color: C.bg,
+            display: "grid",
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 10,
+            fontWeight: 800,
+            inset: 12,
+            placeItems: "center",
+            position: "absolute",
+          }}
+        >
+          B
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={previewTransition}
+        style={{
+          ...arrangeButton,
+          border: "none",
+          borderRadius: 0,
+          borderTop: `1px solid ${C.border}`,
+          justifyContent: "center",
+          padding: "8px 10px",
+          width: "100%",
+        }}
+      >
+        <Play size={13} /> Preview
+      </button>
     </div>
   );
 }

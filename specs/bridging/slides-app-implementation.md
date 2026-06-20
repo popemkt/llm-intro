@@ -164,6 +164,12 @@ product language now treats them as manual slides because their data model is a
 PowerPoint-style editable canvas. A later schema slice can rename or alias the
 storage kind without changing the user-facing concept.
 
+This boundary follows **parse, don't validate** (see
+[`../principles.md`](../principles.md)): `apps/slides/server/validation.ts`
+parses a raw request body into the typed `libs/api-contract` shape once, and
+every downstream service, renderer, and editor consumes the typed value without
+re-checking field shapes or preset names.
+
 HTML slides are persisted as first-class `kind: "html"` slides with an `html`
 source field. The first implementation supports action creation, update,
 presentation/fullscreen/overview/export rendering, snapshots, typed JSON

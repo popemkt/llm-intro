@@ -10,6 +10,7 @@ mapping, and engineering harness rules.
 | `functional/` | User-visible behavior and product capability specs. These describe what the app does without requiring a reader to know the code. |
 | `bridging/` | Code-to-behavior specs. These map functional areas to routes, actions, services, components, state, and tests. |
 | `harness.md` | Dev/test/agent harness, commands, validation map, and imported Draiver rules. |
+| `principles.md` | Cross-cutting engineering principles that hold across all features. |
 | `code-unit-cohesion.md` | Code-unit cohesion rubric and structural rules. |
 | `slide-scaling.md` | Slide canvas and scaling constraints. |
 

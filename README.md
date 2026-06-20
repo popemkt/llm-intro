@@ -21,6 +21,7 @@ The app has two presentation modes:
 Functional behavior is specified in [`specs/functional/slides-app.md`](specs/functional/slides-app.md).
 The code-to-behavior bridge is tracked in [`specs/bridging/slides-app-implementation.md`](specs/bridging/slides-app-implementation.md).
 The dev/test/agent harness is specified in [`specs/harness.md`](specs/harness.md).
+Cross-cutting engineering principles are recorded in [`specs/principles.md`](specs/principles.md).
 The Agent-Native adoption path is tracked in [`specs/bridging/agent-native-adoption.md`](specs/bridging/agent-native-adoption.md).
 
 ### Shared contract
@@ -74,8 +75,7 @@ Client themes are split in two:
 - `id`
 - `name`
 - `theme`
-- `system_key` nullable unique key for built-in decks
-- `system_key` nullable unique key for the seeded deck
+- `system_key` nullable unique key for built-in/seeded decks
 - timestamps
 
 ### slides

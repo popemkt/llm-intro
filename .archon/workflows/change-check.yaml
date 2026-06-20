@@ -22,7 +22,7 @@ nodes:
     prompt: |
       Read these files. Do not edit:
         - README.md
-        - PLAN.md
+        - specs/principles.md
         - specs/harness.md
       Emit JSON:
         { rules_in_scope: string[], validation_surface: string[] }

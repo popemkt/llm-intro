@@ -3,8 +3,8 @@
 This repo is an interactive LLM intro slide-deck app. Keep changes grounded in
 the current app harness:
 
-- read `README.md`, `PLAN.md`, and `specs/harness.md` before design-affecting
-  edits;
+- read `README.md`, `specs/harness.md`, and `specs/principles.md` before
+  design-affecting edits;
 - update `specs/functional/slides-app.md` when user-visible behavior changes;
 - update `specs/bridging/slides-app-implementation.md` when implementation
   ownership or framework bridging changes;

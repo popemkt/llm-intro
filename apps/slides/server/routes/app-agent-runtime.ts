@@ -64,6 +64,10 @@ function getText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function getRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
 function inferTitle(prompt: string, fallback: string) {
   const quoted = prompt.match(/["“](.+?)["”]/)?.[1]?.trim();
   if (quoted) return quoted;
@@ -269,40 +273,42 @@ function formatSlideList(result: unknown) {
     .join("\n");
 }
 
+function formatFeedbackLocation(location: unknown) {
+  const record = getRecord(location);
+  if (!record) return "";
+
+  const label = getText(record.elementLabel);
+  const source = getText(record.sourcePath);
+  const line = Number(record.line);
+  const sourceHint = source && Number.isFinite(line) ? `${source}:${line}` : source;
+  return [label, sourceHint].filter(Boolean).join(", ");
+}
+
+function formatFeedbackTarget(entry: Record<string, unknown>) {
+  const slideTitle = getText(entry.slide_title);
+  if (slideTitle) return `"${slideTitle}"`;
+
+  const slideId = Number(entry.slide_id);
+  return Number.isFinite(slideId) && slideId > 0 ? `slide ${slideId}` : "a slide";
+}
+
+function formatSlideFeedbackEntry(entry: unknown, index: number) {
+  const record = getRecord(entry);
+  if (!record) return `${index + 1}. Unreadable feedback item`;
+
+  const id = getText(record.id);
+  const status = getText(record.status) || "open";
+  const text = getText(record.text);
+  const sourceHint = formatFeedbackLocation(record.location);
+  const suffix = sourceHint ? ` (${sourceHint})` : "";
+  return `${index + 1}. [${status}] ${id} on ${formatFeedbackTarget(record)}: ${text}${suffix}`;
+}
+
 function formatSlideFeedbackList(result: unknown) {
   if (!Array.isArray(result)) return "I could not read slide feedback.";
   if (result.length === 0) return "No source-linked feedback found.";
 
-  return result
-    .map((entry, index) => {
-      if (!entry || typeof entry !== "object") return `${index + 1}. Unreadable feedback item`;
-      const id = "id" in entry ? getText(entry.id) : "";
-      const status = "status" in entry ? getText(entry.status) : "open";
-      const text = "text" in entry ? getText(entry.text) : "";
-      const slideTitle = "slide_title" in entry ? getText(entry.slide_title) : "";
-      const slideId = "slide_id" in entry ? Number(entry.slide_id) : null;
-      const location = "location" in entry ? entry.location : null;
-      const label =
-        location && typeof location === "object" && "elementLabel" in location
-          ? getText(location.elementLabel)
-          : "";
-      const source =
-        location && typeof location === "object" && "sourcePath" in location
-          ? getText(location.sourcePath)
-          : "";
-      const line =
-        location && typeof location === "object" && "line" in location
-          ? Number(location.line)
-          : null;
-      const target = slideTitle ? `"${slideTitle}"` : slideId ? `slide ${slideId}` : "a slide";
-      const sourceHint = [label, source && line ? `${source}:${line}` : source]
-        .filter(Boolean)
-        .join(", ");
-      return `${index + 1}. [${status}] ${id} on ${target}: ${text}${
-        sourceHint ? ` (${sourceHint})` : ""
-      }`;
-    })
-    .join("\n");
+  return result.map(formatSlideFeedbackEntry).join("\n");
 }
 
 function responseTextForCreatedSlide(result: unknown) {

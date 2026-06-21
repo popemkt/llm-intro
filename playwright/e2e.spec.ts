@@ -38,7 +38,7 @@ test.describe('User deck flow', () => {
     await createDeck(page, deckName)
     await expect(page.getByText(deckName)).toBeVisible()
 
-    await page.getByLabel('Add slide').click()
+    await page.getByLabel('Add blank slide').click()
     await expect(page.getByTestId('slide-thumbnail')).toHaveCount(1)
 
     const firstThumbnail = page.getByTestId('slide-thumbnail').first()
@@ -50,15 +50,15 @@ test.describe('User deck flow', () => {
     await expect(page).toHaveURL(/\/edit\/\d+$/)
 
     await page.getByRole('button', { name: /text/i }).click()
-    await page.getByPlaceholder('Markdown content…').fill('Hello **world**')
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByPlaceholder(/Markdown content|Type markdown/).fill('Hello **world**')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/p\/\d+$/)
 
     await firstThumbnail.click()
     await expect(page.getByText('Hello world')).toBeVisible()
     await page.getByRole('button', { name: /overview/i }).click()
 
-    await page.getByLabel('Add slide').click()
+    await page.getByLabel('Add blank slide').click()
     await expect(page.getByTestId('slide-thumbnail')).toHaveCount(2)
 
     const secondThumbnail = page.getByTestId('slide-thumbnail').nth(1)
@@ -83,7 +83,7 @@ test.describe('User deck flow', () => {
 
     await openDeckSettings(page)
     await page.getByRole('button', { name: /neon/i }).click()
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page.getByText('Saved')).toBeVisible()
     await page.getByTestId('breadcrumb').getByRole('link').filter({ hasText: deckName }).click()
     await expect(page.getByText('neon', { exact: true })).toBeVisible()

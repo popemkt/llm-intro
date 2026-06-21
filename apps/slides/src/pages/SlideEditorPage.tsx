@@ -67,10 +67,10 @@ import type { ApiDeckAsset } from "@/types";
 import { getErrorMessage } from "@/api/client";
 import { C } from "@/design/tokens";
 import { getReadableTextColor } from "@/lib/color";
+import { BLOCK_ANIMATION_TIMING, blockAnimationKeyframes } from "@/lib/blockAnimations";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
-import { BLOCK_ANIMATION_TIMING, blockAnimationKeyframes } from "@/components/DbSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 import { ChartBlockView } from "@/components/ChartBlockView";
 import {

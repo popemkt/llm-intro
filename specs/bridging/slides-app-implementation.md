@@ -185,7 +185,7 @@ round-trips, and browser source editing with live preview.
 | Fullscreen mode | `apps/slides/src/components/FullscreenView.tsx` | Browser smoke for keyboard navigation |
 | Slide editor | `apps/slides/src/pages/SlideEditorPage.tsx` | Playwright for edit/save flows |
 | Block rendering | `apps/slides/src/components/DbSlideRenderer.tsx` and editor canvas rendering | Vitest regression tests |
-| Source feedback inspector | `apps/slides/src/components/SlideFeedbackInspector.tsx` runs inside `SlideShell` for code/html slide previews, captures DOM path, element label, and logical 1000 x 562.5 rect, then calls feedback actions. `SlideEditorPage` mounts it over the code-backed design-time preview from the operations sidebar. | Vitest/API plus manual browser smoke |
+| Source feedback inspector | `apps/slides/src/components/SlideFeedbackInspector.tsx` runs inside `SlideShell` for code/html slide previews, captures DOM path, element label, and logical 1000 x 562.5 rect, then calls feedback actions. It measures the rendered preview and scales stored logical rects/pins/popovers back to CSS pixels; `SlideEditorPage` mounts it over the code-backed design-time preview from the operations sidebar. | Vitest/API plus manual browser smoke |
 
 ## Theme Bridge
 

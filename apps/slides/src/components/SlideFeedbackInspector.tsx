@@ -20,6 +20,40 @@ interface SlideFeedbackInspectorProps {
 
 const CANVAS_WIDTH = 1000;
 const CANVAS_HEIGHT = 562.5;
+const POPOVER_WIDTH = 286;
+const POPOVER_ESTIMATED_HEIGHT = 190;
+
+type OverlaySize = {
+  width: number;
+  height: number;
+};
+
+function logicalRectToCss(rect: SlideFeedbackRect, size: OverlaySize): SlideFeedbackRect {
+  const scaleX = size.width / CANVAS_WIDTH;
+  const scaleY = size.height / CANVAS_HEIGHT;
+  return {
+    h: rect.h * scaleY,
+    w: rect.w * scaleX,
+    x: rect.x * scaleX,
+    y: rect.y * scaleY,
+  };
+}
+
+function logicalPointToCss(point: { x: number; y: number }, size: OverlaySize) {
+  return {
+    x: point.x * (size.width / CANVAS_WIDTH),
+    y: point.y * (size.height / CANVAS_HEIGHT),
+  };
+}
+
+function popoverPosition(point: { x: number; y: number }, size: OverlaySize) {
+  const leftLimit = Math.max(12, size.width - POPOVER_WIDTH - 12);
+  const topLimit = Math.max(12, size.height - POPOVER_ESTIMATED_HEIGHT - 12);
+  return {
+    left: Math.min(point.x + 12, leftLimit),
+    top: Math.min(point.y + 12, topLimit),
+  };
+}
 
 function logicalRectForElement(element: Element, root: HTMLElement): SlideFeedbackRect {
   const rootRect = root.getBoundingClientRect();
@@ -100,9 +134,15 @@ export function SlideFeedbackInspector({
   const [feedback, setFeedback] = useState<ApiSlideFeedback[]>([]);
   const [target, setTarget] = useState<InspectTarget | null>(null);
   const [targetLocked, setTargetLocked] = useState(false);
+  const [overlaySize, setOverlaySize] = useState<OverlaySize>({
+    height: CANVAS_HEIGHT,
+    width: CANVAS_WIDTH,
+  });
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const getRoot = useCallback(() => overlayRef.current?.parentElement as HTMLElement | null, []);
 
   const loadFeedback = useCallback(async () => {
     if (!enabled || slide.kind === "db") return;
@@ -118,9 +158,24 @@ export function SlideFeedbackInspector({
     void loadFeedback();
   }, [loadFeedback]);
 
-  if (!enabled || slide.kind === "db") return null;
+  useEffect(() => {
+    if (!enabled || slide.kind === "db") return;
+    const root = getRoot();
+    if (!root) return;
 
-  const getRoot = () => overlayRef.current?.parentElement as HTMLElement | null;
+    const updateSize = () => {
+      const rect = root.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      setOverlaySize({ height: rect.height, width: rect.width });
+    };
+
+    updateSize();
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(root);
+    return () => resizeObserver.disconnect();
+  }, [enabled, getRoot, slide.kind]);
+
+  if (!enabled || slide.kind === "db") return null;
 
   const targetAt = (clientX: number, clientY: number): InspectTarget | null => {
     const root = getRoot();
@@ -184,6 +239,12 @@ export function SlideFeedbackInspector({
     }
   };
 
+  const targetCssRect = target ? logicalRectToCss(target.logicalRect, overlaySize) : null;
+  const targetCssPoint = target ? logicalPointToCss(target.pointer, overlaySize) : null;
+  const targetPopoverPosition = targetCssPoint
+    ? popoverPosition(targetCssPoint, overlaySize)
+    : null;
+
   return (
     <div
       ref={overlayRef}
@@ -239,7 +300,7 @@ export function SlideFeedbackInspector({
       {feedback
         .filter((entry) => entry.status === "open")
         .map((entry, index) => {
-          const rect = feedbackPinRect(entry);
+          const rect = logicalRectToCss(feedbackPinRect(entry), overlaySize);
           return (
             <button
               key={entry.id}
@@ -272,14 +333,14 @@ export function SlideFeedbackInspector({
           );
         })}
 
-      {target ? (
+      {target && targetCssRect ? (
         <div
           style={{
             position: "absolute",
-            left: target.logicalRect.x,
-            top: target.logicalRect.y,
-            width: target.logicalRect.w,
-            height: target.logicalRect.h,
+            left: targetCssRect.x,
+            top: targetCssRect.y,
+            width: targetCssRect.w,
+            height: targetCssRect.h,
             border: "2px solid #38bdf8",
             boxShadow: "0 0 0 9999px rgba(2,6,23,.28)",
             pointerEvents: "none",
@@ -287,15 +348,15 @@ export function SlideFeedbackInspector({
         />
       ) : null}
 
-      {target ? (
+      {target && targetPopoverPosition ? (
         <div
           data-slide-inspector-ui
           style={{
             position: "absolute",
-            left: Math.min(target.pointer.x + 12, 700),
-            top: Math.min(target.pointer.y + 12, 382),
+            left: targetPopoverPosition.left,
+            top: targetPopoverPosition.top,
             zIndex: 46,
-            width: 286,
+            width: POPOVER_WIDTH,
             border: "1px solid rgba(255,255,255,.18)",
             borderRadius: 8,
             background: "rgba(15,23,42,.96)",

@@ -275,7 +275,8 @@ editing, themed presentation playback, and HTML export.
 - Feedback inspector targeting uses a two-step interaction: pointer movement
   previews/selects the element under the cursor, clicking locks that element and
   opens a stable comment form, Cancel unlocks the target, and Add persists the
-  feedback.
+  feedback. Inspector rectangles, pins, and comment forms render by scaling the
+  stored 1000 x 562.5 logical slide coordinates to the current preview size.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { customAlphabet } from "nanoid";
 import type {
   ApiSlide,
@@ -26,7 +27,8 @@ type FeedbackInput = {
 };
 
 const createCommentId = customAlphabet("0123456789abcdef", 8);
-const SLIDES_SOURCE_ROOT = path.resolve(process.cwd(), "apps/slides/src/slides");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SLIDES_SOURCE_ROOT = path.resolve(__dirname, "../../src/slides");
 
 function requirePresentation(presentationsRepo: PresentationsRepository, presentationId: number) {
   const presentation = presentationsRepo.getById(presentationId);

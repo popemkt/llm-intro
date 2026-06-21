@@ -312,6 +312,11 @@ Mode runtime can summarize feedback through `list-slide-feedback`. It does not
 apply feedback because applying a note may require repository source edits;
 Code Mode agents should use `.agents/skills/apply-slide-feedback/SKILL.md` or
 the `/apply-slide-feedback` command.
+TODO: Rehome `SlideFeedbackInspector` from presentation controls into a shared
+design-time slide operations sidebar. Presentation-mode feedback is a temporary
+entry point; the target UX is inspect/comment/fix while editing manual, HTML,
+or code-backed slides, with kind-specific storage and application behavior
+behind the same sidebar affordance.
 
 ### App Mode And Code Mode
 

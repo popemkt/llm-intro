@@ -570,6 +570,7 @@ export function PresentationView({
               </div>
             )}
 
+            {/* TODO: Rehome feedback into the design-time slide operations sidebar. */}
             {feedbackAvailable && (
               <button
                 onClick={() => setFeedbackEnabled((value) => !value)}

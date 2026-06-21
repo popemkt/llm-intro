@@ -101,4 +101,19 @@ describe("Slide feedback markers", () => {
     expect(apply.body.text).toContain("requires Code Mode");
     expect(apply.body.text).toContain("/apply-slide-feedback");
   });
+
+  it("lists code-backed slide feedback when the server is launched from the app directory", async () => {
+    const codeSlide = db
+      .prepare(
+        "INSERT INTO slides (presentation_id, position, kind, code_id, title, blocks) VALUES (?, ?, 'code', ?, ?, '[]')",
+      )
+      .run(pid, 1, "01-opener", "Code feedback");
+
+    const listed = await request(app)
+      .get("/_agent-native/actions/list-slide-feedback")
+      .query({ pid, slideId: Number(codeSlide.lastInsertRowid) });
+
+    expect(listed.status).toBe(200);
+    expect(listed.body).toEqual([]);
+  });
 });

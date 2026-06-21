@@ -32,11 +32,13 @@ describe("Agent Native app-agent manifest", () => {
           "active-deck-context",
           "prompt-deck-creation",
           "snapshot-create-list-restore",
+          "slide-feedback-listing",
           "local-harness-status",
           "local-harness-mcp-tools",
         ]),
         suggestions: expect.arrayContaining([
           "Summarize this deck",
+          "List slide feedback",
           "Check local harness status",
           "List local harness tools",
         ]),
@@ -56,10 +58,11 @@ describe("Agent Native app-agent manifest", () => {
         promptFamilies: expect.arrayContaining([
           "markdown-import",
           "slide-editing",
+          "slide-feedback-listing",
           "local-harness-status",
           "local-harness-mcp-tools",
         ]),
-        suggestions: expect.arrayContaining(["Export this deck as HTML"]),
+        suggestions: expect.arrayContaining(["Export this deck as HTML", "List slide feedback"]),
       },
     });
   });

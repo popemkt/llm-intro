@@ -269,6 +269,42 @@ function formatSlideList(result: unknown) {
     .join("\n");
 }
 
+function formatSlideFeedbackList(result: unknown) {
+  if (!Array.isArray(result)) return "I could not read slide feedback.";
+  if (result.length === 0) return "No source-linked feedback found.";
+
+  return result
+    .map((entry, index) => {
+      if (!entry || typeof entry !== "object") return `${index + 1}. Unreadable feedback item`;
+      const id = "id" in entry ? getText(entry.id) : "";
+      const status = "status" in entry ? getText(entry.status) : "open";
+      const text = "text" in entry ? getText(entry.text) : "";
+      const slideTitle = "slide_title" in entry ? getText(entry.slide_title) : "";
+      const slideId = "slide_id" in entry ? Number(entry.slide_id) : null;
+      const location = "location" in entry ? entry.location : null;
+      const label =
+        location && typeof location === "object" && "elementLabel" in location
+          ? getText(location.elementLabel)
+          : "";
+      const source =
+        location && typeof location === "object" && "sourcePath" in location
+          ? getText(location.sourcePath)
+          : "";
+      const line =
+        location && typeof location === "object" && "line" in location
+          ? Number(location.line)
+          : null;
+      const target = slideTitle ? `"${slideTitle}"` : slideId ? `slide ${slideId}` : "a slide";
+      const sourceHint = [label, source && line ? `${source}:${line}` : source]
+        .filter(Boolean)
+        .join(", ");
+      return `${index + 1}. [${status}] ${id} on ${target}: ${text}${
+        sourceHint ? ` (${sourceHint})` : ""
+      }`;
+    })
+    .join("\n");
+}
+
 function responseTextForCreatedSlide(result: unknown) {
   const title =
     result && typeof result === "object" && "title" in result ? getText(result.title) : "";
@@ -514,6 +550,27 @@ async function handleDeckReadPrompt(
   }
 
   return null;
+}
+
+async function handleSlideFeedbackPrompt(
+  actions: SlideDeckActions,
+  normalized: string,
+  deckId: number | null,
+) {
+  if (!/\b(feedback|comments?|annotations?|review notes?)\b/.test(normalized)) return null;
+
+  if (/\b(apply|fix|address|resolve)\b/.test(normalized)) {
+    return [
+      "I can list source-linked feedback in App Mode, but applying it requires Code Mode.",
+      "Switch to Code Mode or a local CLI and run /apply-slide-feedback so the agent can edit slide source and resolve markers.",
+    ].join("\n");
+  }
+
+  if (!/\b(list|show|summarize|read|what)\b/.test(normalized)) return null;
+  if (!deckId) return "Open a deck first, then I can list source-linked slide feedback.";
+
+  const feedback = await runAction(actions["list-slide-feedback"], { pid: deckId });
+  return `Slide feedback in this deck:\n${formatSlideFeedbackList(feedback)}`;
 }
 
 async function handleThemePrompt(
@@ -777,6 +834,7 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
   const workspaceResponse = await firstPromptResponse([
     () => handleNavigationPrompt(actions, prompt, normalized, deckId),
     () => handleThemePrompt(actions, prompt, normalized, deckId),
+    () => handleSlideFeedbackPrompt(actions, normalized, deckId),
     () => handleDeckReadPrompt(actions, normalized, deckId),
     () => handleLocalModelPrompt(actions, normalized),
     () => handleLocalHarnessToolsPrompt(actions, normalized),

@@ -7,6 +7,7 @@ export const APP_AGENT_SUGGESTIONS = [
   "Add a bullets slide after the current topic",
   "Turn this outline into normal slides",
   "Export this deck as HTML",
+  "List slide feedback",
   "Check local harness status",
   "List local harness tools",
 ] as const;
@@ -28,6 +29,7 @@ export const APP_AGENT_PROMPT_FAMILIES = [
   "typed-json-export",
   "markdown-export",
   "markdown-import",
+  "slide-feedback-listing",
   "snapshot-create-list-restore",
   "local-model-status",
   "local-harness-status",

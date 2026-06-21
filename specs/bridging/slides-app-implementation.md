@@ -307,6 +307,11 @@ Slide-compatible JSX markers into code-backed slide source files and HTML
 comments into authored HTML slide source. This is intentionally behind the
 `ApiSlideFeedback` action model so a future external/session store can avoid
 code-slide Vite refreshes while keeping the same UI and agent contract.
+The App Mode manifest advertises `slide-feedback-listing`, and the local App
+Mode runtime can summarize feedback through `list-slide-feedback`. It does not
+apply feedback because applying a note may require repository source edits;
+Code Mode agents should use `.agents/skills/apply-slide-feedback/SKILL.md` or
+the `/apply-slide-feedback` command.
 
 ### App Mode And Code Mode
 

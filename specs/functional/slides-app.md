@@ -261,6 +261,9 @@ editing, themed presentation playback, and HTML export.
   agents can read unresolved comments without a hosted service. A later adapter
   should support external/session-backed feedback to avoid Vite refreshes when
   code-backed TSX files are touched.
+- Local App Mode can list source-linked feedback for the active deck. Applying
+  feedback remains a Code Mode workflow because it may edit local TSX, HTML,
+  CSS, tests, or specs; the agent skill/command documents that workflow.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.

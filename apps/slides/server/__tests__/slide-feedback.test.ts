@@ -71,4 +71,34 @@ describe("Slide feedback markers", () => {
       .query({ slideId: sid });
     expect(afterResolve.body[0]).toMatchObject({ id: created.body.id, status: "resolved" });
   });
+
+  it("lets App Mode list feedback but points application work to Code Mode", async () => {
+    await request(app)
+      .post("/_agent-native/actions/create-slide-feedback")
+      .send({
+        location: {
+          elementLabel: "h1 Hello",
+          sourceKind: "html",
+        },
+        pid,
+        slideId: sid,
+        text: "Tighten the heading copy.",
+      });
+
+    const list = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "list slide feedback", scope: { type: "deck", id: String(pid) } });
+
+    expect(list.status).toBe(200);
+    expect(list.body.text).toContain("Slide feedback in this deck");
+    expect(list.body.text).toContain("Tighten the heading copy.");
+
+    const apply = await request(app)
+      .post("/_agent-native/app-agent")
+      .send({ prompt: "apply slide feedback", scope: { type: "deck", id: String(pid) } });
+
+    expect(apply.status).toBe(200);
+    expect(apply.body.text).toContain("requires Code Mode");
+    expect(apply.body.text).toContain("/apply-slide-feedback");
+  });
 });

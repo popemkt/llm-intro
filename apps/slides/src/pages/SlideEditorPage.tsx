@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   AlignHorizontalJustifyCenter,
@@ -20,6 +20,7 @@ import {
   Italic,
   List,
   Copy,
+  Code2,
   Edit3,
   Eye,
   EyeOff,
@@ -30,6 +31,7 @@ import {
   Group,
   Image as ImageIcon,
   Lock,
+  MessageSquare,
   Pill,
   Play,
   Settings,
@@ -61,6 +63,7 @@ import type {
   Block,
   ManualBlockAnimationPreset,
   ShapeBlock,
+  UnifiedSlide,
   ThemeName,
 } from "@/types";
 import type { ApiDeckAsset } from "@/types";
@@ -73,6 +76,9 @@ import { DeckAssetPanel } from "@/components/DeckAssetPanel";
 import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 import { ChartBlockView } from "@/components/ChartBlockView";
+import { SlideFeedbackInspector } from "@/components/SlideFeedbackInspector";
+import { SlideShell } from "@/components/SlideShell";
+import { codeSlideRegistry } from "@/slides/registry";
 import {
   getTransitionLayerZIndex,
   getTransitionPhaseTiming,
@@ -627,7 +633,7 @@ function cloneHistoryValue<T>(value: T): T {
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
-type EditableSlideKind = "db" | "html";
+type EditableSlideKind = "db" | "html" | "code";
 type MarkdownFormat = "bold" | "italic" | "h1" | "h2" | "quote" | "bullets";
 type BlockArrangeAction =
   | "align-left"
@@ -952,6 +958,7 @@ export function SlideEditorPage() {
   const [title, setTitle] = useState("Untitled");
   const [presName, setPresName] = useState("");
   const [slideKind, setSlideKind] = useState<EditableSlideKind>("db");
+  const [codeId, setCodeId] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [html, setHtml] = useState("");
   const [notes, setNotes] = useState("");
@@ -970,6 +977,7 @@ export function SlideEditorPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [feedbackInspectorEnabled, setFeedbackInspectorEnabled] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
@@ -1042,6 +1050,8 @@ export function SlideEditorPage() {
     setLoadError(null);
     setSaveError(null);
     setSaveStatus("idle");
+    setFeedbackInspectorEnabled(false);
+    setCodeId(null);
     undoStackRef.current = [];
     redoStackRef.current = [];
     setCanUndo(false);
@@ -1079,13 +1089,28 @@ export function SlideEditorPage() {
       return;
     }
     if (slide.kind === "code") {
-      setLoadError("Code-backed slides cannot be edited here");
+      // Code slides own their content (a React component), so it stays
+      // read-only here, but their motion (transition + background) is editable.
+      setPresName(pres.name);
+      setSlideKind("code");
+      setCodeId(slide.code_id);
+      setTitle(slide.title);
+      setNotes(slide.notes ?? "");
+      setTransition(slide.transition);
+      setBackground(slide.background);
+      setTheme(pres.theme);
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      setCanUndo(false);
+      setCanRedo(false);
+      hasLoadedRef.current = true;
       setLoading(false);
       return;
     }
 
     setPresName(pres.name);
     setSlideKind(slide.kind);
+    setCodeId(slide.code_id);
     setTitle(slide.title);
     setBlocks(slide.blocks);
     setHtml(slide.html);
@@ -1247,7 +1272,9 @@ export function SlideEditorPage() {
         const content =
           slideKindRef.current === "html"
             ? { html: htmlRef.current }
-            : { blocks: blocksRef.current };
+            : slideKindRef.current === "code"
+              ? {}
+              : { blocks: blocksRef.current };
         await updateSlide.mutateAsync({
           pid,
           sid,
@@ -1277,7 +1304,11 @@ export function SlideEditorPage() {
     setSaveError(null);
     try {
       const content =
-        slideKindRef.current === "html" ? { html: htmlRef.current } : { blocks: blocksRef.current };
+        slideKindRef.current === "html"
+          ? { html: htmlRef.current }
+          : slideKindRef.current === "code"
+            ? {}
+            : { blocks: blocksRef.current };
       await updateSlide.mutateAsync({
         pid,
         sid,
@@ -1330,7 +1361,8 @@ export function SlideEditorPage() {
   }, []);
 
   const recordHistory = useCallback(() => {
-    if (!hasLoadedRef.current || slideKindRef.current === "html") return;
+    if (!hasLoadedRef.current || slideKindRef.current === "html" || slideKindRef.current === "code")
+      return;
     const snapshot = currentHistorySnapshot();
     const last = undoStackRef.current[undoStackRef.current.length - 1];
     if (last && JSON.stringify(last) === JSON.stringify(snapshot)) return;
@@ -1862,6 +1894,35 @@ export function SlideEditorPage() {
   const selectedBlock =
     selectedIds.length === 1 ? (blocks.find((b) => b.id === selectedIds[0]) ?? null) : null;
 
+  const codeSlideComponent = codeId ? codeSlideRegistry[codeId] : undefined;
+  const feedbackSlide = useMemo<UnifiedSlide | null>(() => {
+    if (slideKind === "code") {
+      if (!codeSlideComponent) return null;
+      return {
+        kind: "code",
+        id: sid,
+        codeId,
+        groupId: null,
+        title,
+        notes,
+        transition,
+        component: codeSlideComponent,
+      };
+    }
+    if (slideKind === "html") {
+      return {
+        kind: "html",
+        id: sid,
+        groupId: null,
+        title,
+        notes,
+        transition,
+        html,
+      };
+    }
+    return null;
+  }, [codeId, codeSlideComponent, html, notes, sid, slideKind, title, transition]);
+
   const saveStatusLabel =
     saveStatus === "saving"
       ? "Saving…"
@@ -1987,115 +2048,119 @@ export function SlideEditorPage() {
               {saveStatusLabel}
             </span>
           )}
-          <button
-            type="button"
-            onClick={undoSlideEdit}
-            disabled={!canUndo}
-            title="Undo (⌘Z)"
-            style={{
-              ...arrangeButton,
-              width: 34,
-              height: 32,
-              cursor: canUndo ? "pointer" : "not-allowed",
-              opacity: canUndo ? 1 : 0.45,
-            }}
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={redoSlideEdit}
-            disabled={!canRedo}
-            title="Redo (⇧⌘Z)"
-            style={{
-              ...arrangeButton,
-              width: 34,
-              height: 32,
-              cursor: canRedo ? "pointer" : "not-allowed",
-              opacity: canRedo ? 1 : 0.45,
-            }}
-          >
-            <Redo2 size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => copyBlocksToClipboard(selectedIds)}
-            disabled={selectedIds.length === 0}
-            title="Copy blocks (⌘C)"
-            style={{
-              ...arrangeButton,
-              width: 34,
-              height: 32,
-              cursor: selectedIds.length > 0 ? "pointer" : "not-allowed",
-              opacity: selectedIds.length > 0 ? 1 : 0.45,
-            }}
-          >
-            <Copy size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => cutBlocksToClipboard(selectedIds)}
-            disabled={selectedIds.length === 0}
-            title="Cut blocks (⌘X)"
-            style={{
-              ...arrangeButton,
-              width: 34,
-              height: 32,
-              cursor: selectedIds.length > 0 ? "pointer" : "not-allowed",
-              opacity: selectedIds.length > 0 ? 1 : 0.45,
-            }}
-          >
-            <Scissors size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={pasteBlocksFromClipboard}
-            disabled={!blockClipboard}
-            title="Paste blocks (⌘V)"
-            style={{
-              ...arrangeButton,
-              width: 34,
-              height: 32,
-              cursor: blockClipboard ? "pointer" : "not-allowed",
-              opacity: blockClipboard ? 1 : 0.45,
-            }}
-          >
-            <ClipboardPaste size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setSnapToGrid((value) => !value)}
-            title={snapToGrid ? "Disable grid snap" : "Enable grid snap"}
-            style={{
-              ...arrangeButton,
-              width: 34,
-              height: 32,
-              color: snapToGrid ? C.accent : C.textDim,
-              background: snapToGrid ? C.accentSubtle : C.bg,
-            }}
-          >
-            <Grid3X3 size={14} />
-          </button>
-          <input
-            type="number"
-            min={1}
-            max={25}
-            step={1}
-            value={gridStep}
-            disabled={!snapToGrid}
-            onChange={(e) => {
-              const next = Number(e.target.value);
-              setGridStep(clamp(Number.isFinite(next) ? next : 5, 1, 25));
-            }}
-            title="Grid step (%)"
-            style={{
-              ...inp,
-              width: 48,
-              height: 32,
-              padding: "4px 6px",
-              opacity: snapToGrid ? 1 : 0.45,
-            }}
-          />
+          {slideKind === "db" && (
+            <>
+              <button
+                type="button"
+                onClick={undoSlideEdit}
+                disabled={!canUndo}
+                title="Undo (⌘Z)"
+                style={{
+                  ...arrangeButton,
+                  width: 34,
+                  height: 32,
+                  cursor: canUndo ? "pointer" : "not-allowed",
+                  opacity: canUndo ? 1 : 0.45,
+                }}
+              >
+                <Undo2 size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={redoSlideEdit}
+                disabled={!canRedo}
+                title="Redo (⇧⌘Z)"
+                style={{
+                  ...arrangeButton,
+                  width: 34,
+                  height: 32,
+                  cursor: canRedo ? "pointer" : "not-allowed",
+                  opacity: canRedo ? 1 : 0.45,
+                }}
+              >
+                <Redo2 size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => copyBlocksToClipboard(selectedIds)}
+                disabled={selectedIds.length === 0}
+                title="Copy blocks (⌘C)"
+                style={{
+                  ...arrangeButton,
+                  width: 34,
+                  height: 32,
+                  cursor: selectedIds.length > 0 ? "pointer" : "not-allowed",
+                  opacity: selectedIds.length > 0 ? 1 : 0.45,
+                }}
+              >
+                <Copy size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => cutBlocksToClipboard(selectedIds)}
+                disabled={selectedIds.length === 0}
+                title="Cut blocks (⌘X)"
+                style={{
+                  ...arrangeButton,
+                  width: 34,
+                  height: 32,
+                  cursor: selectedIds.length > 0 ? "pointer" : "not-allowed",
+                  opacity: selectedIds.length > 0 ? 1 : 0.45,
+                }}
+              >
+                <Scissors size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={pasteBlocksFromClipboard}
+                disabled={!blockClipboard}
+                title="Paste blocks (⌘V)"
+                style={{
+                  ...arrangeButton,
+                  width: 34,
+                  height: 32,
+                  cursor: blockClipboard ? "pointer" : "not-allowed",
+                  opacity: blockClipboard ? 1 : 0.45,
+                }}
+              >
+                <ClipboardPaste size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSnapToGrid((value) => !value)}
+                title={snapToGrid ? "Disable grid snap" : "Enable grid snap"}
+                style={{
+                  ...arrangeButton,
+                  width: 34,
+                  height: 32,
+                  color: snapToGrid ? C.accent : C.textDim,
+                  background: snapToGrid ? C.accentSubtle : C.bg,
+                }}
+              >
+                <Grid3X3 size={14} />
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={25}
+                step={1}
+                value={gridStep}
+                disabled={!snapToGrid}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setGridStep(clamp(Number.isFinite(next) ? next : 5, 1, 25));
+                }}
+                title="Grid step (%)"
+                style={{
+                  ...inp,
+                  width: 48,
+                  height: 32,
+                  padding: "4px 6px",
+                  opacity: snapToGrid ? 1 : 0.45,
+                }}
+              />
+            </>
+          )}
           <button
             onClick={() => navigate(`/p/${pid}/settings`)}
             style={{
@@ -2148,7 +2213,24 @@ export function SlideEditorPage() {
         </div>
       )}
 
-      {slideKind === "html" ? (
+      {slideKind === "code" ? (
+        <CodeSlideSourceEditor
+          background={background}
+          codeId={codeId}
+          component={codeSlideComponent}
+          feedbackEnabled={feedbackInspectorEnabled}
+          feedbackSlide={feedbackSlide}
+          notes={notes}
+          onBackground={updateSlideBackground}
+          onFeedbackEnabled={setFeedbackInspectorEnabled}
+          onNotes={updateSlideNotes}
+          onTransition={updateSlideTransition}
+          presentationId={pid}
+          theme={theme}
+          title={title}
+          transition={transition}
+        />
+      ) : slideKind === "html" ? (
         <HtmlSlideSourceEditor
           html={html}
           notes={notes}
@@ -3476,6 +3558,238 @@ function TransitionKeyframeEditor({
       />
       {error && <div style={{ color: "#ff8a8a", fontSize: 10, marginTop: 4 }}>{error}</div>}
     </div>
+  );
+}
+
+function NonManualSlideWorkspace({
+  preview,
+  sidebar,
+}: {
+  preview: React.ReactNode;
+  sidebar: React.ReactNode;
+}) {
+  return (
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#070908",
+          padding: 28,
+          overflow: "hidden",
+        }}
+      >
+        {preview}
+      </div>
+      <div
+        style={{
+          width: 340,
+          borderLeft: `1px solid ${C.border}`,
+          display: "flex",
+          flexDirection: "column",
+          background: C.surface,
+          flexShrink: 0,
+          overflowY: "auto",
+        }}
+      >
+        {sidebar}
+      </div>
+    </div>
+  );
+}
+
+function NonManualPreviewFrame({
+  background,
+  children,
+  theme,
+}: {
+  background?: ApiSlideBackground | null;
+  children: React.ReactNode;
+  theme?: ThemeName;
+}) {
+  return (
+    <div
+      data-theme={theme}
+      style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: "calc((100vh - 140px) * 16 / 9)",
+        aspectRatio: "16 / 9",
+        overflow: "hidden",
+        boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
+        background: C.bg,
+        ...slideBackgroundStyle(background ?? null),
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SidebarSection({ children, title }: { children: React.ReactNode; title: string }) {
+  return (
+    <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ ...inspectorLabel, marginBottom: 8 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function FeedbackInspectorToggle({
+  disabled = false,
+  enabled,
+  onEnabled,
+}: {
+  disabled?: boolean;
+  enabled: boolean;
+  onEnabled: (enabled: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onEnabled(!enabled)}
+      style={{
+        ...arrangeButton,
+        justifyContent: "center",
+        gap: 6,
+        width: "100%",
+        minHeight: 32,
+        background: enabled ? C.accentSubtle : C.bg,
+        color: enabled ? C.accent : C.textDim,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <MessageSquare size={14} />
+      {enabled ? "Exit feedback" : "Inspect feedback"}
+    </button>
+  );
+}
+
+function CodeSlideSourceEditor({
+  background,
+  codeId,
+  component,
+  feedbackEnabled,
+  feedbackSlide,
+  notes,
+  onBackground,
+  onFeedbackEnabled,
+  onNotes,
+  onTransition,
+  presentationId,
+  theme,
+  title,
+  transition,
+}: {
+  background: ApiSlideBackground | null;
+  codeId: string | null;
+  component?: Extract<UnifiedSlide, { kind: "code" }>["component"];
+  feedbackEnabled: boolean;
+  feedbackSlide: UnifiedSlide | null;
+  notes: string;
+  onBackground: (background: ApiSlideBackground | null) => void;
+  onFeedbackEnabled: (enabled: boolean) => void;
+  onNotes: (notes: string) => void;
+  onTransition: (transition: ApiSlideTransition | null) => void;
+  presentationId: number;
+  theme: ThemeName;
+  title: string;
+  transition: ApiSlideTransition | null;
+}) {
+  const Component = component;
+  return (
+    <NonManualSlideWorkspace
+      preview={
+        <NonManualPreviewFrame background={background} theme={theme}>
+          {Component ? (
+            <SlideShell>
+              <Component isActive={true} />
+            </SlideShell>
+          ) : (
+            <div
+              style={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: C.textDim,
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 12,
+                gap: 8,
+              }}
+            >
+              <Code2 size={16} />
+              Missing code slide
+            </div>
+          )}
+          {feedbackSlide ? (
+            <SlideFeedbackInspector
+              enabled={feedbackEnabled}
+              presentationId={presentationId}
+              slide={feedbackSlide}
+              onClose={() => onFeedbackEnabled(false)}
+            />
+          ) : null}
+        </NonManualPreviewFrame>
+      }
+      sidebar={
+        <>
+          <SidebarSection title="Code-backed slide">
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>{title}</div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  color: C.textDim,
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: 11,
+                  minWidth: 0,
+                }}
+              >
+                <Code2 size={13} />
+                <span
+                  style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                >
+                  {codeId ?? "missing code_id"}
+                </span>
+              </div>
+            </div>
+          </SidebarSection>
+          <SidebarSection title="Feedback">
+            <FeedbackInspectorToggle
+              disabled={!feedbackSlide}
+              enabled={feedbackEnabled}
+              onEnabled={onFeedbackEnabled}
+            />
+          </SidebarSection>
+          <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
+            <SlideBackgroundEditor background={background} onBackground={onBackground} />
+          </div>
+          <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
+            <SlideTransitionEditor transition={transition} onTransition={onTransition} />
+          </div>
+          <SidebarSection title="Speaker Notes">
+            <textarea
+              value={notes}
+              onChange={(event) => onNotes(event.target.value)}
+              rows={5}
+              style={{
+                ...inp,
+                resize: "vertical",
+                fontFamily: "Inter, sans-serif",
+                lineHeight: 1.5,
+              }}
+            />
+          </SidebarSection>
+        </>
+      }
+    />
   );
 }
 

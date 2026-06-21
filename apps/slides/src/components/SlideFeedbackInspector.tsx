@@ -99,6 +99,7 @@ export function SlideFeedbackInspector({
   const overlayRef = useRef<HTMLDivElement>(null);
   const [feedback, setFeedback] = useState<ApiSlideFeedback[]>([]);
   const [target, setTarget] = useState<InspectTarget | null>(null);
+  const [targetLocked, setTargetLocked] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,22 +122,31 @@ export function SlideFeedbackInspector({
 
   const getRoot = () => overlayRef.current?.parentElement as HTMLElement | null;
 
-  const inspectAt = (clientX: number, clientY: number) => {
+  const targetAt = (clientX: number, clientY: number): InspectTarget | null => {
     const root = getRoot();
-    if (!root) return;
+    if (!root) return null;
     const element = findTargetElement(clientX, clientY, root);
-    if (!element) {
-      setTarget(null);
-      return;
-    }
+    if (!element) return null;
     const rect = logicalRectForElement(element, root);
-    setTarget({
+    return {
       domPath: domPathForElement(element, root),
       elementLabel: describeElement(element),
       logicalRect: rect,
       pointer: logicalPointer(clientX, clientY, root),
       selector: element.getAttribute("data-slide-feedback-target") ?? undefined,
-    });
+    };
+  };
+
+  const inspectAt = (clientX: number, clientY: number) => {
+    if (targetLocked) return;
+    setTarget(targetAt(clientX, clientY));
+  };
+
+  const lockTargetAt = (clientX: number, clientY: number) => {
+    const nextTarget = targetAt(clientX, clientY);
+    if (!nextTarget) return;
+    setTarget(nextTarget);
+    setTargetLocked(true);
   };
 
   const handleCreate = async () => {
@@ -156,6 +166,7 @@ export function SlideFeedbackInspector({
       });
       setDraft("");
       setTarget(null);
+      setTargetLocked(false);
       await loadFeedback();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -187,7 +198,7 @@ export function SlideFeedbackInspector({
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        inspectAt(event.clientX, event.clientY);
+        lockTargetAt(event.clientX, event.clientY);
       }}
       onPointerMove={(event) => inspectAt(event.clientX, event.clientY)}
     >
@@ -293,6 +304,7 @@ export function SlideFeedbackInspector({
             boxShadow: "0 16px 42px rgba(0,0,0,.42)",
           }}
           onClick={(event) => event.stopPropagation()}
+          onPointerMove={(event) => event.stopPropagation()}
         >
           <div style={{ marginBottom: 8, fontSize: 11, color: "rgba(255,255,255,.72)" }}>
             {target.elementLabel || "Selected element"}
@@ -324,6 +336,7 @@ export function SlideFeedbackInspector({
               type="button"
               onClick={() => {
                 setTarget(null);
+                setTargetLocked(false);
                 setDraft("");
               }}
               style={{ color: "rgba(255,255,255,.74)", fontSize: 12 }}

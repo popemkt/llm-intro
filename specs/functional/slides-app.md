@@ -264,10 +264,18 @@ editing, themed presentation playback, and HTML export.
 - Local App Mode can list source-linked feedback for the active deck. Applying
   feedback remains a Code Mode workflow because it may edit local TSX, HTML,
   CSS, tests, or specs; the agent skill/command documents that workflow.
-- TODO: Move feedback inspector entry into the design-time slide editor/sidebar
-  for manual, HTML, and code-backed slides. The current presentation-mode entry
-  is only a temporary review surface; feedback should primarily be created while
-  editing a slide, not while presenting it.
+- Code-backed slides open in the design-time editor as a read-only slide preview
+  plus an operations sidebar. The sidebar exposes code identity, feedback
+  inspection, background, transition, and speaker-note controls without showing
+  manual block-only toolbar controls.
+- TODO: Finish unifying feedback inspector entry across manual and HTML slide
+  operations sidebars. The current presentation-mode entry is only a temporary
+  review surface; feedback should primarily be created while editing a slide,
+  not while presenting it.
+- Feedback inspector targeting uses a two-step interaction: pointer movement
+  previews/selects the element under the cursor, clicking locks that element and
+  opens a stable comment form, Cancel unlocks the target, and Add persists the
+  feedback.
 - Users can create a new deck from Home in either blank mode or outline mode.
   Outline mode parses one slide per line into standard themeable DB-backed
   layouts and uses `create-deck-from-outline`.

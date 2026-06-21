@@ -80,7 +80,7 @@ framework boundary.
 | HTML slide rendering/editing | `HtmlSlideRenderer` renders `kind: "html"` slides in a sandboxed full-canvas iframe, reused by presentation, fullscreen, overview, export viewer, and the HTML source editor branch in `SlideEditorPage` | Vitest renderer tests, build, browser smoke |
 | Per-slide transitions | `slides.transition_json`, `ApiSlide.transition`, `update-slide` action, `SlideTransitionEditor` preset/custom keyframe controls, reusable custom transition templates, inline previews through `resolveSlideTransition`, shared transition layer ordering, server transition validation, and `SlideTransitionStage` in presentation/fullscreen/export paths | Vitest/API, typed JSON round-trip, browser smoke |
 | Deck default transitions | `presentations.default_transition_json`, `ApiPresentation.defaultTransition`, `create-deck`/`update-deck` actions, `SettingsPage`, and `toUnifiedSlide` inheritance for presentation/fullscreen/audience/export playback | Vitest/API, typecheck |
-| Source-linked slide feedback | Shared `ApiSlideFeedback` contract, `source-feedback-markers` parser/serializer, `createSlideFeedbackService`, `slide-feedback` REST route, `list-slide-feedback`/`create-slide-feedback`/`resolve-slide-feedback` actions, and `SlideFeedbackInspector` overlay in `PresentationView` for code-backed and HTML slides | Vitest/API, typecheck; WIP browser smoke for inspector UX |
+| Source-linked slide feedback | Shared `ApiSlideFeedback` contract, `source-feedback-markers` parser/serializer, `createSlideFeedbackService`, `slide-feedback` REST route, `list-slide-feedback`/`create-slide-feedback`/`resolve-slide-feedback` actions, and `SlideFeedbackInspector` overlay in `PresentationView` plus the code-backed `SlideEditorPage` preview | Vitest/API, typecheck; WIP browser smoke for inspector UX |
 
 ## Groups
 
@@ -185,7 +185,7 @@ round-trips, and browser source editing with live preview.
 | Fullscreen mode | `apps/slides/src/components/FullscreenView.tsx` | Browser smoke for keyboard navigation |
 | Slide editor | `apps/slides/src/pages/SlideEditorPage.tsx` | Playwright for edit/save flows |
 | Block rendering | `apps/slides/src/components/DbSlideRenderer.tsx` and editor canvas rendering | Vitest regression tests |
-| Source feedback inspector | `apps/slides/src/components/SlideFeedbackInspector.tsx` runs inside `SlideShell` for presentation-mode code/html slides, captures DOM path, element label, and logical 1000 x 562.5 rect, then calls feedback actions | Vitest/API plus manual browser smoke |
+| Source feedback inspector | `apps/slides/src/components/SlideFeedbackInspector.tsx` runs inside `SlideShell` for code/html slide previews, captures DOM path, element label, and logical 1000 x 562.5 rect, then calls feedback actions. `SlideEditorPage` mounts it over the code-backed design-time preview from the operations sidebar. | Vitest/API plus manual browser smoke |
 
 ## Theme Bridge
 
@@ -312,11 +312,11 @@ Mode runtime can summarize feedback through `list-slide-feedback`. It does not
 apply feedback because applying a note may require repository source edits;
 Code Mode agents should use `.agents/skills/apply-slide-feedback/SKILL.md` or
 the `/apply-slide-feedback` command.
-TODO: Rehome `SlideFeedbackInspector` from presentation controls into a shared
-design-time slide operations sidebar. Presentation-mode feedback is a temporary
-entry point; the target UX is inspect/comment/fix while editing manual, HTML,
-or code-backed slides, with kind-specific storage and application behavior
-behind the same sidebar affordance.
+TODO: Finish rehoming `SlideFeedbackInspector` from presentation controls into
+shared design-time slide operations sidebars. Code-backed slides now expose the
+inspector from the editor sidebar; manual and HTML still need the same
+inspect/comment/fix affordance, with kind-specific storage and application
+behavior behind one sidebar pattern.
 
 ### App Mode And Code Mode
 

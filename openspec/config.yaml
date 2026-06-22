@@ -1,0 +1,24 @@
+schema: spec-driven
+openlore:
+  version: 1.0.0
+  generatedAt: 2026-06-22T16:25:00.266Z
+  domains:
+    - slide
+    - apps-slides-server-services
+  confidence: 0.5
+context: >-
+  # Auto-detected by openlore
+
+  Tech stack: node-typescript, React, Express, Vitest
+
+  Architecture: Layered (routes → controllers → services → repositories)
+
+  Domains: slide, local, application, deck, manual, normal, agent, extension, slides, install,
+  apps-slides-actions, apps-slides-server-routes, apps-slides-server-services, apps-slides-server,
+  apps-slides-src, apps-slides-src-components, apps-slides-src-data, apps-slides-src-pages,
+  eslint-config, apps-slides-src-slides-ssh, demos, apps-slides-server-repositories,
+  apps-slides-shared, apps-slides-src-design, apps-slides-src-lib, apps-slides-src-slides,
+  apps-slides, playground-wip, apps-slides-server-tests, apps-slides-src-components-tests,
+  libs-api-contract, specs-bridging, apps-slides-src-lib-tests, scripts, code-unit-cohesion
+
+  Key patterns: Middleware pipeline, Component-based UI

@@ -1,5 +1,11 @@
 # Agent Instructions
 
+> **OpenLore-first workflow is MANDATORY for every code change.** Orient with the
+> code graph before blind-reading files: `orient → locate → impact → plan →
+> implement → verify → sync specs → analyze → record`. Full table and rules in
+> `CLAUDE.md`; operating guide in `specs/bridging/openlore-adoption.md`. Always run
+> `pnpm exec openlore analyze` after changes (and after `generate`).
+
 This repo is an interactive LLM intro slide-deck app. Keep changes grounded in
 the current app harness:
 

@@ -17,6 +17,9 @@
     "test:ui": "nx run llm-intro-slides:test:ui",
     "test:e2e": "nx run @llm-intro/api-contract:build && nx run llm-intro-slides:test:e2e",
     "typecheck": "nx run @llm-intro/api-contract:typecheck && nx run llm-intro-slides:typecheck",
+    "proxy": "uvx --from 'headroom-ai[proxy,code]' headroom proxy --port ${HEADROOM_PORT:-8787}",
+    "claude:proxy": "ANTHROPIC_BASE_URL=${HEADROOM_PROXY:-http://localhost:8787} claude",
+    "codex:proxy": "OPENAI_BASE_URL=${HEADROOM_PROXY:-http://localhost:8787} codex",
     "archon:install": "node scripts/install-archon.mjs",
     "setup:worktree": "node scripts/setup-worktree.mjs",
     "prepare": "node scripts/install-git-hooks.mjs"

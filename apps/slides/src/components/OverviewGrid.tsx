@@ -113,11 +113,13 @@ const manualQuickAddButtonStyle: React.CSSProperties = {
 
 function ThumbnailActions({
   slide,
+  motionOnly = false,
   onDelete,
   onDuplicate,
   onEdit,
 }: {
   slide: UnifiedSlide;
+  motionOnly?: boolean;
   onDelete: (slideId: number) => void;
   onDuplicate?: (slideId: number) => Promise<void>;
   onEdit: (slideId: number) => void;
@@ -143,7 +145,7 @@ function ThumbnailActions({
       >
         <Pencil size={12} />
       </button>
-      {onDuplicate && (
+      {!motionOnly && onDuplicate && (
         <button
           onClick={(event) => {
             event.stopPropagation();
@@ -158,19 +160,21 @@ function ThumbnailActions({
           <Copy size={12} />
         </button>
       )}
-      <button
-        onClick={(event) => {
-          event.stopPropagation();
-          onDelete(slide.id);
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-        aria-label={`Delete ${slide.title}`}
-        className="p-1.5 rounded-lg"
-        style={{ ...buttonStyle, color: "#ff6b6b" }}
-        title="Delete slide"
-      >
-        <Trash2 size={12} />
-      </button>
+      {!motionOnly && (
+        <button
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete(slide.id);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-label={`Delete ${slide.title}`}
+          className="p-1.5 rounded-lg"
+          style={{ ...buttonStyle, color: "#ff6b6b" }}
+          title="Delete slide"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
     </div>
   );
 }
@@ -380,10 +384,11 @@ function ThumbnailCell({
         </div>
       )}
 
-      {/* Edit + delete buttons — visible on hover for editable slides */}
-      {!selectMode && sortableEnabled && slide.kind !== "code" && !isRenaming && (
+      {/* Edit on hover. Code slides get a motion-only editor (no delete/duplicate). */}
+      {!selectMode && sortableEnabled && !isRenaming && (
         <ThumbnailActions
           slide={slide}
+          motionOnly={slide.kind === "code"}
           onDelete={onDelete}
           onDuplicate={onDuplicate}
           onEdit={onEdit}

@@ -369,9 +369,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("slides-shell-collapsed") === "true",
   );
-  const [agentOpen, setAgentOpen] = useState(
-    () => localStorage.getItem("agent-native-sidebar-open") === "true",
-  );
+  const [agentOpen, setAgentOpen] = useState(() => {
+    // The agent is a peer of the app, not an opt-in panel. Honour an explicit
+    // choice; on first run present it by default, but only on roomy viewports
+    // (on phones it renders as a fixed overlay, so start collapsed there).
+    const stored = localStorage.getItem("agent-native-sidebar-open");
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return typeof window === "undefined" || window.innerWidth >= 1024;
+  });
   const deckScope = useMemo(() => deckScopeFromPath(location.pathname), [location.pathname]);
   const appAgentRuntime = useMemo(() => createSlidesAppAgentRuntime(deckScope), [deckScope]);
   useSlidesRouteStateBridge(location);
@@ -463,7 +469,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="slides-app-shell__main">{children}</main>
 
-      {agentOpen && (
+      {agentOpen ? (
         <aside className="slides-app-agent-panel agent-sidebar-panel" aria-label="Agent">
           <SlidesAgentSurface
             runtime={appAgentRuntime}
@@ -472,6 +478,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onCollapse={() => setAgentOpenPersisted(false)}
           />
         </aside>
+      ) : (
+        <button
+          type="button"
+          className="slides-app-agent-tab"
+          onClick={() => setAgentOpenPersisted(true)}
+          aria-label="Open agent"
+          title="Open agent"
+        >
+          <MessageSquare size={15} />
+          <span>Chat</span>
+        </button>
       )}
     </div>
   );

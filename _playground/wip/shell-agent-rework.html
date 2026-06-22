@@ -1,0 +1,814 @@
+<title>Shell &amp; Agent Rework — Slides</title>
+<style>
+  :root {
+    --ground: #0b0d0c;
+    --surface: #141a17;
+    --surface-2: #0f1411;
+    --border: #1f2d27;
+    --muted: #3a4d42;
+    --text: #e8f0eb;
+    --dim: #7a9985;
+    --accent: #25d366;
+    --accent-2: #00ffa3;
+    --problem: #ff5a52;
+
+    --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, "SF Mono", monospace;
+    --sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      linear-gradient(transparent 0, transparent calc(100% - 1px), rgba(37,211,102,0.035) calc(100% - 1px)),
+      linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(37,211,102,0.035) calc(100% - 1px)),
+      var(--ground);
+    background-size: 100% 100%, 28px 28px, 28px 28px;
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 120px; }
+
+  /* ── title block ─────────────────────────────────────────────── */
+  .titleblock {
+    display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 24px;
+    border: 1px solid var(--border); border-top: 2px solid var(--accent);
+    background: var(--surface-2); padding: 26px 28px 22px; margin: 44px 0 16px;
+  }
+  .titleblock h1 {
+    font-family: var(--mono); font-weight: 600;
+    font-size: clamp(26px, 4.2vw, 44px); letter-spacing: -0.02em; line-height: 1.02; margin: 0;
+  }
+  .titleblock h1 .lo { color: var(--dim); }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 14px;
+  }
+  .meta { font-family: var(--mono); font-size: 11.5px; color: var(--dim); text-align: right; white-space: nowrap; line-height: 1.9; }
+  .meta b { color: var(--text); font-weight: 600; }
+
+  .thesis {
+    border: 1px solid var(--border); border-left: 2px solid var(--accent);
+    background: var(--surface); padding: 20px 24px; margin: 0 0 18px; font-size: 18px;
+  }
+  .thesis b { color: var(--accent-2); font-weight: 600; }
+  .thesis + .thesis { margin-bottom: 52px; }
+
+  /* ── section headers ─────────────────────────────────────────── */
+  .plate-head {
+    display: flex; align-items: baseline; gap: 16px; margin: 0 0 18px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .plate-no {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em;
+    color: var(--ground); background: var(--accent); padding: 3px 9px; border-radius: 2px; font-weight: 700;
+  }
+  .plate-no.bad { background: var(--problem); }
+  .plate-head h2 { font-family: var(--mono); font-weight: 600; font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .plate-head .sub { color: var(--dim); font-size: 13px; font-family: var(--mono); margin-left: auto; }
+
+  .band-head { font-family: var(--mono); font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent); margin: 64px 0 18px; }
+
+  .plate-grid { display: grid; grid-template-columns: 1fr 312px; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .plate-grid { grid-template-columns: 1fr; } }
+
+  /* ── anatomy / frame-hierarchy hero ──────────────────────────── */
+  .anatomy {
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+    padding: 22px; margin: 0 0 14px;
+  }
+  .frame-shell {
+    border: 1.5px solid var(--accent); border-radius: 10px; padding: 14px;
+    position: relative; background:
+      repeating-linear-gradient(135deg, rgba(37,211,102,0.04) 0 8px, transparent 8px 16px);
+  }
+  .frame-tag {
+    position: absolute; top: -10px; left: 14px; background: var(--surface-2);
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 0 8px; color: var(--accent); font-weight: 700;
+  }
+  .frame-row { display: grid; grid-template-columns: 132px 1fr 168px; gap: 14px; align-items: stretch; }
+  @media (max-width: 720px){ .frame-row { grid-template-columns: 1fr; } }
+  .frame-cell {
+    border: 1px solid var(--border); border-radius: 8px; background: var(--ground);
+    padding: 14px; min-height: 132px; position: relative;
+  }
+  .frame-cell.view { border-style: dashed; border-color: var(--muted); background: #0a0f0c; }
+  .frame-cell.agent { border-color: var(--accent-2); background: #0a120d; }
+  .frame-cell h5 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; margin: 0 0 8px;
+    color: var(--text); text-transform: uppercase;
+  }
+  .frame-cell p { margin: 0; font-size: 12px; color: #c2d2c9; }
+  .frame-cell .pill {
+    display: inline-block; font-family: var(--mono); font-size: 9.5px; color: var(--accent-2);
+    border: 1px solid var(--border); border-radius: 99px; padding: 1px 8px; margin: 8px 4px 0 0;
+    background: rgba(0,255,163,0.05);
+  }
+  .frame-cell.view .swap { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 8px; }
+  .frame-cell.view .swap b { color: var(--text); }
+  .anatomy .ann { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin: 16px 2px 0; }
+  .anatomy .ann b { color: var(--accent-2); }
+
+  /* ── mock frame ──────────────────────────────────────────────── */
+  .mock {
+    position: relative; border: 1px solid var(--border); background: var(--ground);
+    border-radius: 8px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+    aspect-ratio: 16 / 10; display: flex; flex-direction: column; font-size: 11px;
+  }
+  .mock.short { aspect-ratio: 16 / 7; }
+  .m-top {
+    height: 34px; flex: 0 0 34px; border-bottom: 1px solid var(--border); background: var(--surface-2);
+    display: flex; align-items: center; gap: 8px; padding: 0 10px;
+  }
+  .m-body { flex: 1; display: flex; min-height: 0; }
+  .m-col { display: flex; flex-direction: column; min-height: 0; }
+
+  .m-canvas {
+    flex: 1; background: radial-gradient(circle at 50% 40%, #11201a 0, #070908 70%);
+    display: flex; align-items: center; justify-content: center; position: relative; min-width: 0;
+  }
+  .slide16 {
+    width: 74%; aspect-ratio: 16/9; background: #0e1512; border: 1px solid #20302a;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7); position: relative; border-radius: 2px;
+  }
+  .blk { position: absolute; border-radius: 2px; }
+  .blk.title { left: 9%; top: 16%; width: 60%; height: 13%; background: linear-gradient(90deg,#1d3a2c,#16271f); }
+  .blk.body  { left: 9%; top: 38%; width: 46%; height: 30%; background: #14201a; border: 1px solid #223129; }
+  .blk.sel   { left: 60%; top: 36%; width: 30%; height: 40%; background: #16241d; outline: 1.5px solid var(--accent); box-shadow: 0 0 0 4px rgba(37,211,102,0.12); }
+  .handle { position: absolute; width: 6px; height: 6px; background: var(--accent); border:1px solid var(--ground); }
+  .handle.tl{left:-3px;top:-3px}.handle.tr{right:-3px;top:-3px}.handle.bl{left:-3px;bottom:-3px}.handle.br{right:-3px;bottom:-3px}
+
+  .lbl { font-family: var(--mono); color: var(--dim); font-size: 9.5px; letter-spacing: 0.04em; }
+  .lbl.bright { color: var(--text); }
+  .chip { height: 18px; border-radius: 3px; background: var(--surface); border: 1px solid var(--border); display: inline-flex; align-items: center; padding: 0 7px; font-family: var(--mono); font-size: 9px; color: var(--dim); gap: 5px; white-space: nowrap; }
+  .chip.solid { background: var(--accent); color: var(--ground); border-color: var(--accent); font-weight: 700; }
+  .chip.ghost { background: transparent; }
+  .dot { width: 13px; height: 13px; border-radius: 3px; background: var(--muted); flex: 0 0 auto; }
+  .sep { width: 1px; align-self: stretch; background: var(--border); margin: 6px 2px; }
+
+  /* nav rail */
+  .nav { background: var(--surface-2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px; gap: 4px; }
+  .nav .brand { display: flex; align-items: center; gap: 7px; padding: 4px 6px 10px; }
+  .nav .brand .mk { width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .nav .brand b { font-size: 11px; }
+  .navlink { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-family: var(--sans); font-size: 10.5px; color: var(--dim); }
+  .navlink .gi { width: 12px; height: 12px; border-radius: 3px; background: var(--muted); flex: 0 0 auto; }
+  .navlink.on { background: var(--surface); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+  .navlink.on .gi { background: var(--accent); }
+  .nav .spacer { flex: 1; }
+  .ext { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
+  .ext-h { display: flex; align-items: center; gap: 6px; padding: 2px 6px 6px; }
+  .ext-h .t { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--text); }
+  .ext-h .add { margin-left: auto; width: 16px; height: 16px; border-radius: 4px; border: 1px dashed var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; line-height: 1; }
+  .ext-row { display: flex; align-items: center; gap: 7px; padding: 4px 6px; font-size: 10px; color: var(--dim); }
+  .ext-row .gi { width: 10px; height: 10px; border-radius: 3px; background: var(--muted); }
+  .ws { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; font-size: 9.5px; color: var(--dim); }
+  .ws .av { width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
+
+  /* decks view */
+  .deckview { flex: 1; padding: 14px; min-width: 0; }
+  .filters { display: flex; gap: 6px; margin-bottom: 12px; }
+  .deckgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .deckcard { border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); aspect-ratio: 4/3; position: relative; overflow: hidden; }
+  .deckcard.add { display: flex; align-items: center; justify-content: center; border-style: dashed; color: var(--dim); font-size: 22px; font-family: var(--mono); }
+  .deckcard.live { background: radial-gradient(circle at 50% 35%, #1a2b6b 0, #0c1024 75%); }
+  .deckcard .cap { position: absolute; left: 8px; bottom: 7px; font-size: 9px; color: var(--text); }
+
+  /* agent peer */
+  .agent { background: var(--surface-2); border-left: 1px solid var(--accent-2); display: flex; flex-direction: column; min-height: 0; }
+  .agent.dim { border-left-color: var(--border); opacity: 0.92; }
+  .agent-h { padding: 8px 11px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 7px; }
+  .agent-h .d2 { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
+  .agent-h b { font-size: 10.5px; }
+  .agent-h .badge { margin-left: auto; font-family: var(--mono); font-size: 8px; color: var(--accent-2); border: 1px solid var(--border); border-radius: 99px; padding: 1px 7px; }
+  .agent-body { flex: 1; padding: 11px; display: flex; flex-direction: column; gap: 7px; min-height: 0; }
+  .sugg { border: 1px solid var(--border); border-radius: 7px; background: var(--ground); padding: 7px 9px; font-size: 10px; color: #c2d2c9; }
+  .agent-foot { padding: 9px; border-top: 1px solid var(--border); }
+  .composer { border: 1px solid var(--border); border-radius: 8px; background: var(--ground); padding: 8px; }
+  .composer .ph { font-size: 9.5px; color: var(--dim); margin-bottom: 9px; }
+  .composer .row { display: flex; align-items: center; gap: 6px; }
+  .composer .row .send { margin-left: auto; width: 18px; height: 18px; border-radius: 5px; background: var(--accent); }
+
+  /* editor inner pieces */
+  .dock { background: var(--surface-2); border-right: 1px solid var(--border); }
+  .tabs { display: flex; gap: 2px; padding: 6px 6px 0; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .tab { font-family: var(--mono); font-size: 9.5px; padding: 5px 9px; color: var(--dim); border-radius: 4px 4px 0 0; }
+  .tab.on { color: var(--text); background: var(--ground); box-shadow: inset 0 -1.5px 0 var(--accent); }
+  .thumbs { padding: 8px; display: flex; flex-direction: column; gap: 7px; overflow: hidden; }
+  .thumb { aspect-ratio: 16/9; border-radius: 3px; background: #0e1512; border: 1px solid var(--border); position: relative; }
+  .thumb.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,211,102,0.18); }
+  .thumb::before { content: attr(data-n); position: absolute; left: 4px; top: 3px; font-family: var(--mono); font-size: 8px; color: var(--dim); }
+  .insp { background: var(--surface-2); border-left: 1px solid var(--border); }
+  .acc { padding: 9px 11px; border-bottom: 1px solid var(--border); }
+  .acc-h { display: flex; align-items: center; justify-content: space-between; }
+  .acc-h .cv { color: var(--dim); font-family: var(--mono); font-size: 11px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .field { height: 19px; border-radius: 4px; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; padding: 0 6px; font-family: var(--mono); font-size: 9px; color: var(--dim); }
+  .floatbar { position: absolute; display: flex; gap: 4px; align-items: center; padding: 4px 5px; border-radius: 6px; background: #0c120f; border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  .fb-ico { width: 15px; height: 15px; border-radius: 3px; background: var(--surface); border: 1px solid var(--border); }
+  .fb-ico.act { background: rgba(37,211,102,0.16); border-color: var(--accent); }
+  .zoom { position: absolute; right: 10px; bottom: 8px; display: flex; gap: 4px; }
+
+  /* pins + notes */
+  .pin {
+    position: absolute; z-index: 6; width: 22px; height: 22px; border-radius: 50%;
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ground); background: var(--accent); border: 2px solid var(--ground);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 4px 10px rgba(0,0,0,0.5);
+    cursor: pointer; transform: translate(-50%, -50%); transition: transform 0.14s ease;
+  }
+  .pin.bad { background: var(--problem); box-shadow: 0 0 0 1.5px var(--problem), 0 4px 10px rgba(0,0,0,0.5); }
+  .pin:hover, .pin.hot { transform: translate(-50%, -50%) scale(1.22); z-index: 8; }
+
+  .notes { display: flex; flex-direction: column; gap: 10px; }
+  .note {
+    border: 1px solid var(--border); border-left: 2px solid var(--accent);
+    background: var(--surface-2); border-radius: 6px; padding: 12px 14px;
+    transition: border-color 0.14s ease, background 0.14s ease, transform 0.14s ease;
+  }
+  .note.bad { border-left-color: var(--problem); }
+  .note.hot { border-color: var(--accent); background: var(--surface); transform: translateX(2px); }
+  .note.bad.hot { border-color: var(--problem); }
+  .note-h { display: flex; align-items: center; gap: 9px; margin-bottom: 5px; }
+  .note-n {
+    width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; color: var(--ground); background: var(--accent);
+  }
+  .note.bad .note-n { background: var(--problem); }
+  .note-h h4 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .note p { margin: 0; font-size: 12.5px; color: #c2d2c9; }
+  .src {
+    display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
+    color: var(--accent-2); border: 1px solid var(--border); border-radius: 99px; padding: 2px 9px; background: rgba(0,255,163,0.05);
+  }
+  .note.bad .src { color: #ff9a94; background: rgba(255,90,82,0.06); }
+  .legend { font-family: var(--mono); font-size: 11px; color: var(--dim); margin: 10px 0 0; }
+  .legend b { color: var(--text); }
+
+  /* what's new inventory */
+  .newgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 820px){ .newgrid { grid-template-columns: 1fr; } }
+  .newcol { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 14px 16px; }
+  .newcol h6 { font-family: var(--mono); font-size: 12px; margin: 0 0 10px; color: var(--text); display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .newcol h6 .ct { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .newlist { list-style: none; margin: 0; padding: 0; }
+  .newlist li { font-size: 12px; color: #c2d2c9; padding: 5px 0; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: baseline; }
+  .newlist li:first-child { border-top: 0; }
+  .newlist b { color: var(--text); font-weight: 600; }
+  .tag { flex: 0 0 auto; font-family: var(--mono); font-size: 8.5px; font-weight: 700; letter-spacing: 0.04em; padding: 1px 5px; border-radius: 3px; margin-top: 1px; }
+  .tag.add { background: var(--accent); color: var(--ground); }
+  .tag.chg { background: rgba(0,255,163,0.12); color: var(--accent-2); border: 1px solid var(--border); }
+  .tag.keep { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+  .tag.cut { background: rgba(255,90,82,0.1); color: #ff9a94; border: 1px solid var(--problem-dim, #5c2522); }
+
+  /* collapse affordance + states */
+  .coll { font-family: var(--mono); font-size: 9px; color: var(--dim); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; height: 15px; line-height: 13px; display: inline-flex; align-items: center; }
+  .brand .coll { margin-left: auto; }
+  .agent-h .coll { margin-left: 6px; }
+  .collstrip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 820px){ .collstrip { grid-template-columns: 1fr 1fr; } }
+  .collcard { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 14px 16px; }
+  .collcard h6 { font-family: var(--mono); font-size: 12px; margin: 0 0 5px; color: var(--text); }
+  .collcard p { margin: 0; font-size: 11.5px; color: #c2d2c9; }
+  .colldemo { display: flex; align-items: center; gap: 9px; height: 42px; margin-bottom: 11px; }
+  .colldemo .wide { flex: 1; height: 100%; border: 1px solid var(--accent); border-radius: 5px; background: linear-gradient(180deg, var(--surface), var(--ground)); }
+  .colldemo .rail { width: 12px; height: 100%; border: 1px solid var(--border); border-radius: 4px; background: var(--ground); }
+  .colldemo .ar { color: var(--dim); font-family: var(--mono); font-size: 13px; flex: 0 0 auto; }
+
+  /* provenance + spec */
+  .prov { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 760px){ .prov { grid-template-columns: 1fr; } }
+  .prov-card { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 16px 18px; }
+  .prov-card.lead { border-color: var(--accent-2); }
+  .prov-card h3 { font-family: var(--mono); font-size: 14px; margin: 0 0 4px; color: var(--accent-2); }
+  .prov-card .from { font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .prov-card ul { margin: 10px 0 0; padding-left: 16px; font-size: 12.5px; color: #c2d2c9; }
+  .prov-card li { margin: 4px 0; }
+
+  .table-scroll { overflow-x: auto; }
+  table.spec { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; min-width: 560px; }
+  table.spec th, table.spec td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  table.spec th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); font-weight: 500; }
+  table.spec td.k { font-family: var(--mono); color: var(--text); white-space: nowrap; }
+  table.spec td.was { font-family: var(--mono); color: #ff9a94; }
+  table.spec td.now { font-family: var(--mono); color: var(--accent-2); }
+  table.spec tr:hover td { background: var(--surface-2); }
+
+  .foot { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .foot b { color: var(--text); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .mock.seen .pin { animation: pop 0.4s backwards; }
+    @keyframes pop { from { opacity: 0; transform: translate(-50%,-50%) scale(0.3); } to { opacity: 1; } }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="titleblock">
+    <div>
+      <p class="eyebrow">Shell &amp; Agent · Design Review</p>
+      <h1>Slides<br><span class="lo">outside-in rework</span></h1>
+    </div>
+    <div class="meta">
+      SHEET <b>02 / 02</b><br>
+      TARGET <b>apps/slides shell</b><br>
+      PATTERNS <b>Agent Native · Figma · PPT</b><br>
+      STATUS <b style="color:var(--accent)">PROPOSAL</b>
+    </div>
+  </header>
+
+  <p class="thesis">
+    Sheet 01 reworked the editor's panels. This sheet steps out one level. The agent doesn't decorate the
+    editor — it <b>drives the whole app</b>: it navigates between decks, swaps slides, applies themes, reads
+    your selection (see <code>navigation</code>, <code>app-theme-command</code>, <code>pending-selection-context</code>
+    bridges in <code>AppShell.tsx</code>). So it can't be a panel inside one view. It's a <b>peer of the app</b> —
+    a persistent column that stays put while the view underneath it changes.
+  </p>
+  <p class="thesis">
+    Design <b>outside-in</b>: get the shell frame right first — left nav, agent peer, top bar — then the editor
+    is just one view that slots into the middle. Borrow Agent Native's own slide-template shell: structured nav,
+    an <b>Extensions tray you can extend ad-hoc</b>, a workspace switcher, and a Chat peer that's always reachable.
+  </p>
+
+  <!-- ════════ ANATOMY ════════ -->
+  <p class="band-head">The frame hierarchy</p>
+  <div class="anatomy">
+    <div class="frame-shell">
+      <span class="frame-tag">App Shell — persistent</span>
+      <div class="frame-row">
+        <div class="frame-cell">
+          <h5>Left nav</h5>
+          <p>Where am I, where can I go. Decks · Design Systems.</p>
+          <span class="pill">+ Extensions</span><span class="pill">collapses → rail</span>
+        </div>
+        <div class="frame-cell view">
+          <h5>View — swaps</h5>
+          <p>The only region that changes when you navigate.</p>
+          <div class="swap">now: <b>Decks</b> &nbsp;·&nbsp; or <b>Editor</b> &nbsp;·&nbsp; or <b>Themes</b></div>
+        </div>
+        <div class="frame-cell agent">
+          <h5>Agent peer</h5>
+          <p>Controls every view — nav, slides, theme, selection. Never unmounts.</p>
+          <span class="pill">acts ON the app</span><span class="pill">collapses → tab</span>
+        </div>
+      </div>
+    </div>
+    <p class="ann">
+      Left nav and Agent are <b>siblings of the view, not children of it</b> — they live at shell level and
+      outlast any single screen. The editor's own dock/inspector (Sheet 01) live one level deeper, inside the View cell.
+    </p>
+  </div>
+
+  <!-- ════════ PLATE A — SHELL AS BUILT ════════ -->
+  <div class="plate-head" style="margin-top:56px">
+    <span class="plate-no bad">AS&nbsp;BUILT</span>
+    <h2>Shell today: thin rail, agent as afterthought</h2>
+    <span class="sub">current</span>
+  </div>
+
+  <div class="plate-grid" style="margin-bottom:60px">
+    <div class="mock short" id="mock-a">
+      <div class="m-top">
+        <span class="dot" style="background:var(--accent)"></span>
+        <span class="lbl bright">Decks</span>
+        <span style="margin-left:auto"></span>
+        <span class="chip">＋ New Deck</span>
+        <span class="dot"></span>
+      </div>
+      <div class="m-body">
+        <!-- thin icon rail -->
+        <div class="m-col nav" style="width:8%;align-items:center;padding:8px 4px">
+          <span class="dot" style="background:linear-gradient(135deg,var(--accent),var(--accent-2))"></span>
+          <span class="dot" style="margin-top:10px;background:var(--accent)"></span>
+          <span class="dot" style="margin-top:6px"></span>
+          <span class="spacer"></span>
+          <span class="dot"></span>
+        </div>
+        <div class="deckview">
+          <div class="filters"><span class="chip">All</span><span class="chip ghost">Mine</span></div>
+          <div class="deckgrid">
+            <div class="deckcard add">＋</div>
+            <div class="deckcard live"><span class="cap">Understanding LLMs</span></div>
+            <div class="deckcard" style="opacity:0.35"></div>
+          </div>
+        </div>
+        <!-- agent only if toggled -->
+        <div class="m-col agent dim" style="width:24%">
+          <div class="agent-h"><span class="dot" style="width:8px;height:8px;border-radius:50%"></span><b>Agent</b><span class="badge" style="color:var(--dim)">toggle</span></div>
+          <div class="agent-body"><div class="sugg" style="opacity:0.5">Ask about this deck</div></div>
+        </div>
+      </div>
+
+      <span class="pin bad" style="left:4%;top:55%"  data-id="a1">1</span>
+      <span class="pin bad" style="left:88%;top:30%" data-id="a2">2</span>
+      <span class="pin bad" style="left:4%;top:88%"  data-id="a3">3</span>
+    </div>
+
+    <div class="notes" id="notes-a">
+      <div class="note bad" data-id="a1">
+        <div class="note-h"><span class="note-n">1</span><h4>Nav is two icons</h4></div>
+        <p>The rail holds only Decks and Theme as bare icons plus a collapse button. No Team, no Design Systems, no sense of the product's surface area.</p>
+      </div>
+      <div class="note bad" data-id="a2">
+        <div class="note-h"><span class="note-n">2</span><h4>Agent is opt-in, not a peer</h4></div>
+        <p>It's a conditional <code>&lt;aside&gt;</code> behind a toggle button buried in the rail. The thing that can drive the whole app reads as an optional add-on.</p>
+      </div>
+      <div class="note bad" data-id="a3">
+        <div class="note-h"><span class="note-n">3</span><h4>No extensions, no workspace</h4></div>
+        <p>No way to add a capability ad-hoc, no workspace/account anchor at the foot of the rail. The shell can't grow with the user.</p>
+      </div>
+      <p class="legend">The architecture already supports a peer — <b>the agent is a sibling of <code>&lt;main&gt;</code></b>. It just isn't presented as one.</p>
+    </div>
+  </div>
+
+  <!-- ════════ PLATE B — SHELL PROPOSED ════════ -->
+  <div class="plate-head">
+    <span class="plate-no">PROPOSED</span>
+    <h2>Shell reworked: nav · view · agent peer</h2>
+    <span class="sub">hover a pin →</span>
+  </div>
+
+  <div class="plate-grid" style="margin-bottom:60px">
+    <div class="mock" id="mock-b">
+      <div class="m-top">
+        <span class="lbl bright">Decks</span>
+        <span style="margin-left:auto"></span>
+        <span class="chip solid">＋ New Deck</span>
+        <span class="sep"></span>
+        <span class="chip">⌘K</span>
+        <span class="chip">◐ Chat</span>
+      </div>
+      <div class="m-body">
+        <!-- structured nav -->
+        <div class="m-col nav" style="width:18%">
+          <div class="brand"><span class="mk"></span><b>Slides</b><span class="coll">‹‹</span></div>
+          <span class="navlink on"><span class="gi"></span>Decks</span>
+          <span class="navlink"><span class="gi"></span>Design Systems</span>
+          <span class="spacer"></span>
+          <div class="ext">
+            <div class="ext-h"><span class="t">Extensions</span><span class="add">＋</span></div>
+            <div class="ext-row"><span class="gi"></span>Brand kit</div>
+            <div class="ext-row"><span class="gi"></span>Chart pack</div>
+          </div>
+          <div class="ws"><span class="av"></span>Hoangng71299's…</div>
+        </div>
+
+        <div class="deckview">
+          <div class="filters"><span class="chip solid">All</span><span class="chip ghost">Mine</span></div>
+          <div class="deckgrid">
+            <div class="deckcard add">＋</div>
+            <div class="deckcard live"><span class="cap">Understanding LLMs · 4 slides</span></div>
+            <div class="deckcard" style="opacity:0.3"></div>
+            <div class="deckcard" style="opacity:0.2"></div>
+            <div class="deckcard" style="opacity:0.12"></div>
+            <div class="deckcard" style="opacity:0.07"></div>
+          </div>
+        </div>
+
+        <!-- agent peer -->
+        <div class="m-col agent" style="width:25%">
+          <div class="agent-h"><span class="d2"></span><b>Chat</b><span class="badge">app peer</span><span class="coll">››</span></div>
+          <div class="agent-body">
+            <div class="sugg">What should I do next here?</div>
+            <div class="sugg">Build a 10-slide pitch from this doc</div>
+            <div class="sugg">Apply our brand to this deck</div>
+          </div>
+          <div class="agent-foot">
+            <div class="composer">
+              <div class="ph">Message agent…</div>
+              <div class="row"><span class="chip">＋</span><span class="chip">Sonnet 4.6 ▾</span><span class="chip">Act ▾</span><span class="send"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="pin" style="left:9%;top:11%"  data-id="b2">2</span>
+      <span class="pin" style="left:9%;top:68%"  data-id="b3">3</span>
+      <span class="pin" style="left:9%;top:90%"  data-id="b4">4</span>
+      <span class="pin" style="left:88.5%;top:14%" data-id="b1">1</span>
+      <span class="pin" style="left:88.5%;top:46%" data-id="b5">5</span>
+      <span class="pin" style="left:74%;top:5%"   data-id="b6">6</span>
+    </div>
+
+    <div class="notes" id="notes-b">
+      <div class="note" data-id="b1">
+        <div class="note-h"><span class="note-n">1</span><h4>Agent is a first-class peer</h4></div>
+        <p>A persistent right column at shell level — same width and home in every view. It's the thing that drives the app, so it's always there, not a toggle. Collapsible, but present by default.</p>
+        <span class="src">Agent Native shell · Cursor / VS Code chat dock</span>
+      </div>
+      <div class="note" data-id="b2">
+        <div class="note-h"><span class="note-n">2</span><h4>Nav shows the surface area</h4></div>
+        <p>Decks · Design Systems · Team as labelled rows with a brand mark up top — you can see everything the product does at a glance, not decode two icons.</p>
+        <span class="src">Agent Native nav · Linear sidebar</span>
+      </div>
+      <div class="note" data-id="b3">
+        <div class="note-h"><span class="note-n">3</span><h4>Extensions, added ad-hoc</h4></div>
+        <p>An Extensions tray with a <b>＋</b> to bolt on capabilities (brand kit, chart pack, an MCP tool) without a rebuild. The shell grows with the user — the part you liked most in the reference.</p>
+        <span class="src">Agent Native extensions · VS Code marketplace</span>
+      </div>
+      <div class="note" data-id="b4">
+        <div class="note-h"><span class="note-n">4</span><h4>Workspace + account anchor</h4></div>
+        <p>Workspace switcher and Feedback pinned to the foot of the rail — the stable "who/where am I" anchor every pro tool keeps bottom-left.</p>
+        <span class="src">Figma / Slack workspace switcher</span>
+      </div>
+      <div class="note" data-id="b5">
+        <div class="note-h"><span class="note-n">5</span><h4>Suggestions are contextual</h4></div>
+        <p>The peer offers view-aware prompts — "what should I do next here", "apply our brand" on Decks; different set in the editor. Same column, context-sensitive content.</p>
+        <span class="src">Agent Native suggestions</span>
+      </div>
+      <div class="note" data-id="b6">
+        <div class="note-h"><span class="note-n">6</span><h4>Top bar = view actions only</h4></div>
+        <p>The top bar carries just this view's actions (New Deck, command palette, chat toggle). Global nav lives left, agent lives right — each region has one job.</p>
+        <span class="src">PowerPoint ribbon scope · Figma top bar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ PLATE C — EDITOR INSIDE THE SHELL ════════ -->
+  <div class="plate-head">
+    <span class="plate-no">PROPOSED</span>
+    <h2>Editor is one view — the agent peer persists beside it</h2>
+    <span class="sub">Sheet 01 panels, now nested correctly</span>
+  </div>
+
+  <div class="plate-grid">
+    <div class="mock" id="mock-c">
+      <div class="m-top">
+        <span class="chip">‹ Decks</span><span class="chip">SSH ▸ Slide 04</span>
+        <span style="margin-left:auto"></span>
+        <span class="chip">↶</span><span class="chip">↷</span>
+        <span class="sep"></span>
+        <span class="chip">⊞ Snap</span>
+        <span class="sep"></span>
+        <span class="chip">▶ Present</span><span class="chip solid">Share</span>
+        <span class="chip">◐</span>
+      </div>
+      <div class="m-body">
+        <!-- shell nav stays -->
+        <div class="m-col nav" style="width:9%;align-items:center;padding:8px 4px">
+          <span class="dot" style="background:linear-gradient(135deg,var(--accent),var(--accent-2))"></span>
+          <span class="dot" style="margin-top:10px"></span>
+          <span class="dot" style="margin-top:6px"></span>
+          <span class="dot" style="margin-top:6px"></span>
+          <span class="spacer"></span>
+          <span class="dot" style="border:1px dashed var(--accent);background:transparent"></span>
+        </div>
+
+        <!-- VIEW = editor: dock | canvas | inspector -->
+        <div class="m-col dock" style="width:15%">
+          <div class="tabs"><span class="tab on">Slides</span><span class="tab">Layers</span><span class="tab">Insert</span><span class="coll" style="margin-left:auto;align-self:center">‹</span></div>
+          <div class="thumbs">
+            <div class="thumb" data-n="01"></div>
+            <div class="thumb on" data-n="04"></div>
+            <div class="thumb" data-n="05"></div>
+          </div>
+        </div>
+
+        <div class="m-canvas">
+          <div class="slide16">
+            <div class="blk title"></div>
+            <div class="blk body"></div>
+            <div class="blk sel">
+              <i class="handle tl"></i><i class="handle tr"></i><i class="handle bl"></i><i class="handle br"></i>
+            </div>
+            <div class="floatbar" style="left:60%;top:30%">
+              <span class="fb-ico act"></span><span class="fb-ico"></span><span class="fb-ico"></span>
+              <span style="width:1px;align-self:stretch;background:var(--border)"></span>
+              <span class="fb-ico"></span>
+            </div>
+          </div>
+          <div class="zoom"><span class="chip">−</span><span class="chip">Fit</span><span class="chip">+</span></div>
+        </div>
+
+        <div class="m-col insp" style="width:20%">
+          <div class="tabs"><span class="tab on">Design</span><span class="tab">Animate</span><span class="tab">Notes</span><span class="coll" style="margin-left:auto;align-self:center">›</span></div>
+          <div class="acc"><div class="acc-h"><span class="lbl bright">Position &amp; size</span><span class="cv">▾</span></div>
+            <div class="fields"><span class="field">X 60</span><span class="field">Y 36</span><span class="field">W 30</span><span class="field">H 40</span></div>
+          </div>
+          <div class="acc"><div class="acc-h"><span class="lbl bright">Appearance</span><span class="cv">▾</span></div>
+            <div class="fields"><span class="field">Fill</span><span class="field">Opacity</span></div>
+          </div>
+          <div class="acc"><div class="acc-h"><span class="lbl">Text</span><span class="cv">▸</span></div></div>
+        </div>
+
+        <!-- SAME agent peer, persists -->
+        <div class="m-col agent" style="width:22%">
+          <div class="agent-h"><span class="d2"></span><b>Chat</b><span class="badge">same peer</span><span class="coll">››</span></div>
+          <div class="agent-body">
+            <div class="sugg">Tighten the copy on this slide</div>
+            <div class="sugg">Match slide 03's layout</div>
+          </div>
+          <div class="agent-foot">
+            <div class="composer">
+              <div class="ph">Message agent…</div>
+              <div class="row"><span class="chip">＋</span><span class="chip">Sonnet 4.6 ▾</span><span class="send"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="pin" style="left:24%;top:30%" data-id="c1">A</span>
+      <span class="pin" style="left:78.5%;top:30%" data-id="c2">B</span>
+      <span class="pin" style="left:89%;top:14%" data-id="c3">C</span>
+      <span class="pin" style="left:60%;top:23%" data-id="c4">D</span>
+    </div>
+
+    <div class="notes" id="notes-c">
+      <div class="note" data-id="c1">
+        <div class="note-h"><span class="note-n">A</span><h4>Editor lives in the View cell</h4></div>
+        <p>Dock (Slides/Layers/Insert) and inspector (Design/Animate/Notes) from Sheet 01 sit <b>inside</b> the swappable middle — they're view chrome, not shell chrome. Leave the editor and they unmount; nav and agent don't.</p>
+        <span class="src">Sheet 01 · Figma left/right roles</span>
+      </div>
+      <div class="note" data-id="c2">
+        <div class="note-h"><span class="note-n">B</span><h4>Agent peer is the same column</h4></div>
+        <p>The Chat peer here is the exact column from the Decks view — same position, same thread, now showing editor-aware suggestions. Switching views never tears it down or moves it.</p>
+        <span class="src">persistent shell peer</span>
+      </div>
+      <div class="note" data-id="c3">
+        <div class="note-h"><span class="note-n">C</span><h4>It can act on what you see</h4></div>
+        <p>Because it's a peer, "match slide 03's layout" can navigate, edit the selected block, and re-theme — driving the view from outside it. A nested panel couldn't reach past its own view.</p>
+        <span class="src">navigation · selection · theme bridges</span>
+      </div>
+      <div class="note" data-id="c4">
+        <div class="note-h"><span class="note-n">D</span><h4>Four columns, still breathes</h4></div>
+        <p>Nav (collapsible) · dock · canvas · inspector · agent. On a laptop, collapse nav to a rail and the agent to a tab — the canvas always wins the contested middle.</p>
+        <span class="src">VS Code collapsible docks</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ WHAT'S NEW ════════ -->
+  <p class="band-head">What's new — full inventory</p>
+  <div class="newgrid">
+    <div class="newcol">
+      <h6>Shell chrome &nbsp;<span class="ct">persistent</span></h6>
+      <ul class="newlist">
+        <li><span class="tag add">NEW</span><b>Agent peer</b> — toggled aside → always-present shell column</li>
+        <li><span class="tag add">NEW</span><b>Every bar collapses</b> — nav · agent · dock · inspector fold to a rail/tab</li>
+        <li><span class="tag add">NEW</span><b>Design Systems</b> nav destination</li>
+        <li><span class="tag add">NEW</span><b>Extensions tray</b> with ad-hoc <b>＋ add</b></li>
+        <li><span class="tag add">NEW</span><b>Workspace switcher</b> + Feedback (foot of nav)</li>
+        <li><span class="tag add">NEW</span><b>Command palette</b> (⌘K) in the top bar</li>
+        <li><span class="tag chg">CHG</span>Nav icons → <b>labelled rows</b> + brand mark</li>
+        <li><span class="tag chg">CHG</span>Top bar scoped to <b>current-view actions only</b></li>
+        <li><span class="tag cut">CUT</span><b>Team</b> — collaborator mgmt, not needed for decks</li>
+      </ul>
+    </div>
+    <div class="newcol">
+      <h6>Agent peer &nbsp;<span class="ct">drives the app</span></h6>
+      <ul class="newlist">
+        <li><span class="tag add">NEW</span><b>Context-aware suggestions</b> per view (Decks vs Editor)</li>
+        <li><span class="tag add">NEW</span><b>Model + mode selector</b> in composer (Sonnet 4.6 · Act)</li>
+        <li><span class="tag add">NEW</span><b>"app peer" status</b> — visible that it acts on the app</li>
+        <li><span class="tag keep">USE</span>Existing <code>navigation</code> bridge — agent navigates</li>
+        <li><span class="tag keep">USE</span>Existing <code>app-theme-command</code> — agent re-themes</li>
+        <li><span class="tag keep">USE</span>Existing <code>pending-selection-context</code> — agent reads selection</li>
+      </ul>
+    </div>
+    <div class="newcol">
+      <h6>View chrome &nbsp;<span class="ct">Sheet 01, re-nested</span></h6>
+      <ul class="newlist">
+        <li><span class="tag add">NEW</span><b>Left dock</b>: Slides · Layers · Insert tabs</li>
+        <li><span class="tag add">NEW</span><b>Tabbed inspector</b>: Design · Animate · Notes</li>
+        <li><span class="tag add">NEW</span><b>Floating toolbar</b> on the selected block</li>
+        <li><span class="tag add">NEW</span><b>Persistent zoom / fit</b> on the canvas</li>
+        <li><span class="tag add">NEW</span><b>Insert as searchable library</b> (flyout)</li>
+        <li><span class="tag add">NEW</span><b>Dock + inspector collapse</b> to give the canvas the middle</li>
+        <li><span class="tag chg">CHG</span>Layers <b>190px cap → full height</b></li>
+        <li><span class="tag chg">CHG</span>4-panel scroll column → <b>split by job</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════ COLLAPSE STATES ════════ -->
+  <p class="band-head">Every bar collapses</p>
+  <p class="legend" style="margin:-6px 2px 16px">Each region folds independently and remembers its state. On a laptop, collapse what you don't need — the canvas always takes the reclaimed width. Nothing unmounts; it just narrows.</p>
+  <div class="collstrip">
+    <div class="collcard">
+      <div class="colldemo"><span class="wide"></span><span class="ar">→</span><span class="rail"></span></div>
+      <h6>Left nav</h6>
+      <p>Folds to a ~44px icon rail. Brand mark + active icons stay; labels return on expand.</p>
+    </div>
+    <div class="collcard">
+      <div class="colldemo"><span class="wide"></span><span class="ar">→</span><span class="rail"></span></div>
+      <h6>Editor dock</h6>
+      <p>Collapses left. A thin reopen tab (Slides ▸) stays pinned so structure is one click away.</p>
+    </div>
+    <div class="collcard">
+      <div class="colldemo"><span class="rail"></span><span class="ar">←</span><span class="wide"></span></div>
+      <h6>Inspector</h6>
+      <p>Collapses right to a Design ▸ tab. Reopens on the section you last had open.</p>
+    </div>
+    <div class="collcard">
+      <div class="colldemo"><span class="rail" style="border-color:var(--accent-2)"></span><span class="ar">←</span><span class="wide" style="border-color:var(--accent-2)"></span></div>
+      <h6>Agent peer</h6>
+      <p>Collapses to a Chat ▸ tab on the right edge — thread intact, summonable from any view.</p>
+    </div>
+  </div>
+
+  <!-- ════════ PROVENANCE ════════ -->
+  <p class="band-head">Where each idea comes from</p>
+  <div class="prov">
+    <div class="prov-card lead">
+      <span class="from">Lead reference</span>
+      <h3>Agent Native shell</h3>
+      <ul>
+        <li>Chat as a persistent app-level peer, not a view panel</li>
+        <li>Structured nav: Decks · Design Systems</li>
+        <li>Extensions tray with ad-hoc ＋ add</li>
+        <li>Workspace switcher + Feedback pinned bottom-left</li>
+      </ul>
+    </div>
+    <div class="prov-card">
+      <span class="from">Borrowed from</span>
+      <h3>Figma · VS Code</h3>
+      <ul>
+        <li>Fixed left/right region roles that survive view changes</li>
+        <li>Collapsible docks so the canvas wins the middle</li>
+        <li>A side dock you summon, that never reflows the work area</li>
+      </ul>
+    </div>
+    <div class="prov-card">
+      <span class="from">Borrowed from</span>
+      <h3>PowerPoint · Linear</h3>
+      <ul>
+        <li>Top bar scoped to the current view's actions only</li>
+        <li>Labelled nav rows over bare icons</li>
+        <li>Command palette (⌘K) as the universal entry point</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════ SPEC ════════ -->
+  <p class="band-head">Shell regions &amp; behaviour</p>
+  <div class="table-scroll">
+    <table class="spec">
+      <thead><tr><th>Region</th><th>Today</th><th>Proposed</th><th>Lifecycle</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Left nav</td><td class="was">2 icons + toggle</td><td class="now">labelled rows</td><td>Shell-level. Decks · Design Systems · Team. Collapsible to rail.</td></tr>
+        <tr><td class="k">Extensions</td><td class="was">— (none)</td><td class="now">tray + ＋ add</td><td>Shell-level, foot of nav. Ad-hoc capabilities.</td></tr>
+        <tr><td class="k">Workspace</td><td class="was">— (none)</td><td class="now">switcher chip</td><td>Shell-level anchor + Feedback.</td></tr>
+        <tr><td class="k">Agent</td><td class="was">toggled aside</td><td class="now">persistent peer</td><td>Shell-level sibling of the view. Survives navigation; collapsible.</td></tr>
+        <tr><td class="k">View</td><td class="was">main slot</td><td class="now">swappable cell</td><td>The only region that changes: Decks / Editor / Themes.</td></tr>
+        <tr><td class="k">Editor dock</td><td class="was">in right panel</td><td class="now">view-level left</td><td>Inside the View. Slides · Layers · Insert. Collapses to a reopen tab. Unmounts on leave.</td></tr>
+        <tr><td class="k">Inspector</td><td class="was">in right panel</td><td class="now">view-level right</td><td>Inside the View. Design · Animate · Notes. Collapses right to a tab.</td></tr>
+        <tr><td class="k">Top bar</td><td class="was">mixed scope</td><td class="now">view actions</td><td>Only the current view's actions; nav left, agent right.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="foot">
+    Wireframe, not pixel-final — palette &amp; tokens from the app's dark-green theme
+    (<span style="color:var(--accent)">#25d366</span>). <b>Load-bearing move:</b> promote the agent from a toggled
+    <code>&lt;aside&gt;</code> to a persistent shell peer, and split shell-chrome (nav, agent, extensions) from
+    view-chrome (dock, inspector). The architecture already has the agent as a sibling of <code>&lt;main&gt;</code> —
+    this is mostly presentation + an Extensions tray, then the Sheet&nbsp;01 editor slots into the View cell.
+  </p>
+
+</div>
+
+<script>
+  function link(mockId, notesId) {
+    var mock = document.getElementById(mockId);
+    var notes = document.getElementById(notesId);
+    if (!mock || !notes) return;
+    function set(id, on) {
+      var p = mock.querySelector('.pin[data-id="' + id + '"]');
+      var n = notes.querySelector('.note[data-id="' + id + '"]');
+      if (p) p.classList.toggle('hot', on);
+      if (n) n.classList.toggle('hot', on);
+    }
+    mock.querySelectorAll('.pin').forEach(function (p) {
+      var id = p.getAttribute('data-id');
+      p.addEventListener('mouseenter', function () { set(id, true); });
+      p.addEventListener('mouseleave', function () { set(id, false); });
+      p.addEventListener('click', function () {
+        var n = notes.querySelector('.note[data-id="' + id + '"]');
+        if (n) n.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+    notes.querySelectorAll('.note').forEach(function (n) {
+      var id = n.getAttribute('data-id');
+      n.addEventListener('mouseenter', function () { set(id, true); });
+      n.addEventListener('mouseleave', function () { set(id, false); });
+    });
+  }
+  link('mock-a', 'notes-a');
+  link('mock-b', 'notes-b');
+  link('mock-c', 'notes-c');
+
+  if (window.IntersectionObserver) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) e.target.classList.add('seen'); });
+    }, { threshold: 0.25 });
+    document.querySelectorAll('.mock').forEach(function (m) { io.observe(m); });
+  }
+</script>

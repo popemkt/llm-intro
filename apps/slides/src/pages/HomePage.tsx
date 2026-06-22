@@ -4,9 +4,11 @@ import { motion } from "motion/react";
 import { Plus, Trash2, Presentation, Settings } from "lucide-react";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
 import { getErrorMessage } from "@/api/client";
-import { type ApiPresentation } from "@/types";
+import { type ApiPresentation, type ApiSlide } from "@/types";
 import { C } from "@/design/tokens";
 import { DeckCreatePanel } from "@/components/DeckCreatePanel";
+import { SlidePreview } from "@/components/SlidePreview";
+import { toUnifiedSlide } from "@/lib/presentationSlides";
 
 type HomeHeaderProps = {
   onSettings: () => void;
@@ -22,6 +24,7 @@ type DeckGridProps = {
   presentations: ApiPresentation[];
   onDelete: (id: number) => void;
   onOpen: (id: number) => void;
+  onCreate: () => void;
 };
 
 function HomeHeader({ onSettings, onToggleCreate }: HomeHeaderProps) {
@@ -116,7 +119,197 @@ function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
   );
 }
 
-function DeckGrid({ presentations, onDelete, onOpen }: DeckGridProps) {
+function NewDeckTile({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="New deck"
+      style={{
+        width: "100%",
+        background: "transparent",
+        border: `1px dashed ${C.border}`,
+        borderRadius: 12,
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        textAlign: "left",
+        color: C.textDim,
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          paddingBottom: "56.25%",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.surface,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: C.accent,
+            }}
+          >
+            <Plus size={20} />
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>New Deck</div>
+        <div
+          style={{
+            fontSize: 10,
+            color: C.muted,
+            fontFamily: "JetBrains Mono, monospace",
+            marginTop: 4,
+          }}
+        >
+          Create a deck or visual
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function DeckCard({
+  pres,
+  onOpen,
+  onDelete,
+}: {
+  pres: ApiPresentation;
+  onOpen: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
+  const slidesQuery = useActionQuery<ApiSlide[]>("list-slides", { pid: pres.id });
+  const slides = slidesQuery.data ?? [];
+  const cover =
+    slides.length > 0
+      ? toUnifiedSlide([...slides].sort((a, b) => a.position - b.position)[0], pres.theme)
+      : null;
+
+  return (
+    <motion.div whileHover={{ scale: 1.02 }} style={{ position: "relative" }}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpen(pres.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen(pres.id);
+          }
+        }}
+        aria-label={`Open ${pres.name}`}
+        style={{
+          width: "100%",
+          background: C.surface,
+          border: `1px solid ${C.border}`,
+          borderRadius: 12,
+          padding: 0,
+          textAlign: "left",
+          cursor: "pointer",
+          display: "block",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ background: "#070908", borderBottom: `1px solid ${C.border}` }}>
+          {cover ? (
+            <SlidePreview slide={cover} />
+          ) : (
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                paddingBottom: "56.25%",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 10,
+                  fontFamily: "JetBrains Mono, monospace",
+                  color: C.muted,
+                }}
+              >
+                {slidesQuery.isLoading ? "…" : "empty deck"}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Presentation size={14} style={{ color: C.accent, flexShrink: 0 }} />
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: C.text,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {pres.name}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              color: C.muted,
+              fontFamily: "JetBrains Mono, monospace",
+              marginTop: 4,
+            }}
+          >
+            {slides.length} slide{slides.length === 1 ? "" : "s"} · {pres.theme}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(pres.id);
+        }}
+        aria-label={`Delete ${pres.name}`}
+        style={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          background: "rgba(0,0,0,0.45)",
+          border: "none",
+          cursor: "pointer",
+          color: C.textDim,
+          padding: 5,
+          borderRadius: 6,
+        }}
+        title="Delete"
+      >
+        <Trash2 size={13} />
+      </button>
+    </motion.div>
+  );
+}
+
+function DeckGrid({ presentations, onDelete, onOpen, onCreate }: DeckGridProps) {
   return (
     <div
       style={{
@@ -125,58 +318,9 @@ function DeckGrid({ presentations, onDelete, onOpen }: DeckGridProps) {
         gap: 16,
       }}
     >
+      <NewDeckTile onClick={onCreate} />
       {presentations.map((pres) => (
-        <motion.div key={pres.id} whileHover={{ scale: 1.02 }} style={{ position: "relative" }}>
-          <button
-            onClick={() => onOpen(pres.id)}
-            aria-label={`Open ${pres.name}`}
-            style={{
-              width: "100%",
-              background: C.surface,
-              border: `1px solid ${C.border}`,
-              borderRadius: 12,
-              padding: "18px 20px",
-              textAlign: "left",
-              cursor: "pointer",
-              display: "block",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Presentation size={14} style={{ color: C.accent }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{pres.name}</span>
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                color: C.muted,
-                fontFamily: "JetBrains Mono, monospace",
-              }}
-            >
-              slides theme: {pres.theme}
-            </div>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(pres.id);
-            }}
-            aria-label={`Delete ${pres.name}`}
-            style={{
-              position: "absolute",
-              top: 10,
-              right: 10,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: C.muted,
-              padding: 4,
-              borderRadius: 6,
-            }}
-            title="Delete"
-          >
-            <Trash2 size={13} />
-          </button>
-        </motion.div>
+        <DeckCard key={pres.id} pres={pres} onOpen={onOpen} onDelete={onDelete} />
       ))}
     </div>
   );
@@ -231,13 +375,12 @@ export function HomePage() {
 
         {decksQuery.isLoading ? (
           <div style={{ fontSize: 12, color: C.textDim }}>Loading…</div>
-        ) : presentations.length === 0 ? (
-          <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>No decks yet.</div>
         ) : (
           <DeckGrid
             presentations={presentations}
             onDelete={(id) => void remove(id)}
             onOpen={(id) => navigate(`/p/${id}`)}
+            onCreate={() => setShowForm(true)}
           />
         )}
       </div>

@@ -42,6 +42,10 @@ import {
   Diamond,
   Hexagon,
   Maximize2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Quote,
   Scissors,
   StretchHorizontal,
@@ -77,7 +81,9 @@ import { HtmlSlideRenderer } from "@/components/HtmlSlideRenderer";
 import { SlideBlockInsertPanel } from "@/components/SlideBlockInsertPanel";
 import { ChartBlockView } from "@/components/ChartBlockView";
 import { SlideFeedbackInspector } from "@/components/SlideFeedbackInspector";
-import { SlideShell } from "@/components/SlideShell";
+import { SlidePreview } from "@/components/SlidePreview";
+import { SlideShell, SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT } from "@/components/SlideShell";
+import { toUnifiedSlide } from "@/lib/presentationSlides";
 import { codeSlideRegistry } from "@/slides/registry";
 import {
   getTransitionLayerZIndex,
@@ -948,6 +954,288 @@ function getBlockLayerName(block: Block) {
   return block.label?.trim() || `${block.shape} ${block.color}`;
 }
 
+type PanelTab = "insert" | "design" | "animate" | "notes" | "layers";
+
+const PANEL_TABS: { id: PanelTab; label: string }[] = [
+  { id: "insert", label: "Insert" },
+  { id: "design", label: "Design" },
+  { id: "animate", label: "Animate" },
+  { id: "notes", label: "Notes" },
+  { id: "layers", label: "Layers" },
+];
+
+/**
+ * Tab strip for the inspector panel. Splits the old single-scroll column
+ * (Insert + Assets + Properties + Layers) into one job per tab so nothing is
+ * buried below the fold and Layers is no longer height-capped.
+ */
+function InspectorTabs({
+  active,
+  onChange,
+  layerCount,
+  onCollapse,
+}: {
+  active: PanelTab;
+  onChange: (tab: PanelTab) => void;
+  layerCount: number;
+  onCollapse?: () => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        borderBottom: `1px solid ${C.border}`,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        role="tablist"
+        style={{
+          display: "flex",
+          gap: 2,
+          padding: "6px 6px 0",
+          flex: 1,
+          minWidth: 0,
+          overflowX: "auto",
+        }}
+      >
+        {PANEL_TABS.map((t) => {
+          const on = t.id === active;
+          const label = t.id === "layers" && layerCount > 0 ? `${t.label} ${layerCount}` : t.label;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => onChange(t.id)}
+              style={{
+                flex: 1,
+                padding: "7px 4px",
+                fontSize: 10.5,
+                fontWeight: 650,
+                fontFamily: "Inter, sans-serif",
+                whiteSpace: "nowrap",
+                color: on ? C.text : C.textDim,
+                background: on ? C.bg : "transparent",
+                border: "none",
+                borderRadius: "6px 6px 0 0",
+                boxShadow: on ? `inset 0 -2px 0 ${C.accent}` : "none",
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {onCollapse && (
+        <button
+          type="button"
+          onClick={onCollapse}
+          title="Hide inspector"
+          aria-label="Hide inspector"
+          style={{
+            flexShrink: 0,
+            border: "none",
+            background: "transparent",
+            color: C.textDim,
+            padding: "0 8px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <PanelRightClose size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Left slide dock — a thumbnail/title navigator so you can switch slides
+ * without leaving the editor. Collapses to a thin reopen rail, like the
+ * other shell/editor bars.
+ */
+function SlideDock({
+  slides,
+  currentSid,
+  open,
+  onToggle,
+  onNavigate,
+}: {
+  slides: UnifiedSlide[];
+  currentSid: number;
+  open: boolean;
+  onToggle: () => void;
+  onNavigate: (sid: number) => void;
+}) {
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        title="Show slides"
+        aria-label="Show slides"
+        style={{
+          width: 34,
+          flexShrink: 0,
+          borderRight: `1px solid ${C.border}`,
+          background: C.surface,
+          color: C.textDim,
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 12,
+          padding: "14px 0",
+        }}
+      >
+        <PanelLeftOpen size={15} />
+        <span
+          style={{
+            writingMode: "vertical-rl",
+            fontSize: 11,
+            fontWeight: 650,
+            letterSpacing: "0.08em",
+          }}
+        >
+          Slides
+        </span>
+      </button>
+    );
+  }
+  return (
+    <div
+      style={{
+        width: 208,
+        flexShrink: 0,
+        borderRight: `1px solid ${C.border}`,
+        background: C.surface,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 12px",
+          borderBottom: `1px solid ${C.border}`,
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 9,
+            fontFamily: "JetBrains Mono, monospace",
+            color: C.muted,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Slides ({slides.length})
+        </span>
+        <button
+          type="button"
+          onClick={onToggle}
+          title="Hide slides"
+          aria-label="Hide slides"
+          style={{
+            background: "none",
+            border: "none",
+            color: C.textDim,
+            cursor: "pointer",
+            display: "flex",
+            padding: 2,
+          }}
+        >
+          <PanelLeftClose size={14} />
+        </button>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: 8,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        {slides.map((s, i) => {
+          const on = s.id === currentSid;
+          return (
+            <div
+              key={s.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open slide ${i + 1}: ${s.title || "Untitled"}`}
+              onClick={() => onNavigate(s.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigate(s.id);
+                }
+              }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                padding: 6,
+                borderRadius: 9,
+                cursor: "pointer",
+                background: on ? C.accentSubtle : C.bg,
+                border: `1px solid ${on ? C.accent : C.border}`,
+                boxShadow: on ? `0 0 0 1px ${C.accent}` : "none",
+                color: on ? C.text : C.textDim,
+              }}
+            >
+              <div
+                style={{
+                  borderRadius: 5,
+                  overflow: "hidden",
+                  border: `1px solid ${C.border}`,
+                  background: "#070908",
+                }}
+              >
+                <SlidePreview slide={s} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontFamily: "JetBrains Mono, monospace",
+                    color: on ? C.accent : C.muted,
+                    minWidth: 16,
+                  }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {s.title || "Untitled"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function SlideEditorPage() {
   const { id: pidStr, sid: sidStr } = useParams<{ id: string; sid: string }>();
   const navigate = useNavigate();
@@ -972,6 +1260,53 @@ export function SlideEditorPage() {
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [activeGuides, setActiveGuides] = useState<ActiveGuide[]>([]);
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const [panelTab, setPanelTab] = useState<PanelTab>(
+    () => (localStorage.getItem("slides-editor-panel-tab") as PanelTab | null) ?? "design",
+  );
+  const [dockOpen, setDockOpen] = useState(
+    () => localStorage.getItem("slides-editor-dock-open") !== "false",
+  );
+  const [inspectorOpen, setInspectorOpen] = useState(
+    () => localStorage.getItem("slides-editor-inspector-open") !== "false",
+  );
+  const prevSelectedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("slides-editor-panel-tab", panelTab);
+  }, [panelTab]);
+  useEffect(() => {
+    localStorage.setItem("slides-editor-dock-open", String(dockOpen));
+  }, [dockOpen]);
+  useEffect(() => {
+    localStorage.setItem("slides-editor-inspector-open", String(inspectorOpen));
+  }, [inspectorOpen]);
+  // Fit the slide canvas to its frame by scaling a fixed logical 1000×562.5
+  // surface, so content stays proportional no matter how narrow the column
+  // gets when the dock / inspector / agent are open (otherwise vw-based text
+  // overflows the shrunken box and the frame clips it).
+  useEffect(() => {
+    const el = canvasFrameRef.current;
+    if (!el) return;
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      setCanvasScale(Math.min(width / SLIDE_CANVAS_WIDTH, height / SLIDE_CANVAS_HEIGHT));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [slideKind, dockOpen, inspectorOpen]);
+  // Jump to Design when a block is selected while browsing the Insert library,
+  // so its properties surface. Guarded so opening Insert with a block already
+  // selected doesn't bounce you straight back.
+  useEffect(() => {
+    const prev = prevSelectedIdRef.current;
+    prevSelectedIdRef.current = selectedId;
+    if (selectedId && selectedId !== prev && panelTab === "insert") {
+      setPanelTab("design");
+    }
+  }, [selectedId, panelTab]);
   const [gridStep, setGridStep] = useState(5);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loading, setLoading] = useState(true);
@@ -982,6 +1317,8 @@ export function SlideEditorPage() {
   const [canRedo, setCanRedo] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasFrameRef = useRef<HTMLDivElement>(null);
+  const [canvasScale, setCanvasScale] = useState(0.5);
   const dragRef = useRef<DragState | null>(null);
   const dragHistorySnapshotRef = useRef<SlideHistorySnapshot | null>(null);
   const pasteOffsetRef = useRef(1);
@@ -2015,7 +2352,6 @@ export function SlideEditorPage() {
           segments={[
             { label: "Home", to: "/" },
             { label: presName || "Deck", to: `/p/${pid}` },
-            { label: title },
           ]}
         />
         <div style={{ width: 1, height: 20, background: C.border }} />
@@ -2080,6 +2416,7 @@ export function SlideEditorPage() {
               >
                 <Redo2 size={14} />
               </button>
+              <div style={{ width: 1, height: 20, background: C.border, margin: "0 2px" }} />
               <button
                 type="button"
                 onClick={() => copyBlocksToClipboard(selectedIds)}
@@ -2125,6 +2462,7 @@ export function SlideEditorPage() {
               >
                 <ClipboardPaste size={14} />
               </button>
+              <div style={{ width: 1, height: 20, background: C.border, margin: "0 2px" }} />
               <button
                 type="button"
                 onClick={() => setSnapToGrid((value) => !value)}
@@ -2213,37 +2551,56 @@ export function SlideEditorPage() {
         </div>
       )}
 
-      {slideKind === "code" ? (
-        <CodeSlideSourceEditor
-          background={background}
-          codeId={codeId}
-          component={codeSlideComponent}
-          feedbackEnabled={feedbackInspectorEnabled}
-          feedbackSlide={feedbackSlide}
-          notes={notes}
-          onBackground={updateSlideBackground}
-          onFeedbackEnabled={setFeedbackInspectorEnabled}
-          onNotes={updateSlideNotes}
-          onTransition={updateSlideTransition}
-          presentationId={pid}
-          theme={theme}
-          title={title}
-          transition={transition}
+      {/* Shared editor row: the slide dock is present for every slide kind */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <SlideDock
+          slides={[...((slidesQuery.data as ApiSlide[] | undefined) ?? [])]
+            .sort((a, b) => a.position - b.position)
+            .map((s) => toUnifiedSlide(s, theme))}
+          currentSid={sid}
+          open={dockOpen}
+          onToggle={() => setDockOpen((v) => !v)}
+          onNavigate={(nextSid) => {
+            if (nextSid !== sid) navigate(`/p/${pid}/edit/${nextSid}`);
+          }}
         />
-      ) : slideKind === "html" ? (
-        <HtmlSlideSourceEditor
-          html={html}
-          notes={notes}
-          transition={transition}
-          title={title}
-          onHtml={setHtml}
-          onNotes={setNotes}
-          onTransition={setTransition}
-        />
-      ) : (
-        <>
-          {/* Canvas + right panel */}
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {slideKind === "code" ? (
+          <div style={{ flex: 1, minWidth: 0, display: "flex", overflow: "hidden" }}>
+            <CodeSlideSourceEditor
+              background={background}
+              codeId={codeId}
+              component={codeSlideComponent}
+              feedbackEnabled={feedbackInspectorEnabled}
+              feedbackSlide={feedbackSlide}
+              notes={notes}
+              onBackground={updateSlideBackground}
+              onFeedbackEnabled={setFeedbackInspectorEnabled}
+              onNotes={updateSlideNotes}
+              onTransition={updateSlideTransition}
+              presentationId={pid}
+              theme={theme}
+              title={title}
+              transition={transition}
+              inspectorOpen={inspectorOpen}
+              onToggleInspector={() => setInspectorOpen((v) => !v)}
+            />
+          </div>
+        ) : slideKind === "html" ? (
+          <div style={{ flex: 1, minWidth: 0, display: "flex", overflow: "hidden" }}>
+            <HtmlSlideSourceEditor
+              html={html}
+              notes={notes}
+              transition={transition}
+              title={title}
+              onHtml={setHtml}
+              onNotes={setNotes}
+              onTransition={setTransition}
+              inspectorOpen={inspectorOpen}
+              onToggleInspector={() => setInspectorOpen((v) => !v)}
+            />
+          </div>
+        ) : (
+          <>
             {/* Canvas area */}
             <div
               style={{
@@ -2258,7 +2615,7 @@ export function SlideEditorPage() {
               onClick={clearSelection}
             >
               <div
-                ref={canvasRef}
+                ref={canvasFrameRef}
                 data-theme={theme}
                 style={{
                   position: "relative",
@@ -2271,543 +2628,695 @@ export function SlideEditorPage() {
                   boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
                 }}
               >
-                {snapToGrid && (
-                  <div
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      pointerEvents: "none",
-                      backgroundImage:
-                        "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
-                      backgroundSize: `${gridStep}% ${gridStep}%`,
-                    }}
-                  />
-                )}
-
-                {blocks.length === 0 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: 0.18,
-                      fontSize: 12,
-                      color: "var(--theme-text)",
-                      fontFamily: "JetBrains Mono, monospace",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    add blocks using the panel →
-                  </div>
-                )}
-
-                {activeGuides.map((guide, index) => (
-                  <div
-                    key={`${guide.axis}-${guide.value}-${index}`}
-                    style={{
-                      position: "absolute",
-                      pointerEvents: "none",
-                      zIndex: 30,
-                      background: "var(--theme-accent, #25d366)",
-                      boxShadow: "0 0 0 1px rgba(13,15,14,0.45)",
-                      opacity: 0.85,
-                      ...(guide.axis === "x"
-                        ? {
-                            left: `${guide.value}%`,
-                            top: 0,
-                            width: 1,
-                            height: "100%",
-                          }
-                        : {
-                            left: 0,
-                            top: `${guide.value}%`,
-                            width: "100%",
-                            height: 1,
-                          }),
-                    }}
-                  />
-                ))}
-
-                {blocks.map((block) => {
-                  const isSelected = selectedIds.includes(block.id);
-                  if (block.hidden && !isSelected) return null;
-                  const isInlineEditing = editingTextId === block.id && block.type === "text";
-                  const x = block.x ?? 5;
-                  const y = block.y ?? 5;
-                  const w = block.w ?? 80;
-                  const h = block.h ?? 30;
-                  return (
+                <div
+                  ref={canvasRef}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: SLIDE_CANVAS_WIDTH,
+                    height: SLIDE_CANVAS_HEIGHT,
+                    transform: `scale(${canvasScale})`,
+                    transformOrigin: "top left",
+                  }}
+                >
+                  {snapToGrid && (
                     <div
-                      key={block.id}
-                      onPointerDown={(e) => startDrag(e, block, "move")}
-                      onDoubleClick={(e) => {
-                        if (block.type !== "text" || block.locked) return;
-                        e.stopPropagation();
-                        selectOnlyBlock(block.id);
-                        setEditingTextId(block.id);
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (e.shiftKey || e.metaKey || e.ctrlKey) toggleBlockSelection(block.id);
-                        else selectOnlyBlock(block.id);
-                      }}
+                      aria-hidden="true"
                       style={{
                         position: "absolute",
-                        left: `${x}%`,
-                        top: `${y}%`,
-                        width: `${w}%`,
-                        height: `${h}%`,
-                        cursor: "move",
-                        transform: blockTransform(block),
-                        opacity: block.hidden ? 0.22 : block.opacity,
-                        boxShadow: block.shadow,
-                        outline: isSelected
-                          ? block.hidden
-                            ? "2px dotted var(--theme-accent, #25d366)"
-                            : block.locked
-                              ? "2px dashed #f6c85f"
-                              : "2px solid var(--theme-accent, #25d366)"
-                          : "1px dashed transparent",
-                        outlineOffset: 1,
-                        overflow: isSelected ? "visible" : "hidden",
-                        userSelect: "none",
-                        boxSizing: "border-box",
+                        inset: 0,
+                        pointerEvents: "none",
+                        backgroundImage:
+                          "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
+                        backgroundSize: `${gridStep}% ${gridStep}%`,
+                      }}
+                    />
+                  )}
+
+                  {blocks.length === 0 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: 0.18,
+                        fontSize: 12,
+                        color: "var(--theme-text)",
+                        fontFamily: "JetBrains Mono, monospace",
+                        pointerEvents: "none",
                       }}
                     >
+                      add blocks using the panel →
+                    </div>
+                  )}
+
+                  {activeGuides.map((guide, index) => (
+                    <div
+                      key={`${guide.axis}-${guide.value}-${index}`}
+                      style={{
+                        position: "absolute",
+                        pointerEvents: "none",
+                        zIndex: 30,
+                        background: "var(--theme-accent, #25d366)",
+                        boxShadow: "0 0 0 1px rgba(13,15,14,0.45)",
+                        opacity: 0.85,
+                        ...(guide.axis === "x"
+                          ? {
+                              left: `${guide.value}%`,
+                              top: 0,
+                              width: 1,
+                              height: "100%",
+                            }
+                          : {
+                              left: 0,
+                              top: `${guide.value}%`,
+                              width: "100%",
+                              height: 1,
+                            }),
+                      }}
+                    />
+                  ))}
+
+                  {blocks.map((block) => {
+                    const isSelected = selectedIds.includes(block.id);
+                    if (block.hidden && !isSelected) return null;
+                    const isInlineEditing = editingTextId === block.id && block.type === "text";
+                    const x = block.x ?? 5;
+                    const y = block.y ?? 5;
+                    const w = block.w ?? 80;
+                    const h = block.h ?? 30;
+                    return (
                       <div
+                        key={block.id}
+                        onPointerDown={(e) => startDrag(e, block, "move")}
+                        onDoubleClick={(e) => {
+                          if (block.type !== "text" || block.locked) return;
+                          e.stopPropagation();
+                          selectOnlyBlock(block.id);
+                          setEditingTextId(block.id);
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (e.shiftKey || e.metaKey || e.ctrlKey) toggleBlockSelection(block.id);
+                          else selectOnlyBlock(block.id);
+                        }}
                         style={{
                           position: "absolute",
-                          inset: 0,
-                          overflow: "hidden",
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          width: `${w}%`,
+                          height: `${h}%`,
+                          cursor: "move",
+                          transform: blockTransform(block),
+                          opacity: block.hidden ? 0.22 : block.opacity,
+                          boxShadow: block.shadow,
+                          outline: isSelected
+                            ? block.hidden
+                              ? "2px dotted var(--theme-accent, #25d366)"
+                              : block.locked
+                                ? "2px dashed #f6c85f"
+                                : "2px solid var(--theme-accent, #25d366)"
+                            : "1px dashed transparent",
+                          outlineOffset: 1,
+                          overflow: isSelected ? "visible" : "hidden",
+                          userSelect: "none",
                           boxSizing: "border-box",
                         }}
                       >
-                        {isInlineEditing ? (
-                          <InlineTextBlockEditor
-                            block={block}
-                            onChange={(markdown) => updateBlock(block.id, { markdown })}
-                            onDone={() => setEditingTextId(null)}
-                          />
-                        ) : (
-                          <CanvasBlockContent block={block} />
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            overflow: "hidden",
+                            boxSizing: "border-box",
+                          }}
+                        >
+                          {isInlineEditing ? (
+                            <InlineTextBlockEditor
+                              block={block}
+                              onChange={(markdown) => updateBlock(block.id, { markdown })}
+                              onDone={() => setEditingTextId(null)}
+                            />
+                          ) : (
+                            <CanvasBlockContent block={block} />
+                          )}
+                        </div>
+
+                        {isSelected && (
+                          <>
+                            <BlockBubbleMenu
+                              canEditText={block.type === "text"}
+                              hidden={Boolean(block.hidden)}
+                              locked={Boolean(block.locked)}
+                              onEditText={() => {
+                                if (!block.locked) setEditingTextId(block.id);
+                              }}
+                              onDuplicate={() => duplicateBlock(block.id)}
+                              onBringForward={() => moveBlockLayer(block.id, "forward")}
+                              onSendBack={() => moveBlockLayer(block.id, "back")}
+                              onDelete={() => deleteBlock(block.id)}
+                              onToggleLocked={() =>
+                                updateBlock(block.id, { locked: !block.locked } as Partial<Block>)
+                              }
+                              onToggleHidden={() =>
+                                updateBlock(block.id, { hidden: !block.hidden } as Partial<Block>)
+                              }
+                              editing={isInlineEditing}
+                            />
+                            {/* Resize handles */}
+                            {!block.locked &&
+                              (["tl", "tr", "bl", "br"] as const).map((handle) => (
+                                <div
+                                  key={handle}
+                                  onPointerDown={(e) => startDrag(e, block, `resize-${handle}`)}
+                                  style={{
+                                    position: "absolute",
+                                    width: 9,
+                                    height: 9,
+                                    background: "var(--theme-accent, #25d366)",
+                                    border: "2px solid var(--theme-bg, #0d0f0e)",
+                                    borderRadius: 2,
+                                    cursor:
+                                      handle === "tl" || handle === "br"
+                                        ? "nwse-resize"
+                                        : "nesw-resize",
+                                    zIndex: 10,
+                                    ...(handle === "tl" ? { top: -5, left: -5 } : {}),
+                                    ...(handle === "tr" ? { top: -5, right: -5 } : {}),
+                                    ...(handle === "bl" ? { bottom: -5, left: -5 } : {}),
+                                    ...(handle === "br" ? { bottom: -5, right: -5 } : {}),
+                                  }}
+                                />
+                              ))}
+                          </>
                         )}
                       </div>
-
-                      {isSelected && (
-                        <>
-                          <BlockBubbleMenu
-                            canEditText={block.type === "text"}
-                            hidden={Boolean(block.hidden)}
-                            locked={Boolean(block.locked)}
-                            onEditText={() => {
-                              if (!block.locked) setEditingTextId(block.id);
-                            }}
-                            onDuplicate={() => duplicateBlock(block.id)}
-                            onBringForward={() => moveBlockLayer(block.id, "forward")}
-                            onSendBack={() => moveBlockLayer(block.id, "back")}
-                            onDelete={() => deleteBlock(block.id)}
-                            onToggleLocked={() =>
-                              updateBlock(block.id, { locked: !block.locked } as Partial<Block>)
-                            }
-                            onToggleHidden={() =>
-                              updateBlock(block.id, { hidden: !block.hidden } as Partial<Block>)
-                            }
-                            editing={isInlineEditing}
-                          />
-                          {/* Resize handles */}
-                          {!block.locked &&
-                            (["tl", "tr", "bl", "br"] as const).map((handle) => (
-                              <div
-                                key={handle}
-                                onPointerDown={(e) => startDrag(e, block, `resize-${handle}`)}
-                                style={{
-                                  position: "absolute",
-                                  width: 9,
-                                  height: 9,
-                                  background: "var(--theme-accent, #25d366)",
-                                  border: "2px solid var(--theme-bg, #0d0f0e)",
-                                  borderRadius: 2,
-                                  cursor:
-                                    handle === "tl" || handle === "br"
-                                      ? "nwse-resize"
-                                      : "nesw-resize",
-                                  zIndex: 10,
-                                  ...(handle === "tl" ? { top: -5, left: -5 } : {}),
-                                  ...(handle === "tr" ? { top: -5, right: -5 } : {}),
-                                  ...(handle === "bl" ? { bottom: -5, left: -5 } : {}),
-                                  ...(handle === "br" ? { bottom: -5, right: -5 } : {}),
-                                }}
-                              />
-                            ))}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Right panel */}
-            <div
-              style={{
-                width: 272,
-                borderLeft: `1px solid ${C.border}`,
-                display: "flex",
-                flexDirection: "column",
-                background: C.surface,
-                overflow: "hidden",
-                flexShrink: 0,
-              }}
-            >
-              <SlideBlockInsertPanel onAddBlock={addBlock} onAddBlocks={addBlocks} />
-              <DeckAssetPanel enabled={validRoute} pid={pid} onInsertAsset={insertAssetBlock} />
-
-              {/* Selected block properties */}
+            {/* Right panel (inspector) — collapsible like the dock + agent */}
+            {inspectorOpen ? (
               <div
                 style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  padding: "14px 16px",
+                  width: 300,
+                  borderLeft: `1px solid ${C.border}`,
                   display: "flex",
                   flexDirection: "column",
-                  gap: 14,
+                  background: C.surface,
+                  overflow: "hidden",
+                  flexShrink: 0,
                 }}
               >
-                {selectedBlock ? (
-                  <>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontFamily: "JetBrains Mono, monospace",
-                          color: C.muted,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {selectedBlock.type}
-                      </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <button
-                          type="button"
-                          title="Copy format"
-                          onClick={() => copySelectedBlockFormat(selectedBlock)}
-                          style={{
-                            ...arrangeButton,
-                            width: 28,
-                            height: 28,
-                            color:
-                              formatClipboard?.sourceType === selectedBlock.type
-                                ? C.accent
-                                : C.textDim,
-                          }}
-                        >
-                          <Copy size={12} />
-                        </button>
-                        <button
-                          type="button"
-                          title="Paste format"
-                          onClick={() => pasteSelectedBlockFormat(selectedBlock.id)}
-                          disabled={!formatClipboard || selectedBlock.locked}
-                          style={{
-                            ...arrangeButton,
-                            width: 28,
-                            height: 28,
-                            cursor:
-                              !formatClipboard || selectedBlock.locked ? "not-allowed" : "pointer",
-                            opacity: !formatClipboard || selectedBlock.locked ? 0.45 : 1,
-                          }}
-                        >
-                          <ClipboardPaste size={12} />
-                        </button>
-                        <button
-                          onClick={() => deleteBlock(selectedBlock.id)}
-                          disabled={selectedBlock.locked}
-                          style={{
-                            color: "#ff6b6b",
-                            background: "none",
-                            border: "none",
-                            cursor: selectedBlock.locked ? "not-allowed" : "pointer",
-                            padding: 4,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            fontSize: 11,
-                            opacity: selectedBlock.locked ? 0.45 : 1,
-                          }}
-                        >
-                          <Trash2 size={12} /> Delete
-                        </button>
-                      </div>
-                    </div>
+                <InspectorTabs
+                  active={panelTab}
+                  onChange={setPanelTab}
+                  layerCount={blocks.length}
+                  onCollapse={() => setInspectorOpen(false)}
+                />
 
-                    {/* Arrange */}
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: C.textDim,
-                          marginBottom: 6,
-                          fontFamily: "JetBrains Mono, monospace",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        Arrange
-                      </div>
-                      <div
-                        style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}
-                      >
-                        <button
-                          type="button"
-                          aria-label="Align left"
-                          title="Align left"
-                          onClick={() => arrangeSelectedBlock("align-left")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <AlignHorizontalJustifyStart size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Align center"
-                          title="Align center"
-                          onClick={() => arrangeSelectedBlock("align-center")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <AlignHorizontalJustifyCenter size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Align right"
-                          title="Align right"
-                          onClick={() => arrangeSelectedBlock("align-right")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <AlignHorizontalJustifyEnd size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Align top"
-                          title="Align top"
-                          onClick={() => arrangeSelectedBlock("align-top")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <AlignVerticalJustifyStart size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Align middle"
-                          title="Align middle"
-                          onClick={() => arrangeSelectedBlock("align-middle")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <AlignVerticalJustifyCenter size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Align bottom"
-                          title="Align bottom"
-                          onClick={() => arrangeSelectedBlock("align-bottom")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <AlignVerticalJustifyEnd size={14} />
-                        </button>
-                      </div>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(3, 1fr)",
-                          gap: 6,
-                          marginTop: 6,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          aria-label="Fit width"
-                          title="Fit width"
-                          onClick={() => arrangeSelectedBlock("fit-width")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <StretchHorizontal size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Fit height"
-                          title="Fit height"
-                          onClick={() => arrangeSelectedBlock("fit-height")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <StretchVertical size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Fit slide"
-                          title="Fit slide"
-                          onClick={() => arrangeSelectedBlock("fit-slide")}
-                          disabled={selectedBlock.locked}
-                          style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
-                        >
-                          <Maximize2 size={14} />
-                        </button>
-                      </div>
-                    </div>
+                {/* Insert — content library + deck assets */}
+                {panelTab === "insert" && (
+                  <div
+                    style={{
+                      flex: 1,
+                      overflowY: "auto",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <SlideBlockInsertPanel onAddBlock={addBlock} onAddBlocks={addBlocks} />
+                    <DeckAssetPanel
+                      enabled={validRoute}
+                      pid={pid}
+                      onInsertAsset={insertAssetBlock}
+                    />
+                  </div>
+                )}
 
-                    {/* Position & size */}
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: C.textDim,
-                          marginBottom: 6,
-                          fontFamily: "JetBrains Mono, monospace",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        Position &amp; Size (%)
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                        {(["x", "y", "w", "h"] as const).map((k) => (
-                          <label
-                            key={k}
-                            style={{ display: "flex", flexDirection: "column", gap: 3 }}
+                {/* Design / Animate / Notes — selected block + slide properties */}
+                {(panelTab === "design" || panelTab === "animate" || panelTab === "notes") && (
+                  <div
+                    style={{
+                      flex: 1,
+                      overflowY: "auto",
+                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 14,
+                    }}
+                  >
+                    {panelTab === "design" &&
+                      (selectedBlock ? (
+                        <>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
                           >
                             <span
                               style={{
                                 fontSize: 9,
-                                color: C.muted,
                                 fontFamily: "JetBrains Mono, monospace",
+                                color: C.muted,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
                               }}
                             >
-                              {k === "x"
-                                ? "Left"
-                                : k === "y"
-                                  ? "Top"
-                                  : k === "w"
-                                    ? "Width"
-                                    : "Height"}
+                              {selectedBlock.type}
                             </span>
-                            <input
-                              type="number"
-                              value={
-                                Math.round(
-                                  (selectedBlock[k] ?? BLOCK_DEFAULTS[selectedBlock.type][k]) * 10,
-                                ) / 10
-                              }
-                              onChange={(e) =>
-                                !selectedBlock.locked &&
-                                updateBlock(selectedBlock.id, { [k]: Number(e.target.value) })
-                              }
-                              disabled={selectedBlock.locked}
-                              min={0}
-                              max={100}
-                              step={0.5}
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <button
+                                type="button"
+                                title="Copy format"
+                                onClick={() => copySelectedBlockFormat(selectedBlock)}
+                                style={{
+                                  ...arrangeButton,
+                                  width: 28,
+                                  height: 28,
+                                  color:
+                                    formatClipboard?.sourceType === selectedBlock.type
+                                      ? C.accent
+                                      : C.textDim,
+                                }}
+                              >
+                                <Copy size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Paste format"
+                                onClick={() => pasteSelectedBlockFormat(selectedBlock.id)}
+                                disabled={!formatClipboard || selectedBlock.locked}
+                                style={{
+                                  ...arrangeButton,
+                                  width: 28,
+                                  height: 28,
+                                  cursor:
+                                    !formatClipboard || selectedBlock.locked
+                                      ? "not-allowed"
+                                      : "pointer",
+                                  opacity: !formatClipboard || selectedBlock.locked ? 0.45 : 1,
+                                }}
+                              >
+                                <ClipboardPaste size={12} />
+                              </button>
+                              <button
+                                onClick={() => deleteBlock(selectedBlock.id)}
+                                disabled={selectedBlock.locked}
+                                style={{
+                                  color: "#ff6b6b",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: selectedBlock.locked ? "not-allowed" : "pointer",
+                                  padding: 4,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  fontSize: 11,
+                                  opacity: selectedBlock.locked ? 0.45 : 1,
+                                }}
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Arrange */}
+                          <div>
+                            <div
                               style={{
-                                ...inp,
-                                padding: "4px 8px",
-                                opacity: selectedBlock.locked ? 0.55 : 1,
-                                cursor: selectedBlock.locked ? "not-allowed" : "text",
+                                fontSize: 9,
+                                color: C.textDim,
+                                marginBottom: 6,
+                                fontFamily: "JetBrains Mono, monospace",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
                               }}
+                            >
+                              Arrange
+                            </div>
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(3, 1fr)",
+                                gap: 6,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                aria-label="Align left"
+                                title="Align left"
+                                onClick={() => arrangeSelectedBlock("align-left")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <AlignHorizontalJustifyStart size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Align center"
+                                title="Align center"
+                                onClick={() => arrangeSelectedBlock("align-center")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <AlignHorizontalJustifyCenter size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Align right"
+                                title="Align right"
+                                onClick={() => arrangeSelectedBlock("align-right")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <AlignHorizontalJustifyEnd size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Align top"
+                                title="Align top"
+                                onClick={() => arrangeSelectedBlock("align-top")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <AlignVerticalJustifyStart size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Align middle"
+                                title="Align middle"
+                                onClick={() => arrangeSelectedBlock("align-middle")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <AlignVerticalJustifyCenter size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Align bottom"
+                                title="Align bottom"
+                                onClick={() => arrangeSelectedBlock("align-bottom")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <AlignVerticalJustifyEnd size={14} />
+                              </button>
+                            </div>
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(3, 1fr)",
+                                gap: 6,
+                                marginTop: 6,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                aria-label="Fit width"
+                                title="Fit width"
+                                onClick={() => arrangeSelectedBlock("fit-width")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <StretchHorizontal size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Fit height"
+                                title="Fit height"
+                                onClick={() => arrangeSelectedBlock("fit-height")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <StretchVertical size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Fit slide"
+                                title="Fit slide"
+                                onClick={() => arrangeSelectedBlock("fit-slide")}
+                                disabled={selectedBlock.locked}
+                                style={selectedBlock.locked ? disabledArrangeButton : arrangeButton}
+                              >
+                                <Maximize2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Position & size */}
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 9,
+                                color: C.textDim,
+                                marginBottom: 6,
+                                fontFamily: "JetBrains Mono, monospace",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                              }}
+                            >
+                              Position &amp; Size (%)
+                            </div>
+                            <div
+                              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
+                            >
+                              {(["x", "y", "w", "h"] as const).map((k) => (
+                                <label
+                                  key={k}
+                                  style={{ display: "flex", flexDirection: "column", gap: 3 }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: 9,
+                                      color: C.muted,
+                                      fontFamily: "JetBrains Mono, monospace",
+                                    }}
+                                  >
+                                    {k === "x"
+                                      ? "Left"
+                                      : k === "y"
+                                        ? "Top"
+                                        : k === "w"
+                                          ? "Width"
+                                          : "Height"}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={
+                                      Math.round(
+                                        (selectedBlock[k] ??
+                                          BLOCK_DEFAULTS[selectedBlock.type][k]) * 10,
+                                      ) / 10
+                                    }
+                                    onChange={(e) =>
+                                      !selectedBlock.locked &&
+                                      updateBlock(selectedBlock.id, { [k]: Number(e.target.value) })
+                                    }
+                                    disabled={selectedBlock.locked}
+                                    min={0}
+                                    max={100}
+                                    step={0.5}
+                                    style={{
+                                      ...inp,
+                                      padding: "4px 8px",
+                                      opacity: selectedBlock.locked ? 0.55 : 1,
+                                      cursor: selectedBlock.locked ? "not-allowed" : "text",
+                                    }}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <CommonAppearanceEditor
+                            block={selectedBlock}
+                            onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                          />
+                          <BlockAnimationEditor
+                            block={selectedBlock}
+                            onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                          />
+                          <BlockLinkEditor
+                            block={selectedBlock}
+                            onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                          />
+
+                          {/* Type-specific fields */}
+                          {selectedBlock.type === "text" && (
+                            <>
+                              <TextBlockPropertyEditor
+                                block={selectedBlock}
+                                onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
+                              />
+                              <TextAppearanceEditor
+                                block={selectedBlock}
+                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                              />
+                            </>
+                          )}
+
+                          {selectedBlock.type === "image" && (
+                            <>
+                              <div>
+                                <div
+                                  style={{
+                                    fontSize: 9,
+                                    color: C.textDim,
+                                    marginBottom: 4,
+                                    fontFamily: "JetBrains Mono, monospace",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                  }}
+                                >
+                                  URL
+                                </div>
+                                <input
+                                  value={selectedBlock.url}
+                                  onChange={(e) =>
+                                    updateBlock(selectedBlock.id, { url: e.target.value })
+                                  }
+                                  placeholder="https://…"
+                                  style={inp}
+                                />
+                              </div>
+                              <div>
+                                <div
+                                  style={{
+                                    fontSize: 9,
+                                    color: C.textDim,
+                                    marginBottom: 4,
+                                    fontFamily: "JetBrains Mono, monospace",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                  }}
+                                >
+                                  Alt text
+                                </div>
+                                <input
+                                  value={selectedBlock.alt ?? ""}
+                                  onChange={(e) =>
+                                    updateBlock(selectedBlock.id, { alt: e.target.value })
+                                  }
+                                  placeholder="Description"
+                                  style={inp}
+                                />
+                              </div>
+                              <ImageAppearanceEditor
+                                block={selectedBlock}
+                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                              />
+                            </>
+                          )}
+
+                          {selectedBlock.type === "iframe" && (
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 9,
+                                  color: C.textDim,
+                                  marginBottom: 4,
+                                  fontFamily: "JetBrains Mono, monospace",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.06em",
+                                }}
+                              >
+                                URL
+                              </div>
+                              <input
+                                value={selectedBlock.url}
+                                onChange={(e) =>
+                                  updateBlock(selectedBlock.id, { url: e.target.value })
+                                }
+                                placeholder="https://…"
+                                style={inp}
+                              />
+                            </div>
+                          )}
+
+                          {selectedBlock.type === "shape" && (
+                            <ShapePropEditor
+                              block={selectedBlock}
+                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
                             />
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                          )}
 
-                    <CommonAppearanceEditor
-                      block={selectedBlock}
-                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                    />
-                    <BlockAnimationEditor
-                      block={selectedBlock}
-                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                    />
-                    <BlockLinkEditor
-                      block={selectedBlock}
-                      onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                    />
+                          {selectedBlock.type === "line" && (
+                            <LinePropEditor
+                              block={selectedBlock}
+                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                            />
+                          )}
 
-                    {/* Type-specific fields */}
-                    {selectedBlock.type === "text" && (
-                      <>
-                        <TextBlockPropertyEditor
-                          block={selectedBlock}
-                          onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
+                          {selectedBlock.type === "table" && (
+                            <TablePropEditor
+                              block={selectedBlock}
+                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                            />
+                          )}
+
+                          {selectedBlock.type === "chart" && (
+                            <ChartPropEditor
+                              block={selectedBlock}
+                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                            />
+                          )}
+                        </>
+                      ) : selectedIds.length > 1 ? (
+                        <MultiSelectionPanel
+                          count={selectedIds.length}
+                          onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
+                          onDelete={() => deleteSelectedBlocks(selectedIds)}
+                          onDuplicate={() => duplicateBlocks(selectedIds)}
+                          onGroup={() => groupSelectedBlocks(selectedIds)}
+                          onUngroup={() => ungroupSelectedBlocks(selectedIds)}
                         />
-                        <TextAppearanceEditor
-                          block={selectedBlock}
-                          onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                        />
-                      </>
+                      ) : (
+                        <div
+                          style={{
+                            padding: "24px 0",
+                            textAlign: "center",
+                            fontSize: 11,
+                            color: C.muted,
+                            fontFamily: "JetBrains Mono, monospace",
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          click a block
+                          <br />
+                          to select &amp; edit
+                          <br />
+                          <br />
+                          <span style={{ fontSize: 10, opacity: 0.6 }}>
+                            Del · delete selected
+                            <br />
+                            ⌘S · save &amp; exit
+                          </span>
+                        </div>
+                      ))}
+
+                    {panelTab === "design" && (
+                      <SlideBackgroundEditor
+                        background={background}
+                        onBackground={updateSlideBackground}
+                      />
                     )}
 
-                    {selectedBlock.type === "image" && (
-                      <>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 9,
-                              color: C.textDim,
-                              marginBottom: 4,
-                              fontFamily: "JetBrains Mono, monospace",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.06em",
-                            }}
-                          >
-                            URL
-                          </div>
-                          <input
-                            value={selectedBlock.url}
-                            onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
-                            placeholder="https://…"
-                            style={inp}
-                          />
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 9,
-                              color: C.textDim,
-                              marginBottom: 4,
-                              fontFamily: "JetBrains Mono, monospace",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.06em",
-                            }}
-                          >
-                            Alt text
-                          </div>
-                          <input
-                            value={selectedBlock.alt ?? ""}
-                            onChange={(e) => updateBlock(selectedBlock.id, { alt: e.target.value })}
-                            placeholder="Description"
-                            style={inp}
-                          />
-                        </div>
-                        <ImageAppearanceEditor
-                          block={selectedBlock}
-                          onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                        />
-                      </>
+                    {panelTab === "animate" && (
+                      <SlideTransitionEditor
+                        transition={transition}
+                        onTransition={updateSlideTransition}
+                      />
                     )}
 
-                    {selectedBlock.type === "iframe" && (
+                    {panelTab === "notes" && (
                       <div>
                         <div
                           style={{
@@ -2819,227 +3328,169 @@ export function SlideEditorPage() {
                             letterSpacing: "0.06em",
                           }}
                         >
-                          URL
+                          Speaker Notes
                         </div>
-                        <input
-                          value={selectedBlock.url}
-                          onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
-                          placeholder="https://…"
-                          style={inp}
+                        <textarea
+                          value={notes}
+                          onChange={(e) => updateSlideNotes(e.target.value)}
+                          placeholder="Private presenter notes for this slide..."
+                          rows={5}
+                          style={{
+                            ...inp,
+                            resize: "vertical",
+                            fontFamily: "Inter, sans-serif",
+                            lineHeight: 1.5,
+                          }}
                         />
                       </div>
                     )}
-
-                    {selectedBlock.type === "shape" && (
-                      <ShapePropEditor
-                        block={selectedBlock}
-                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                      />
-                    )}
-
-                    {selectedBlock.type === "line" && (
-                      <LinePropEditor
-                        block={selectedBlock}
-                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                      />
-                    )}
-
-                    {selectedBlock.type === "table" && (
-                      <TablePropEditor
-                        block={selectedBlock}
-                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                      />
-                    )}
-
-                    {selectedBlock.type === "chart" && (
-                      <ChartPropEditor
-                        block={selectedBlock}
-                        onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                      />
-                    )}
-                  </>
-                ) : selectedIds.length > 1 ? (
-                  <MultiSelectionPanel
-                    count={selectedIds.length}
-                    onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
-                    onDelete={() => deleteSelectedBlocks(selectedIds)}
-                    onDuplicate={() => duplicateBlocks(selectedIds)}
-                    onGroup={() => groupSelectedBlocks(selectedIds)}
-                    onUngroup={() => ungroupSelectedBlocks(selectedIds)}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      padding: "24px 0",
-                      textAlign: "center",
-                      fontSize: 11,
-                      color: C.muted,
-                      fontFamily: "JetBrains Mono, monospace",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    click a block
-                    <br />
-                    to select &amp; edit
-                    <br />
-                    <br />
-                    <span style={{ fontSize: 10, opacity: 0.6 }}>
-                      Del · delete selected
-                      <br />
-                      ⌘S · save &amp; exit
-                    </span>
                   </div>
                 )}
 
-                <SlideBackgroundEditor
-                  background={background}
-                  onBackground={updateSlideBackground}
-                />
-
-                <SlideTransitionEditor
-                  transition={transition}
-                  onTransition={updateSlideTransition}
-                />
-
-                <div>
+                {/* Layers — full height, no longer capped at 190px */}
+                {panelTab === "layers" && (
                   <div
                     style={{
-                      fontSize: 9,
-                      color: C.textDim,
-                      marginBottom: 4,
-                      fontFamily: "JetBrains Mono, monospace",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
+                      padding: "10px 16px",
+                      flex: 1,
+                      minHeight: 0,
+                      overflowY: "auto",
                     }}
                   >
-                    Speaker Notes
-                  </div>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => updateSlideNotes(e.target.value)}
-                    placeholder="Private presenter notes for this slide..."
-                    rows={5}
-                    style={{
-                      ...inp,
-                      resize: "vertical",
-                      fontFamily: "Inter, sans-serif",
-                      lineHeight: 1.5,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Layers list */}
-              {blocks.length > 0 && (
-                <div
-                  style={{
-                    borderTop: `1px solid ${C.border}`,
-                    padding: "10px 16px",
-                    maxHeight: 190,
-                    overflowY: "auto",
-                    flexShrink: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 9,
-                      fontFamily: "JetBrains Mono, monospace",
-                      color: C.muted,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      marginBottom: 6,
-                    }}
-                  >
-                    Layers ({blocks.length})
-                  </div>
-                  {[...blocks].reverse().map((b) => (
                     <div
-                      key={b.id}
-                      onClick={(event) => {
-                        if (event.shiftKey || event.metaKey || event.ctrlKey)
-                          toggleBlockSelection(b.id);
-                        else selectOnlyBlock(b.id);
-                      }}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "5px 8px",
-                        borderRadius: 7,
-                        cursor: "pointer",
-                        marginBottom: 2,
-                        background: selectedIds.includes(b.id) ? C.accentSubtle : "transparent",
-                        border: `1px solid ${selectedIds.includes(b.id) ? C.border : "transparent"}`,
-                        opacity: b.hidden ? 0.62 : 1,
+                        fontSize: 9,
+                        fontFamily: "JetBrains Mono, monospace",
+                        color: C.muted,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        marginBottom: 6,
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: 9,
-                          color: C.accent,
-                          fontFamily: "JetBrains Mono, monospace",
-                          minWidth: 32,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {b.type}
-                        {b.groupId ? " · grp" : ""}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: C.textDim,
-                          flex: 1,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {getBlockLayerName(b)}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateBlock(b.id, { hidden: !b.hidden } as Partial<Block>);
-                        }}
-                        title={b.hidden ? "Show block" : "Hide block"}
-                        style={{
-                          color: b.hidden ? C.muted : C.textDim,
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 2,
-                          display: "flex",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {b.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteBlock(b.id);
-                        }}
-                        style={{
-                          color: C.muted,
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 2,
-                          display: "flex",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                      Layers ({blocks.length})
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+                    {[...blocks].reverse().map((b) => (
+                      <div
+                        key={b.id}
+                        onClick={(event) => {
+                          if (event.shiftKey || event.metaKey || event.ctrlKey)
+                            toggleBlockSelection(b.id);
+                          else selectOnlyBlock(b.id);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "5px 8px",
+                          borderRadius: 7,
+                          cursor: "pointer",
+                          marginBottom: 2,
+                          background: selectedIds.includes(b.id) ? C.accentSubtle : "transparent",
+                          border: `1px solid ${selectedIds.includes(b.id) ? C.border : "transparent"}`,
+                          opacity: b.hidden ? 0.62 : 1,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 9,
+                            color: C.accent,
+                            fontFamily: "JetBrains Mono, monospace",
+                            minWidth: 32,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {b.type}
+                          {b.groupId ? " · grp" : ""}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: C.textDim,
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {getBlockLayerName(b)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateBlock(b.id, { hidden: !b.hidden } as Partial<Block>);
+                          }}
+                          title={b.hidden ? "Show block" : "Hide block"}
+                          style={{
+                            color: b.hidden ? C.muted : C.textDim,
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 2,
+                            display: "flex",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {b.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteBlock(b.id);
+                          }}
+                          style={{
+                            color: C.muted,
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 2,
+                            display: "flex",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInspectorOpen(true)}
+                title="Show inspector"
+                aria-label="Show inspector"
+                style={{
+                  width: 34,
+                  flexShrink: 0,
+                  borderLeft: `1px solid ${C.border}`,
+                  background: C.surface,
+                  color: C.textDim,
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "14px 0",
+                }}
+              >
+                <PanelRightOpen size={15} />
+                <span
+                  style={{
+                    writingMode: "vertical-rl",
+                    fontSize: 11,
+                    fontWeight: 650,
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  Inspector
+                </span>
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -3564,9 +4015,13 @@ function TransitionKeyframeEditor({
 function NonManualSlideWorkspace({
   preview,
   sidebar,
+  inspectorOpen,
+  onToggleInspector,
 }: {
   preview: React.ReactNode;
   sidebar: React.ReactNode;
+  inspectorOpen: boolean;
+  onToggleInspector: () => void;
 }) {
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -3583,19 +4038,91 @@ function NonManualSlideWorkspace({
       >
         {preview}
       </div>
-      <div
-        style={{
-          width: 340,
-          borderLeft: `1px solid ${C.border}`,
-          display: "flex",
-          flexDirection: "column",
-          background: C.surface,
-          flexShrink: 0,
-          overflowY: "auto",
-        }}
-      >
-        {sidebar}
-      </div>
+      {inspectorOpen ? (
+        <div
+          style={{
+            width: 300,
+            borderLeft: `1px solid ${C.border}`,
+            display: "flex",
+            flexDirection: "column",
+            background: C.surface,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "8px 8px 8px 14px",
+              borderBottom: `1px solid ${C.border}`,
+              flexShrink: 0,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 650,
+                fontFamily: "Inter, sans-serif",
+                color: C.text,
+              }}
+            >
+              Inspector
+            </span>
+            <button
+              type="button"
+              onClick={onToggleInspector}
+              title="Hide inspector"
+              aria-label="Hide inspector"
+              style={{
+                border: "none",
+                background: "transparent",
+                color: C.textDim,
+                padding: 4,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <PanelRightClose size={14} />
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>{sidebar}</div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onToggleInspector}
+          title="Show inspector"
+          aria-label="Show inspector"
+          style={{
+            width: 34,
+            flexShrink: 0,
+            borderLeft: `1px solid ${C.border}`,
+            background: C.surface,
+            color: C.textDim,
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+            padding: "14px 0",
+          }}
+        >
+          <PanelRightOpen size={15} />
+          <span
+            style={{
+              writingMode: "vertical-rl",
+              fontSize: 11,
+              fontWeight: 650,
+              letterSpacing: "0.08em",
+            }}
+          >
+            Inspector
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -3684,6 +4211,8 @@ function CodeSlideSourceEditor({
   theme,
   title,
   transition,
+  inspectorOpen,
+  onToggleInspector,
 }: {
   background: ApiSlideBackground | null;
   codeId: string | null;
@@ -3699,6 +4228,8 @@ function CodeSlideSourceEditor({
   theme: ThemeName;
   title: string;
   transition: ApiSlideTransition | null;
+  inspectorOpen: boolean;
+  onToggleInspector: () => void;
 }) {
   const Component = component;
   return (
@@ -3789,6 +4320,8 @@ function CodeSlideSourceEditor({
           </SidebarSection>
         </>
       }
+      inspectorOpen={inspectorOpen}
+      onToggleInspector={onToggleInspector}
     />
   );
 }
@@ -3801,6 +4334,8 @@ function HtmlSlideSourceEditor({
   onNotes,
   onTransition,
   title,
+  inspectorOpen,
+  onToggleInspector,
 }: {
   html: string;
   notes: string;
@@ -3809,104 +4344,57 @@ function HtmlSlideSourceEditor({
   onNotes: (notes: string) => void;
   onTransition: (transition: ApiSlideTransition | null) => void;
   title: string;
+  inspectorOpen: boolean;
+  onToggleInspector: () => void;
 }) {
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#070908",
-          padding: 28,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: "calc((100vh - 140px) * 16 / 9)",
-            aspectRatio: "16 / 9",
-            overflow: "hidden",
-            boxShadow: "0 8px 48px rgba(0,0,0,0.7)",
-            background: C.bg,
-          }}
-        >
+    <NonManualSlideWorkspace
+      inspectorOpen={inspectorOpen}
+      onToggleInspector={onToggleInspector}
+      preview={
+        <NonManualPreviewFrame>
           <HtmlSlideRenderer html={html} title={title || "HTML slide preview"} />
-        </div>
-      </div>
-      <div
-        style={{
-          width: 420,
-          borderLeft: `1px solid ${C.border}`,
-          display: "flex",
-          flexDirection: "column",
-          background: C.surface,
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
-          <div
-            style={{
-              fontSize: 9,
-              fontFamily: "JetBrains Mono, monospace",
-              color: C.muted,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              marginBottom: 8,
-            }}
-          >
-            HTML Source
+        </NonManualPreviewFrame>
+      }
+      sidebar={
+        <>
+          <SidebarSection title="HTML Source">
+            <textarea
+              value={html}
+              onChange={(event) => onHtml(event.target.value)}
+              spellCheck={false}
+              style={{
+                ...inp,
+                height: 430,
+                resize: "vertical",
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 11,
+                lineHeight: 1.5,
+                whiteSpace: "pre",
+                overflowWrap: "normal",
+                overflowX: "auto",
+              }}
+            />
+          </SidebarSection>
+          <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
+            <SlideTransitionEditor transition={transition} onTransition={onTransition} />
           </div>
-          <textarea
-            value={html}
-            onChange={(event) => onHtml(event.target.value)}
-            spellCheck={false}
-            style={{
-              ...inp,
-              height: 430,
-              resize: "vertical",
-              fontFamily: "JetBrains Mono, monospace",
-              fontSize: 11,
-              lineHeight: 1.5,
-              whiteSpace: "pre",
-              overflowWrap: "normal",
-              overflowX: "auto",
-            }}
-          />
-        </div>
-        <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
-          <SlideTransitionEditor transition={transition} onTransition={onTransition} />
-        </div>
-        <div style={{ padding: 16 }}>
-          <div
-            style={{
-              fontSize: 9,
-              color: C.textDim,
-              marginBottom: 4,
-              fontFamily: "JetBrains Mono, monospace",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-            }}
-          >
-            Speaker Notes
-          </div>
-          <textarea
-            value={notes}
-            onChange={(event) => onNotes(event.target.value)}
-            rows={5}
-            style={{
-              ...inp,
-              resize: "vertical",
-              fontFamily: "Inter, sans-serif",
-              lineHeight: 1.5,
-            }}
-          />
-        </div>
-      </div>
-    </div>
+          <SidebarSection title="Speaker Notes">
+            <textarea
+              value={notes}
+              onChange={(event) => onNotes(event.target.value)}
+              rows={5}
+              style={{
+                ...inp,
+                resize: "vertical",
+                fontFamily: "Inter, sans-serif",
+                lineHeight: 1.5,
+              }}
+            />
+          </SidebarSection>
+        </>
+      }
+    />
   );
 }
 

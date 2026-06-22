@@ -198,6 +198,37 @@
     height: 100%;
   }
 
+  /* Collapsed agent peer — a thin reopen tab on the right edge.
+     The peer never unmounts conceptually; it just narrows to this rail. */
+  .slides-app-agent-tab {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
+    border: none;
+    border-left: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 92%, black);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    transition: color 120ms ease, background 120ms ease;
+  }
+
+  .slides-app-agent-tab:hover {
+    color: var(--color-text);
+    background: var(--color-accent-subtle);
+  }
+
+  .slides-app-agent-tab span {
+    writing-mode: vertical-rl;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+  }
+
   .slides-agent-surface {
     display: flex;
     height: 100%;

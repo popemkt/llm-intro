@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import type { IncomingMessage, Server } from "node:http";
 import type { IPty } from "node-pty";
 import { WebSocketServer, WebSocket } from "ws";
-import { CLI_REGISTRY, commandExists, isAllowedCommand } from "@agent-native/core/terminal/server";
+import { CLI_REGISTRY, isAllowedCommand } from "@agent-native/core/terminal/server";
 
 export type LocalPtyServerResult = {
   server: Server;
@@ -51,13 +51,33 @@ function sendStatus(ws: WebSocket, status: string, message: string) {
   }
 }
 
+const isWindows = os.platform() === "win32";
+
+// Core's commandExists() shells out to `which`, which does not exist on Windows
+// (the equivalent is `where`), so it always reports false there. Probe with the
+// platform-correct tool instead.
+function commandOnPath(command: string) {
+  try {
+    return spawnSync(isWindows ? "where" : "which", [command], { stdio: "ignore" }).status === 0;
+  } catch {
+    return false;
+  }
+}
+
+// node-pty cannot spawn `.cmd`/`.bat` launchers (codex, npx, gemini shims) directly
+// on Windows — CreateProcess fails with "error code: 2". Route them through cmd.exe,
+// a real executable that resolves PATHEXT for us. macOS/Linux spawn the binary directly.
+function withShell(file: string, args: string[]) {
+  return isWindows ? { file: "cmd.exe", args: ["/c", file, ...args] } : { file, args };
+}
+
 async function resolveSpawn(command: string, extraFlags: string) {
   const flags = extraFlags ? splitFlags(extraFlags) : [];
-  if (await commandExists(command)) return { file: command, args: flags };
+  if (commandOnPath(command)) return withShell(command, flags);
 
   const registry = CLI_REGISTRY[command];
   if (!registry?.installPackage) return null;
-  return { file: "npx", args: ["--yes", registry.installPackage, ...flags] };
+  return withShell("npx", ["--yes", registry.installPackage, ...flags]);
 }
 
 function createPtyEnv(command: string) {

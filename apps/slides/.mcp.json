@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "slides-actions": {
+      "type": "http",
+      "url": "http://localhost:3001/_agent-native/actions/mcp"
+    }
+  }
+}

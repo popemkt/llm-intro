@@ -1,5 +1,18 @@
-import { CLI_REGISTRY, commandExists, isAllowedCommand } from "@agent-native/core/terminal/server";
+import os from "node:os";
+import { spawnSync } from "node:child_process";
+import { CLI_REGISTRY, isAllowedCommand } from "@agent-native/core/terminal/server";
 import { createLocalPtyWebSocketServer, type LocalPtyServerResult } from "./local-pty-server.js";
+
+// Core's commandExists() probes with `which`, which is absent on Windows, so use
+// the platform-correct tool to detect installed CLIs.
+function commandOnPath(command: string) {
+  try {
+    const probe = os.platform() === "win32" ? "where" : "which";
+    return spawnSync(probe, [command], { stdio: "ignore" }).status === 0;
+  } catch {
+    return false;
+  }
+}
 
 export type AgentCliStatus = {
   command: string;
@@ -37,7 +50,7 @@ export function createAgentTerminalBridge(options: { appDir?: string } = {}): Ag
       Object.entries(CLI_REGISTRY).map(async ([command, entry]) => ({
         command,
         label: entry.label,
-        available: await commandExists(command),
+        available: commandOnPath(command),
       })),
     );
 

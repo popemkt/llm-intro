@@ -6,6 +6,7 @@ import { createSlidesRepository } from "./repositories/slides.js";
 import { createGroupsRepository } from "./repositories/groups.js";
 import { createSnapshotsRepository } from "./repositories/snapshots.js";
 import { createAssetsRepository } from "./repositories/assets.js";
+import { createExtensionsRepository } from "./repositories/extensions.js";
 import { createPresentationsService } from "./services/presentations.js";
 import { createSlidesService } from "./services/slides.js";
 import { createGroupsService } from "./services/groups.js";
@@ -28,6 +29,7 @@ export function buildRuntime(
   const groupsRepo = createGroupsRepository(db);
   const snapshotsRepo = createSnapshotsRepository(db);
   const assetsRepo = createAssetsRepository(db);
+  const extensionsRepo = createExtensionsRepository(db);
   const presentationsService = createPresentationsService(presentationsRepo);
   const slidesService = createSlidesService(presentationsRepo, slidesRepo);
   const groupsService = createGroupsService(presentationsRepo, groupsRepo);
@@ -47,6 +49,7 @@ export function buildRuntime(
     snapshotsService,
     assetsService,
     feedbackService,
+    extensionsRepo,
     localModelProvider,
   });
   const agentTerminalBridge = createAgentTerminalBridge({ appDir: process.cwd() });
@@ -59,6 +62,7 @@ export function buildRuntime(
       assetsService,
       feedbackService,
       actions,
+      extensionsRepo,
       agentTerminalBridge,
       localModelProvider,
     }),

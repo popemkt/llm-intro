@@ -741,6 +741,37 @@ async function handleMarkdownImportPrompt(
   return responseTextForMarkdownImport(result);
 }
 
+function deriveExtensionName(description: string) {
+  const words = description
+    .replace(/[.!?]+$/, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return "New extension";
+  const name = words.slice(0, 5).join(" ");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+async function handleCreateExtensionPrompt(
+  actions: SlideDeckActions,
+  prompt: string,
+  normalized: string,
+) {
+  const isCreate = /\b(create|make|build|add|new)\b/.test(normalized);
+  const mentionsExtension = /\b(extension|widget)\b/.test(normalized);
+  if (!isCreate || !mentionsExtension) return null;
+
+  // The tray/list "+" sends "Create an extension: <description>"; slot affordances
+  // send "Create a new widget that fits in slot ...". Take the text after the
+  // keyword as the description, derive a name, and scaffold a real extension.
+  const afterKeyword = prompt.split(/\b(?:extension|widget)s?\b\s*:?\s*/i)[1]?.trim();
+  const description = (afterKeyword || prompt).trim();
+  const name = inferTitle(prompt, deriveExtensionName(description));
+  const result = await runAction(actions["create-extension"], { name, description });
+  const id = result && typeof result === "object" && "id" in result ? String(result.id) : null;
+  if (!id) return `Created extension "${name}".`;
+  return `Created extension "${name}". Open it from the Extensions tray, or at /extensions/${id} to build it out.`;
+}
+
 async function handleDeckCreationPrompt(
   actions: SlideDeckActions,
   prompt: string,
@@ -846,6 +877,7 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
     () => handleLocalHarnessToolsPrompt(actions, normalized),
     () => handleLocalHarnessPrompt(actions, normalized),
     () => handleMarkdownImportPrompt(actions, prompt, normalized),
+    () => handleCreateExtensionPrompt(actions, prompt, normalized),
     () => handleDeckCreationPrompt(actions, prompt, normalized),
   ]);
   if (workspaceResponse) return workspaceResponse;

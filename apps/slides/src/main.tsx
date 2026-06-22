@@ -29,6 +29,16 @@ const SettingsPage = lazy(() =>
 const AppSettingsPage = lazy(() =>
   import("./pages/AppSettingsPage").then((module) => ({ default: module.AppSettingsPage })),
 );
+const ExtensionsListPage = lazy(() =>
+  import("@agent-native/core/client/extensions").then((module) => ({
+    default: module.ExtensionsListPage,
+  })),
+);
+const ExtensionViewerPage = lazy(() =>
+  import("@agent-native/core/client/extensions").then((module) => ({
+    default: module.ExtensionViewerPage,
+  })),
+);
 const queryClient = createAgentNativeQueryClient();
 
 function RouteFallback() {
@@ -69,6 +79,9 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/p/:id/edit/:sid" element={<SlideEditorPage />} />
               <Route path="/p/:id/settings" element={<SettingsPage />} />
               <Route path="/settings" element={<AppSettingsPage />} />
+              <Route path="/extensions" element={<ExtensionsListPage />} />
+              <Route path="/extensions/:id" element={<ExtensionViewerPage />} />
+              <Route path="/extensions/:id/:slug" element={<ExtensionViewerPage />} />
             </Routes>
           </Suspense>
         </AppShell>

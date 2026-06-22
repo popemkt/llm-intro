@@ -10,6 +10,7 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
+import { ExtensionsSidebarSection } from "@agent-native/core/client/extensions";
 import { createSlidesAppAgentRuntime } from "@/agent/appAgentRuntime";
 import { applyAppTheme } from "@/lib/appTheme";
 import { THEME_NAMES, type ThemeName } from "@/types";
@@ -420,17 +421,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Sparkles size={15} />
           </div>
           {!collapsed && <span>Slides</span>}
+          {!collapsed && (
+            <button
+              type="button"
+              className="slides-app-rail__brand-toggle"
+              onClick={() => setShellCollapsed(true)}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          )}
         </div>
 
-        <button
-          type="button"
-          className="slides-app-rail__button"
-          onClick={() => setShellCollapsed(!collapsed)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-        </button>
+        {collapsed && (
+          <button
+            type="button"
+            className="slides-app-rail__button"
+            onClick={() => setShellCollapsed(false)}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
 
         <nav className="slides-app-rail__nav">
           {navItems.map((item) => {
@@ -453,23 +467,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {!collapsed && (
+          <div className="slides-app-rail__extensions">
+            <ExtensionsSidebarSection />
+          </div>
+        )}
+
         <div className="slides-app-rail__agent">
           <button
             type="button"
-            className="slides-app-rail__button"
+            className="slides-app-rail__chat"
             onClick={() => setAgentOpenPersisted(!agentOpen)}
-            aria-label="Toggle agent"
-            title="Toggle agent"
+            aria-label="Toggle chat"
+            title="Toggle chat"
             data-active={agentOpen ? "true" : "false"}
           >
             <MessageSquare size={16} />
+            {!collapsed && <span>Chat</span>}
           </button>
         </div>
       </aside>
 
       <main className="slides-app-shell__main">{children}</main>
 
-      {agentOpen ? (
+      {agentOpen && (
         <aside className="slides-app-agent-panel agent-sidebar-panel" aria-label="Agent">
           <SlidesAgentSurface
             runtime={appAgentRuntime}
@@ -478,17 +499,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onCollapse={() => setAgentOpenPersisted(false)}
           />
         </aside>
-      ) : (
-        <button
-          type="button"
-          className="slides-app-agent-tab"
-          onClick={() => setAgentOpenPersisted(true)}
-          aria-label="Open agent"
-          title="Open agent"
-        >
-          <MessageSquare size={15} />
-          <span>Chat</span>
-        </button>
       )}
     </div>
   );

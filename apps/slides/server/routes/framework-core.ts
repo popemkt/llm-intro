@@ -88,6 +88,25 @@ function registerFrameworkHealthRoutes(router: Router) {
   router.get("/demo/status", (_req, res) => {
     res.json({ enabled: false, forced: false });
   });
+
+  // Notifications aren't a feature of the local server; the framework's
+  // NotificationsBell (rendered on the extensions pages) polls this — answer
+  // with an empty count so it stays quiet instead of 404-spamming the console.
+  router.get("/notifications/count", (_req, res) => {
+    res.json({ count: 0, unread: 0 });
+  });
+
+  router.get("/notifications", (_req, res) => {
+    res.json({ notifications: [], count: 0 });
+  });
+
+  // Resource sharing isn't a feature of the local single-user server; the
+  // extension viewer's Share control polls this action. Answer with no shares
+  // so it stays quiet instead of 404-spamming. Mounted here (before the action
+  // router) since there's no backing action.
+  router.get("/actions/list-resource-shares", (_req, res) => {
+    res.json({ shares: [] });
+  });
 }
 
 function registerFrameworkStatusRoutes(router: Router, options: FrameworkStatusRouteOptions) {

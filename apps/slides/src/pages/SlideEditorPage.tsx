@@ -39,13 +39,13 @@ import {
   Trash2,
   Circle,
   Check,
+  ChevronDown,
+  ChevronRight,
   Diamond,
   Hexagon,
   Maximize2,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
+  GalleryVerticalEnd,
+  SlidersHorizontal,
   Quote,
   Scissors,
   StretchHorizontal,
@@ -63,6 +63,7 @@ import type {
   ApiPresentation,
   ApiSlide,
   ApiSlideBackground,
+  ApiSlideGroup,
   ApiSlideTransition,
   Block,
   ManualBlockAnimationPreset,
@@ -954,6 +955,86 @@ function getBlockLayerName(block: Block) {
   return block.label?.trim() || `${block.shape} ${block.color}`;
 }
 
+/**
+ * Collapsible inspector section — the "toolset toggle" from the mockup. A header
+ * row with a chevron folds its body; open/closed state persists per section id
+ * so the inspector reopens the way you left it.
+ */
+function CollapsibleSection({
+  id,
+  title,
+  defaultOpen = true,
+  right,
+  children,
+}: {
+  id: string;
+  title: string;
+  defaultOpen?: boolean;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const storageKey = `slides-inspector-sec-${id}`;
+  const [open, setOpen] = useState(() => {
+    const stored = localStorage.getItem(storageKey);
+    return stored === null ? defaultOpen : stored === "true";
+  });
+  const toggle = () => {
+    setOpen((prev) => {
+      localStorage.setItem(storageKey, String(!prev));
+      return !prev;
+    });
+  };
+  return (
+    <div style={{ borderBottom: `1px solid ${C.border}` }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "9px 12px",
+        }}
+      >
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: C.text,
+            textAlign: "left",
+          }}
+        >
+          {open ? (
+            <ChevronDown size={13} style={{ color: C.textDim, flexShrink: 0 }} />
+          ) : (
+            <ChevronRight size={13} style={{ color: C.textDim, flexShrink: 0 }} />
+          )}
+          <span
+            style={{
+              fontSize: 10.5,
+              fontWeight: 650,
+              fontFamily: "Inter, sans-serif",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {title}
+          </span>
+        </button>
+        {right}
+      </div>
+      {open && <div style={{ padding: "0 12px 14px" }}>{children}</div>}
+    </div>
+  );
+}
+
 type PanelTab = "insert" | "design" | "animate" | "notes" | "layers";
 
 const PANEL_TABS: { id: PanelTab; label: string }[] = [
@@ -973,12 +1054,10 @@ function InspectorTabs({
   active,
   onChange,
   layerCount,
-  onCollapse,
 }: {
   active: PanelTab;
   onChange: (tab: PanelTab) => void;
   layerCount: number;
-  onCollapse?: () => void;
 }) {
   return (
     <div
@@ -1030,84 +1109,50 @@ function InspectorTabs({
           );
         })}
       </div>
-      {onCollapse && (
-        <button
-          type="button"
-          onClick={onCollapse}
-          title="Hide inspector"
-          aria-label="Hide inspector"
-          style={{
-            flexShrink: 0,
-            border: "none",
-            background: "transparent",
-            color: C.textDim,
-            padding: "0 8px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <PanelRightClose size={14} />
-        </button>
-      )}
     </div>
   );
 }
 
 /**
  * Left slide dock — a thumbnail/title navigator so you can switch slides
- * without leaving the editor. Collapses to a thin reopen rail, like the
- * other shell/editor bars.
+ * without leaving the editor. Toggled from the top bar; renders nothing when
+ * closed so the canvas reclaims the full width.
  */
 function SlideDock({
   slides,
+  groups,
   currentSid,
   open,
-  onToggle,
   onNavigate,
 }: {
   slides: UnifiedSlide[];
+  groups: ApiSlideGroup[];
   currentSid: number;
   open: boolean;
-  onToggle: () => void;
   onNavigate: (sid: number) => void;
 }) {
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        title="Show slides"
-        aria-label="Show slides"
-        style={{
-          width: 34,
-          flexShrink: 0,
-          borderRight: `1px solid ${C.border}`,
-          background: C.surface,
-          color: C.textDim,
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-          padding: "14px 0",
-        }}
-      >
-        <PanelLeftOpen size={15} />
-        <span
-          style={{
-            writingMode: "vertical-rl",
-            fontSize: 11,
-            fontWeight: 650,
-            letterSpacing: "0.08em",
-          }}
-        >
-          Slides
-        </span>
-      </button>
-    );
-  }
+  // Bucket slides the same way the overview does: ungrouped first, then each
+  // group in group order. A flat position sort hid group boundaries and could
+  // interleave members, so the dock order drifted from the real deck layout.
+  const sections = useMemo(() => {
+    const byGroup = new Map<number, UnifiedSlide[]>();
+    for (const g of groups) byGroup.set(g.id, []);
+    const ungrouped: UnifiedSlide[] = [];
+    for (const s of slides) {
+      if (s.groupId != null && byGroup.has(s.groupId)) byGroup.get(s.groupId)!.push(s);
+      else ungrouped.push(s);
+    }
+    const out: { key: string; title: string | null; slides: UnifiedSlide[] }[] = [];
+    if (ungrouped.length) out.push({ key: "ungrouped", title: null, slides: ungrouped });
+    for (const g of [...groups].sort((a, b) => a.position - b.position)) {
+      const members = byGroup.get(g.id)!;
+      if (members.length)
+        out.push({ key: `g${g.id}`, title: g.title || "Untitled group", slides: members });
+    }
+    return out;
+  }, [slides, groups]);
+
+  if (!open) return null;
   return (
     <div
       style={{
@@ -1124,7 +1169,6 @@ function SlideDock({
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           padding: "10px 12px",
           borderBottom: `1px solid ${C.border}`,
           flexShrink: 0,
@@ -1141,22 +1185,6 @@ function SlideDock({
         >
           Slides ({slides.length})
         </span>
-        <button
-          type="button"
-          onClick={onToggle}
-          title="Hide slides"
-          aria-label="Hide slides"
-          style={{
-            background: "none",
-            border: "none",
-            color: C.textDim,
-            cursor: "pointer",
-            display: "flex",
-            padding: 2,
-          }}
-        >
-          <PanelLeftClose size={14} />
-        </button>
       </div>
       <div
         style={{
@@ -1165,72 +1193,106 @@ function SlideDock({
           padding: 8,
           display: "flex",
           flexDirection: "column",
-          gap: 6,
+          gap: 10,
         }}
       >
-        {slides.map((s, i) => {
-          const on = s.id === currentSid;
-          return (
-            <div
-              key={s.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Open slide ${i + 1}: ${s.title || "Untitled"}`}
-              onClick={() => onNavigate(s.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onNavigate(s.id);
-                }
-              }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                padding: 6,
-                borderRadius: 9,
-                cursor: "pointer",
-                background: on ? C.accentSubtle : C.bg,
-                border: `1px solid ${on ? C.accent : C.border}`,
-                boxShadow: on ? `0 0 0 1px ${C.accent}` : "none",
-                color: on ? C.text : C.textDim,
-              }}
-            >
-              <div
-                style={{
-                  borderRadius: 5,
-                  overflow: "hidden",
-                  border: `1px solid ${C.border}`,
-                  background: "#070908",
-                }}
-              >
-                <SlidePreview slide={s} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span
+        {(() => {
+          let n = 0; // running 1-based slide number across all sections
+          return sections.map((section) => (
+            <div key={section.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {section.title && (
+                <div
                   style={{
-                    fontSize: 9,
-                    fontFamily: "JetBrains Mono, monospace",
-                    color: on ? C.accent : C.muted,
-                    minWidth: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "2px 2px 0",
                   }}
                 >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {s.title || "Untitled"}
-                </span>
-              </div>
+                  <Group size={11} style={{ color: C.muted, flexShrink: 0 }} />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontFamily: "JetBrains Mono, monospace",
+                      color: C.muted,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {section.title}
+                  </span>
+                </div>
+              )}
+              {section.slides.map((s) => {
+                const idx = ++n;
+                const on = s.id === currentSid;
+                return (
+                  <div
+                    key={s.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open slide ${idx}: ${s.title || "Untitled"}`}
+                    onClick={() => onNavigate(s.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onNavigate(s.id);
+                      }
+                    }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      padding: 6,
+                      borderRadius: 9,
+                      cursor: "pointer",
+                      background: on ? C.accentSubtle : C.bg,
+                      border: `1px solid ${on ? C.accent : C.border}`,
+                      boxShadow: on ? `0 0 0 1px ${C.accent}` : "none",
+                      color: on ? C.text : C.textDim,
+                    }}
+                  >
+                    <div
+                      style={{
+                        borderRadius: 5,
+                        overflow: "hidden",
+                        border: `1px solid ${C.border}`,
+                        background: "#070908",
+                      }}
+                    >
+                      <SlidePreview slide={s} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontFamily: "JetBrains Mono, monospace",
+                          color: on ? C.accent : C.muted,
+                          minWidth: 16,
+                        }}
+                      >
+                        {String(idx).padStart(2, "0")}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {s.title || "Untitled"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          ));
+        })()}
       </div>
     </div>
   );
@@ -1334,6 +1396,11 @@ export function SlideEditorPage() {
     { enabled: validRoute },
   );
   const slidesQuery = useActionQuery<ApiSlide[]>("list-slides", { pid }, { enabled: validRoute });
+  const groupsQuery = useActionQuery<ApiSlideGroup[]>(
+    "list-groups",
+    { pid },
+    { enabled: validRoute },
+  );
   const updateSlide = useActionMutation<
     ApiSlide,
     {
@@ -2348,6 +2415,23 @@ export function SlideEditorPage() {
           background: C.surface,
         }}
       >
+        <button
+          type="button"
+          onClick={() => setDockOpen((v) => !v)}
+          title={dockOpen ? "Hide slides panel" : "Show slides panel"}
+          aria-label={dockOpen ? "Hide slides panel" : "Show slides panel"}
+          aria-pressed={dockOpen}
+          style={{
+            ...arrangeButton,
+            width: 34,
+            height: 32,
+            color: dockOpen ? C.accent : C.textDim,
+            background: dockOpen ? C.accentSubtle : C.bg,
+          }}
+        >
+          <GalleryVerticalEnd size={15} />
+        </button>
+        <div style={{ width: 1, height: 20, background: C.border }} />
         <Breadcrumb
           segments={[
             { label: "Home", to: "/" },
@@ -2500,6 +2584,23 @@ export function SlideEditorPage() {
             </>
           )}
           <button
+            type="button"
+            onClick={() => setInspectorOpen((v) => !v)}
+            title={inspectorOpen ? "Hide inspector" : "Show inspector"}
+            aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"}
+            aria-pressed={inspectorOpen}
+            style={{
+              ...arrangeButton,
+              width: 34,
+              height: 32,
+              color: inspectorOpen ? C.accent : C.textDim,
+              background: inspectorOpen ? C.accentSubtle : C.bg,
+            }}
+          >
+            <SlidersHorizontal size={15} />
+          </button>
+          <div style={{ width: 1, height: 20, background: C.border, margin: "0 2px" }} />
+          <button
             onClick={() => navigate(`/p/${pid}/settings`)}
             style={{
               color: C.textDim,
@@ -2557,9 +2658,9 @@ export function SlideEditorPage() {
           slides={[...((slidesQuery.data as ApiSlide[] | undefined) ?? [])]
             .sort((a, b) => a.position - b.position)
             .map((s) => toUnifiedSlide(s, theme))}
+          groups={groupsQuery.data ?? []}
           currentSid={sid}
           open={dockOpen}
-          onToggle={() => setDockOpen((v) => !v)}
           onNavigate={(nextSid) => {
             if (nextSid !== sid) navigate(`/p/${pid}/edit/${nextSid}`);
           }}
@@ -2582,7 +2683,6 @@ export function SlideEditorPage() {
               title={title}
               transition={transition}
               inspectorOpen={inspectorOpen}
-              onToggleInspector={() => setInspectorOpen((v) => !v)}
             />
           </div>
         ) : slideKind === "html" ? (
@@ -2596,7 +2696,6 @@ export function SlideEditorPage() {
               onNotes={setNotes}
               onTransition={setTransition}
               inspectorOpen={inspectorOpen}
-              onToggleInspector={() => setInspectorOpen((v) => !v)}
             />
           </div>
         ) : (
@@ -2837,7 +2936,6 @@ export function SlideEditorPage() {
                   active={panelTab}
                   onChange={setPanelTab}
                   layerCount={blocks.length}
-                  onCollapse={() => setInspectorOpen(false)}
                 />
 
                 {/* Insert — content library + deck assets */}
@@ -2865,10 +2963,8 @@ export function SlideEditorPage() {
                     style={{
                       flex: 1,
                       overflowY: "auto",
-                      padding: "14px 16px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 14,
                     }}
                   >
                     {panelTab === "design" &&
@@ -2879,6 +2975,7 @@ export function SlideEditorPage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
+                              padding: "12px 12px 8px",
                             }}
                           >
                             <span
@@ -2949,19 +3046,7 @@ export function SlideEditorPage() {
                           </div>
 
                           {/* Arrange */}
-                          <div>
-                            <div
-                              style={{
-                                fontSize: 9,
-                                color: C.textDim,
-                                marginBottom: 6,
-                                fontFamily: "JetBrains Mono, monospace",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.06em",
-                              }}
-                            >
-                              Arrange
-                            </div>
+                          <CollapsibleSection id="arrange" title="Arrange">
                             <div
                               style={{
                                 display: "grid",
@@ -3069,22 +3154,10 @@ export function SlideEditorPage() {
                                 <Maximize2 size={14} />
                               </button>
                             </div>
-                          </div>
+                          </CollapsibleSection>
 
                           {/* Position & size */}
-                          <div>
-                            <div
-                              style={{
-                                fontSize: 9,
-                                color: C.textDim,
-                                marginBottom: 6,
-                                fontFamily: "JetBrains Mono, monospace",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.06em",
-                              }}
-                            >
-                              Position &amp; Size (%)
-                            </div>
+                          <CollapsibleSection id="position" title="Position & size">
                             <div
                               style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
                             >
@@ -3134,90 +3207,100 @@ export function SlideEditorPage() {
                                 </label>
                               ))}
                             </div>
-                          </div>
+                          </CollapsibleSection>
 
-                          <CommonAppearanceEditor
-                            block={selectedBlock}
-                            onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                          />
-                          <BlockAnimationEditor
-                            block={selectedBlock}
-                            onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                          />
-                          <BlockLinkEditor
-                            block={selectedBlock}
-                            onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                          />
+                          <CollapsibleSection id="appearance" title="Appearance">
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                              <CommonAppearanceEditor
+                                block={selectedBlock}
+                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                              />
+                              <BlockAnimationEditor
+                                block={selectedBlock}
+                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                              />
+                              <BlockLinkEditor
+                                block={selectedBlock}
+                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                              />
+                            </div>
+                          </CollapsibleSection>
 
                           {/* Type-specific fields */}
                           {selectedBlock.type === "text" && (
-                            <>
-                              <TextBlockPropertyEditor
-                                block={selectedBlock}
-                                onUpdate={(markdown) => updateBlock(selectedBlock.id, { markdown })}
-                              />
-                              <TextAppearanceEditor
-                                block={selectedBlock}
-                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                              />
-                            </>
+                            <CollapsibleSection id="type-text" title="Text">
+                              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                <TextBlockPropertyEditor
+                                  block={selectedBlock}
+                                  onUpdate={(markdown) =>
+                                    updateBlock(selectedBlock.id, { markdown })
+                                  }
+                                />
+                                <TextAppearanceEditor
+                                  block={selectedBlock}
+                                  onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
+                                />
+                              </div>
+                            </CollapsibleSection>
                           )}
 
                           {selectedBlock.type === "image" && (
-                            <>
-                              <div>
-                                <div
-                                  style={{
-                                    fontSize: 9,
-                                    color: C.textDim,
-                                    marginBottom: 4,
-                                    fontFamily: "JetBrains Mono, monospace",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.06em",
-                                  }}
-                                >
-                                  URL
+                            <CollapsibleSection id="type-image" title="Image">
+                              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                <div>
+                                  <div
+                                    style={{
+                                      fontSize: 9,
+                                      color: C.textDim,
+                                      marginBottom: 4,
+                                      fontFamily: "JetBrains Mono, monospace",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.06em",
+                                    }}
+                                  >
+                                    URL
+                                  </div>
+                                  <input
+                                    value={selectedBlock.url}
+                                    onChange={(e) =>
+                                      updateBlock(selectedBlock.id, { url: e.target.value })
+                                    }
+                                    placeholder="https://…"
+                                    style={inp}
+                                  />
                                 </div>
-                                <input
-                                  value={selectedBlock.url}
-                                  onChange={(e) =>
-                                    updateBlock(selectedBlock.id, { url: e.target.value })
-                                  }
-                                  placeholder="https://…"
-                                  style={inp}
+                                <div>
+                                  <div
+                                    style={{
+                                      fontSize: 9,
+                                      color: C.textDim,
+                                      marginBottom: 4,
+                                      fontFamily: "JetBrains Mono, monospace",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.06em",
+                                    }}
+                                  >
+                                    Alt text
+                                  </div>
+                                  <input
+                                    value={selectedBlock.alt ?? ""}
+                                    onChange={(e) =>
+                                      updateBlock(selectedBlock.id, { alt: e.target.value })
+                                    }
+                                    placeholder="Description"
+                                    style={inp}
+                                  />
+                                </div>
+                                <ImageAppearanceEditor
+                                  block={selectedBlock}
+                                  onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
                                 />
                               </div>
-                              <div>
-                                <div
-                                  style={{
-                                    fontSize: 9,
-                                    color: C.textDim,
-                                    marginBottom: 4,
-                                    fontFamily: "JetBrains Mono, monospace",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.06em",
-                                  }}
-                                >
-                                  Alt text
-                                </div>
-                                <input
-                                  value={selectedBlock.alt ?? ""}
-                                  onChange={(e) =>
-                                    updateBlock(selectedBlock.id, { alt: e.target.value })
-                                  }
-                                  placeholder="Description"
-                                  style={inp}
-                                />
-                              </div>
-                              <ImageAppearanceEditor
-                                block={selectedBlock}
-                                onUpdate={(patch) => updateBlock(selectedBlock.id, patch)}
-                              />
-                            </>
+                            </CollapsibleSection>
                           )}
 
                           {selectedBlock.type === "iframe" && (
-                            <div>
+                            <CollapsibleSection id="type-iframe" title="Embed">
                               <div
                                 style={{
                                   fontSize: 9,
@@ -3238,50 +3321,60 @@ export function SlideEditorPage() {
                                 placeholder="https://…"
                                 style={inp}
                               />
-                            </div>
+                            </CollapsibleSection>
                           )}
 
                           {selectedBlock.type === "shape" && (
-                            <ShapePropEditor
-                              block={selectedBlock}
-                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                            />
+                            <CollapsibleSection id="type-shape" title="Shape">
+                              <ShapePropEditor
+                                block={selectedBlock}
+                                onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                              />
+                            </CollapsibleSection>
                           )}
 
                           {selectedBlock.type === "line" && (
-                            <LinePropEditor
-                              block={selectedBlock}
-                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                            />
+                            <CollapsibleSection id="type-line" title="Line">
+                              <LinePropEditor
+                                block={selectedBlock}
+                                onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                              />
+                            </CollapsibleSection>
                           )}
 
                           {selectedBlock.type === "table" && (
-                            <TablePropEditor
-                              block={selectedBlock}
-                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                            />
+                            <CollapsibleSection id="type-table" title="Table">
+                              <TablePropEditor
+                                block={selectedBlock}
+                                onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                              />
+                            </CollapsibleSection>
                           )}
 
                           {selectedBlock.type === "chart" && (
-                            <ChartPropEditor
-                              block={selectedBlock}
-                              onUpdate={(p) => updateBlock(selectedBlock.id, p)}
-                            />
+                            <CollapsibleSection id="type-chart" title="Chart">
+                              <ChartPropEditor
+                                block={selectedBlock}
+                                onUpdate={(p) => updateBlock(selectedBlock.id, p)}
+                              />
+                            </CollapsibleSection>
                           )}
                         </>
                       ) : selectedIds.length > 1 ? (
-                        <MultiSelectionPanel
-                          count={selectedIds.length}
-                          onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
-                          onDelete={() => deleteSelectedBlocks(selectedIds)}
-                          onDuplicate={() => duplicateBlocks(selectedIds)}
-                          onGroup={() => groupSelectedBlocks(selectedIds)}
-                          onUngroup={() => ungroupSelectedBlocks(selectedIds)}
-                        />
+                        <div style={{ padding: "14px 12px" }}>
+                          <MultiSelectionPanel
+                            count={selectedIds.length}
+                            onArrange={(action) => arrangeSelectedGroup(action, selectedIds)}
+                            onDelete={() => deleteSelectedBlocks(selectedIds)}
+                            onDuplicate={() => duplicateBlocks(selectedIds)}
+                            onGroup={() => groupSelectedBlocks(selectedIds)}
+                            onUngroup={() => ungroupSelectedBlocks(selectedIds)}
+                          />
+                        </div>
                       ) : (
                         <div
                           style={{
-                            padding: "24px 0",
+                            padding: "28px 16px",
                             textAlign: "center",
                             fontSize: 11,
                             color: C.muted,
@@ -3303,21 +3396,25 @@ export function SlideEditorPage() {
                       ))}
 
                     {panelTab === "design" && (
-                      <SlideBackgroundEditor
-                        background={background}
-                        onBackground={updateSlideBackground}
-                      />
+                      <div style={{ padding: "14px 12px", borderTop: `1px solid ${C.border}` }}>
+                        <SlideBackgroundEditor
+                          background={background}
+                          onBackground={updateSlideBackground}
+                        />
+                      </div>
                     )}
 
                     {panelTab === "animate" && (
-                      <SlideTransitionEditor
-                        transition={transition}
-                        onTransition={updateSlideTransition}
-                      />
+                      <div style={{ padding: "14px 12px" }}>
+                        <SlideTransitionEditor
+                          transition={transition}
+                          onTransition={updateSlideTransition}
+                        />
+                      </div>
                     )}
 
                     {panelTab === "notes" && (
-                      <div>
+                      <div style={{ padding: "14px 12px" }}>
                         <div
                           style={{
                             fontSize: 9,
@@ -3454,40 +3551,7 @@ export function SlideEditorPage() {
                   </div>
                 )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setInspectorOpen(true)}
-                title="Show inspector"
-                aria-label="Show inspector"
-                style={{
-                  width: 34,
-                  flexShrink: 0,
-                  borderLeft: `1px solid ${C.border}`,
-                  background: C.surface,
-                  color: C.textDim,
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "14px 0",
-                }}
-              >
-                <PanelRightOpen size={15} />
-                <span
-                  style={{
-                    writingMode: "vertical-rl",
-                    fontSize: 11,
-                    fontWeight: 650,
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  Inspector
-                </span>
-              </button>
-            )}
+            ) : null}
           </>
         )}
       </div>
@@ -4016,12 +4080,10 @@ function NonManualSlideWorkspace({
   preview,
   sidebar,
   inspectorOpen,
-  onToggleInspector,
 }: {
   preview: React.ReactNode;
   sidebar: React.ReactNode;
   inspectorOpen: boolean;
-  onToggleInspector: () => void;
 }) {
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -4053,8 +4115,7 @@ function NonManualSlideWorkspace({
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 8px 8px 14px",
+              padding: "8px 14px",
               borderBottom: `1px solid ${C.border}`,
               flexShrink: 0,
             }}
@@ -4069,60 +4130,10 @@ function NonManualSlideWorkspace({
             >
               Inspector
             </span>
-            <button
-              type="button"
-              onClick={onToggleInspector}
-              title="Hide inspector"
-              aria-label="Hide inspector"
-              style={{
-                border: "none",
-                background: "transparent",
-                color: C.textDim,
-                padding: 4,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <PanelRightClose size={14} />
-            </button>
           </div>
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>{sidebar}</div>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={onToggleInspector}
-          title="Show inspector"
-          aria-label="Show inspector"
-          style={{
-            width: 34,
-            flexShrink: 0,
-            borderLeft: `1px solid ${C.border}`,
-            background: C.surface,
-            color: C.textDim,
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-            padding: "14px 0",
-          }}
-        >
-          <PanelRightOpen size={15} />
-          <span
-            style={{
-              writingMode: "vertical-rl",
-              fontSize: 11,
-              fontWeight: 650,
-              letterSpacing: "0.08em",
-            }}
-          >
-            Inspector
-          </span>
-        </button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -4156,11 +4167,11 @@ function NonManualPreviewFrame({
 }
 
 function SidebarSection({ children, title }: { children: React.ReactNode; title: string }) {
+  const id = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <div style={{ padding: 16, borderBottom: `1px solid ${C.border}` }}>
-      <div style={{ ...inspectorLabel, marginBottom: 8 }}>{title}</div>
+    <CollapsibleSection id={id} title={title}>
       {children}
-    </div>
+    </CollapsibleSection>
   );
 }
 
@@ -4212,7 +4223,6 @@ function CodeSlideSourceEditor({
   title,
   transition,
   inspectorOpen,
-  onToggleInspector,
 }: {
   background: ApiSlideBackground | null;
   codeId: string | null;
@@ -4229,7 +4239,6 @@ function CodeSlideSourceEditor({
   title: string;
   transition: ApiSlideTransition | null;
   inspectorOpen: boolean;
-  onToggleInspector: () => void;
 }) {
   const Component = component;
   return (
@@ -4321,7 +4330,6 @@ function CodeSlideSourceEditor({
         </>
       }
       inspectorOpen={inspectorOpen}
-      onToggleInspector={onToggleInspector}
     />
   );
 }
@@ -4335,7 +4343,6 @@ function HtmlSlideSourceEditor({
   onTransition,
   title,
   inspectorOpen,
-  onToggleInspector,
 }: {
   html: string;
   notes: string;
@@ -4345,12 +4352,10 @@ function HtmlSlideSourceEditor({
   onTransition: (transition: ApiSlideTransition | null) => void;
   title: string;
   inspectorOpen: boolean;
-  onToggleInspector: () => void;
 }) {
   return (
     <NonManualSlideWorkspace
       inspectorOpen={inspectorOpen}
-      onToggleInspector={onToggleInspector}
       preview={
         <NonManualPreviewFrame>
           <HtmlSlideRenderer html={html} title={title || "HTML slide preview"} />

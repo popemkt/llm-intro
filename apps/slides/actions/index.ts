@@ -15,6 +15,8 @@ import { createSnapshotActions } from "./snapshots.js";
 import { createLocalHarnessActions } from "./local-harness.js";
 import { createAssetActions } from "./assets.js";
 import { createSlideFeedbackActions } from "./slide-feedback.js";
+import { createExtensionActions } from "./extensions.js";
+import type { ExtensionsRepository } from "../server/repositories/extensions.js";
 import type { createSnapshotsService } from "../server/services/snapshots.js";
 import type { createAssetsService } from "../server/services/assets.js";
 import type { createSlideFeedbackService } from "../server/services/slide-feedback.js";
@@ -34,9 +36,11 @@ export function createSlideDeckActions(services: {
   snapshotsService: SnapshotsService;
   assetsService: AssetsService;
   feedbackService: SlideFeedbackService;
+  extensionsRepo: ExtensionsRepository;
   localModelProvider?: LocalDeckModelProvider;
 }) {
   return {
+    ...createExtensionActions(services.extensionsRepo),
     ...createAppContextActions(),
     ...createThemeDesignActions(services.presentationsService),
     "get-active-deck-context": createActiveDeckContextAction(services),

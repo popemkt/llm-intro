@@ -7,6 +7,8 @@ import { createGroupsRouter } from "./routes/groups.js";
 import { createSlideFeedbackRouter } from "./routes/slide-feedback.js";
 import { createExportHandler } from "./routes/export.js";
 import { createApplicationStateRouter } from "./routes/application-state.js";
+import { createExtensionsRouter } from "./routes/extensions.js";
+import { createExtensionSlotsRouter } from "./routes/extension-slots.js";
 import { createFrameworkCoreRouter } from "./routes/framework-core.js";
 import { createAppAgentRuntimeRouter } from "./routes/app-agent-runtime.js";
 import { createPromptDeckStreamRouter } from "./routes/prompt-deck-stream.js";
@@ -15,6 +17,7 @@ import {
   createAgentNativeDiscoveryRouter,
 } from "./routes/agent-native-actions.js";
 import type { SlideDeckActions } from "../actions/index.js";
+import type { ExtensionsRepository } from "./repositories/extensions.js";
 import type { createPresentationsService } from "./services/presentations.js";
 import type { createSlidesService } from "./services/slides.js";
 import type { createGroupsService } from "./services/groups.js";
@@ -36,6 +39,7 @@ export function createApp(services: {
   assetsService: AssetsService;
   feedbackService: SlideFeedbackService;
   actions: SlideDeckActions;
+  extensionsRepo: ExtensionsRepository;
   agentTerminalBridge?: AgentTerminalBridge;
   localModelProvider?: LocalDeckModelProvider;
 }) {
@@ -56,6 +60,8 @@ export function createApp(services: {
     }),
   );
   app.use("/_agent-native/application-state", createApplicationStateRouter());
+  app.use("/_agent-native/extensions", createExtensionsRouter(services.extensionsRepo));
+  app.use("/_agent-native/slots", createExtensionSlotsRouter(services.extensionsRepo));
   app.use("/_agent-native/actions", createAgentNativeActionsRouter(services.actions));
   const exportHandler = createExportHandler(
     services.presentationsService,

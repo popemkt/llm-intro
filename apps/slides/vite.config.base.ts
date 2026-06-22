@@ -15,5 +15,9 @@ export const baseConfig: UserConfig = {
     alias: {
       "@": SRC_DIR,
     },
+    // App and @agent-native/core must share one react-router instance, or core
+    // components (the extensions tray) lose the Router context. Versions are
+    // aligned in package.json; dedupe collapses any remaining duplicate copies.
+    dedupe: ["react", "react-dom", "react-router", "react-router-dom"],
   },
 };

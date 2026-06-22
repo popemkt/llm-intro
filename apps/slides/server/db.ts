@@ -185,6 +185,68 @@ function migrate(db: Database.Database) {
     migratePresentationDefaultTransitions(db);
     db.pragma("user_version = 13");
   }
+
+  if (version < 14) {
+    migrateExtensions(db);
+    db.pragma("user_version = 14");
+  }
+}
+
+// Agent-native "extensions": user/agent-authored sandboxed apps plus the slot
+// system that lets them render into named UI mount points, and a per-extension
+// key/value store. Mirrors the framework's tool_* schema (renamed extension_*)
+// so the stock @agent-native client components work against this local server.
+function migrateExtensions(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS extensions (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      content     TEXT NOT NULL DEFAULT '',
+      icon        TEXT,
+      owner_email TEXT NOT NULL DEFAULT 'local-user',
+      visibility  TEXT NOT NULL DEFAULT 'private',
+      hidden_at   TEXT,
+      hidden_by   TEXT,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS extension_slots (
+      id           TEXT PRIMARY KEY,
+      extension_id TEXT NOT NULL REFERENCES extensions(id) ON DELETE CASCADE,
+      slot_id      TEXT NOT NULL,
+      config       TEXT,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(extension_id, slot_id)
+    );
+    CREATE INDEX IF NOT EXISTS extension_slots_slot_idx ON extension_slots(slot_id);
+
+    CREATE TABLE IF NOT EXISTS extension_slot_installs (
+      id           TEXT PRIMARY KEY,
+      extension_id TEXT NOT NULL REFERENCES extensions(id) ON DELETE CASCADE,
+      slot_id      TEXT NOT NULL,
+      owner_email  TEXT NOT NULL DEFAULT 'local-user',
+      position     INTEGER NOT NULL DEFAULT 0,
+      config       TEXT,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(extension_id, slot_id, owner_email)
+    );
+    CREATE INDEX IF NOT EXISTS extension_slot_installs_slot_idx
+      ON extension_slot_installs(slot_id, owner_email, position);
+
+    CREATE TABLE IF NOT EXISTS extension_data (
+      extension_id TEXT NOT NULL REFERENCES extensions(id) ON DELETE CASCADE,
+      collection   TEXT NOT NULL DEFAULT 'default',
+      item_id      TEXT NOT NULL,
+      data         TEXT NOT NULL,
+      scope        TEXT NOT NULL DEFAULT 'user',
+      scope_key    TEXT NOT NULL DEFAULT 'local-user',
+      updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (extension_id, collection, item_id, scope, scope_key)
+    );
+  `);
 }
 
 function migrateDeckSnapshots(db: Database.Database) {

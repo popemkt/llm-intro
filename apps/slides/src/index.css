@@ -66,23 +66,47 @@
   }
 
   .slides-app-shell[data-shell-collapsed="true"] .slides-app-rail {
-    width: 52px;
-    flex-basis: 52px;
+    width: 48px;
+    flex-basis: 48px;
     align-items: center;
   }
 
+
   .slides-app-rail__brand {
-    height: 56px;
+    height: 52px;
     width: 100%;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 0 14px;
+    padding: 0 10px 0 14px;
     border-bottom: 1px solid var(--color-border);
     font-size: 14px;
     font-weight: 800;
     letter-spacing: 0;
     box-sizing: border-box;
+  }
+
+  /* Collapse control lives inside the brand row (right-aligned) so the rail's
+     top border aligns with the editor top bar (both 52px) — no separate
+     floating button box that left the seam misaligned. */
+  .slides-app-rail__brand-toggle {
+    margin-left: auto;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--color-text-dim);
+    cursor: pointer;
+  }
+
+  .slides-app-rail__brand-toggle:hover {
+    color: var(--color-text);
+    background: var(--color-accent-subtle);
   }
 
   .slides-app-rail__mark {
@@ -166,14 +190,61 @@
     padding: 0;
   }
 
+  /* Pinned to the foot of the rail (just above Chat): margin-top:auto sinks it
+     and the agent button to the bottom, capped so a long list scrolls instead
+     of pushing Chat off-screen. */
+  .slides-app-rail__extensions {
+    width: 100%;
+    min-height: 0;
+    flex: 0 1 auto;
+    margin-top: auto;
+    max-height: 45vh;
+    overflow-y: auto;
+    padding: 8px 6px 0;
+    border-top: 1px solid var(--color-border);
+    box-sizing: border-box;
+  }
+
   .slides-app-rail__agent {
     width: 100%;
     margin-top: auto;
     padding: 8px;
     border-top: 1px solid var(--color-border);
     box-sizing: border-box;
+  }
+
+  /* The agent toggle is the rail's primary action — full-width, like a nav row,
+     not a small centered icon. */
+  .slides-app-rail__chat {
+    width: 100%;
+    height: 38px;
     display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text-dim);
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .slides-app-rail__chat:hover {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  }
+
+  .slides-app-rail__chat[data-active="true"] {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  .slides-app-shell[data-shell-collapsed="true"] .slides-app-rail__chat {
     justify-content: center;
+    padding: 0;
   }
 
   .slides-app-shell__main {
@@ -196,37 +267,6 @@
 
   .slides-app-agent-panel > div {
     height: 100%;
-  }
-
-  /* Collapsed agent peer — a thin reopen tab on the right edge.
-     The peer never unmounts conceptually; it just narrows to this rail. */
-  .slides-app-agent-tab {
-    flex: 0 0 auto;
-    width: 38px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 0;
-    border: none;
-    border-left: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-surface) 92%, black);
-    color: var(--color-text-dim);
-    cursor: pointer;
-    transition: color 120ms ease, background 120ms ease;
-  }
-
-  .slides-app-agent-tab:hover {
-    color: var(--color-text);
-    background: var(--color-accent-subtle);
-  }
-
-  .slides-app-agent-tab span {
-    writing-mode: vertical-rl;
-    font-size: 12px;
-    font-weight: 650;
-    letter-spacing: 0.08em;
   }
 
   .slides-agent-surface {
@@ -398,4 +438,35 @@
       box-shadow: 0 20px 60px rgb(0 0 0 / 0.45);
     }
   }
+}
+
+/* Unlayered so these win over Tailwind's utility layer (justify-center, py-16,
+   .sr-only) on the shared AgentPanel. The panel centres its empty state and
+   hides the prompt heading, leaving a lone icon pill floating mid-column —
+   anchor the cluster near the top and reveal the heading so it reads as a
+   deliberate "start here" state, not an orphaned button. */
+.slides-agent-surface .agent-empty-state {
+  justify-content: flex-start;
+  padding-top: 44px;
+  gap: 10px;
+}
+
+.slides-agent-surface .agent-empty-state > div:first-child {
+  height: 36px;
+  width: 36px;
+}
+
+.slides-agent-surface .agent-empty-state p.sr-only {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 2px 0 6px;
+  padding: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
 }

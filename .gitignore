@@ -56,3 +56,7 @@ apps/slides/server/data/*.db-wal
 .references/
 .claude/settings.local.json
 .codex/config.toml
+
+# openlore — ignore analysis artifacts, keep shared config
+.openlore/*
+!.openlore/config.json

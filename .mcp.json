@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openlore": {
+      "command": "npx",
+      "args": ["-y", "openlore", "mcp"]
+    }
+  }
+}

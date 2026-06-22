@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "projectType": "nodejs",
+  "openspecPath": "./openspec",
+  "analysis": {
+    "maxFiles": 100000,
+    "includePatterns": [],
+    "excludePatterns": []
+  },
+  "generation": {
+    "provider": "claude-code",
+    "model": "claude-sonnet-4-6",
+    "domains": "auto"
+  },
+  "panicResponse": {
+    "mode": "off"
+  },
+  "createdAt": "2026-06-22T16:04:45.251Z",
+  "lastRun": null
+}

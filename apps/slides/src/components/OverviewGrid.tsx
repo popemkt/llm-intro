@@ -4,7 +4,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Settings,
   ChevronDown,
   ChevronRight,
   Download,
@@ -61,7 +60,6 @@ interface OverviewGridProps {
   onDuplicateSlide?: (slideId: number) => Promise<void>;
   onDeleteSlide: (slideId: number, options?: { confirm?: boolean }) => Promise<void>;
   onRenameSlide: (slideId: number, newTitle: string) => void;
-  onOpenSettings?: () => void;
   breadcrumbs?: BreadcrumbSegment[];
   readonly?: boolean;
   simpleHeader?: boolean;
@@ -1351,7 +1349,6 @@ export function OverviewGrid({
   onDuplicateSlide,
   onDeleteSlide,
   onRenameSlide,
-  onOpenSettings,
   breadcrumbs,
   readonly = false,
   simpleHeader = false,
@@ -1748,22 +1745,6 @@ export function OverviewGrid({
                 }}
               >
                 <FolderPlus size={14} />
-              </button>
-            )}
-            {!readonly && onOpenSettings && (
-              <button
-                onClick={onOpenSettings}
-                aria-label="Presentation settings"
-                title="Presentation settings"
-                className="p-1.5 rounded-lg transition-colors hover:bg-(--color-border)"
-                style={{
-                  color: "var(--color-text-dim)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <Settings size={14} />
               </button>
             )}
             {!readonly && (

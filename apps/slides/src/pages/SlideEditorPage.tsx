@@ -34,7 +34,6 @@ import {
   MessageSquare,
   Pill,
   Play,
-  Settings,
   Square,
   Trash2,
   Circle,
@@ -2600,23 +2599,6 @@ export function SlideEditorPage() {
             <SlidersHorizontal size={15} />
           </button>
           <div style={{ width: 1, height: 20, background: C.border, margin: "0 2px" }} />
-          <button
-            onClick={() => navigate(`/p/${pid}/settings`)}
-            style={{
-              color: C.textDim,
-              background: "none",
-              border: `1px solid ${C.border}`,
-              cursor: "pointer",
-              padding: "6px 12px",
-              borderRadius: 8,
-              fontSize: 11,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Settings size={13} /> Theme
-          </button>
           <button
             onClick={saveAndExit}
             disabled={saveStatus === "saving"}

@@ -492,7 +492,6 @@ export function PresentationPage() {
             onDuplicateSlide={handleDuplicateSlide}
             onDeleteSlide={handleDeleteSlide}
             onRenameSlide={handleRenameSlide}
-            onOpenSettings={() => navigate(`/p/${presentation.id}/settings`)}
           />
         ) : mode === "presentation" ? (
           <PresentationView

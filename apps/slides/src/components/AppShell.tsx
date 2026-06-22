@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { agentNativePath } from "@agent-native/core/client/api-path";
 import type { AgentChatRuntime } from "@agent-native/core/client/chat";
 import {
+  Blocks,
   LayoutDashboard,
   MessageSquare,
   PanelLeftClose,
@@ -467,7 +468,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {!collapsed && (
+        {/* Single spacer so the bottom group (extensions + chat) sits flush
+            above the foot — two auto margins split the gap and left it mid-rail. */}
+        <div className="slides-app-rail__spacer" />
+
+        {collapsed ? (
+          <Link
+            to="/extensions"
+            className="slides-app-rail__link slides-app-rail__ext-collapsed"
+            data-active={location.pathname.startsWith("/extensions") ? "true" : "false"}
+            aria-label="Extensions"
+            title="Extensions"
+          >
+            <Blocks size={16} />
+          </Link>
+        ) : (
           <div className="slides-app-rail__extensions">
             <ExtensionsSidebarSection />
           </div>

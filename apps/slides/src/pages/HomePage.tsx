@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Plus, Trash2, Presentation, Settings } from "lucide-react";
+import { Plus, Trash2, Presentation } from "lucide-react";
 import { useActionMutation, useActionQuery } from "@agent-native/core/client";
 import { getErrorMessage } from "@/api/client";
 import { type ApiPresentation, type ApiSlide } from "@/types";
@@ -9,11 +9,6 @@ import { C } from "@/design/tokens";
 import { DeckCreatePanel } from "@/components/DeckCreatePanel";
 import { SlidePreview } from "@/components/SlidePreview";
 import { toUnifiedSlide } from "@/lib/presentationSlides";
-
-type HomeHeaderProps = {
-  onSettings: () => void;
-  onToggleCreate: () => void;
-};
 
 type ErrorBannerProps = {
   message: string;
@@ -27,7 +22,7 @@ type DeckGridProps = {
   onCreate: () => void;
 };
 
-function HomeHeader({ onSettings, onToggleCreate }: HomeHeaderProps) {
+function HomeHeader() {
   return (
     <div
       style={{
@@ -43,43 +38,6 @@ function HomeHeader({ onSettings, onToggleCreate }: HomeHeaderProps) {
       <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em", color: C.text }}>
         Decks
       </span>
-      <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-        <button
-          onClick={onSettings}
-          aria-label="App settings"
-          title="App settings"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: 7,
-            background: "none",
-            border: `1px solid ${C.border}`,
-            borderRadius: 8,
-            cursor: "pointer",
-            color: C.textDim,
-          }}
-        >
-          <Settings size={14} />
-        </button>
-        <button
-          onClick={onToggleCreate}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            background: C.accent,
-            color: C.bg,
-            border: "none",
-            borderRadius: 8,
-            padding: "8px 14px",
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          <Plus size={13} /> New
-        </button>
-      </div>
     </div>
   );
 }
@@ -354,10 +312,7 @@ export function HomePage() {
         fontFamily: "Inter, sans-serif",
       }}
     >
-      <HomeHeader
-        onSettings={() => navigate("/settings")}
-        onToggleCreate={() => setShowForm((v) => !v)}
-      />
+      <HomeHeader />
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 40px" }}>
         {visibleError && (

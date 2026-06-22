@@ -7,6 +7,7 @@ import { getErrorMessage } from "@/api/client";
 import { type ApiPresentation, type ApiSlide } from "@/types";
 import { C } from "@/design/tokens";
 import { DeckCreatePanel } from "@/components/DeckCreatePanel";
+import { SlidesMark } from "@/components/SlidesMark";
 import { SlidePreview } from "@/components/SlidePreview";
 import { toUnifiedSlide } from "@/lib/presentationSlides";
 
@@ -34,7 +35,7 @@ function HomeHeader() {
         background: C.surface,
       }}
     >
-      <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.accent }} />
+      <SlidesMark size={20} />
       <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em", color: C.text }}>
         Decks
       </span>

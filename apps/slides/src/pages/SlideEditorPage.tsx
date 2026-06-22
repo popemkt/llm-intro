@@ -46,6 +46,8 @@ import {
   GalleryVerticalEnd,
   SlidersHorizontal,
   Quote,
+  Save,
+  Loader2,
   Scissors,
   StretchHorizontal,
   StretchVertical,
@@ -72,7 +74,7 @@ import type {
 } from "@/types";
 import type { ApiDeckAsset } from "@/types";
 import { getErrorMessage } from "@/api/client";
-import { C } from "@/design/tokens";
+import { C, radius } from "@/design/tokens";
 import { getReadableTextColor } from "@/lib/color";
 import { BLOCK_ANIMATION_TIMING, blockAnimationKeyframes } from "@/lib/blockAnimations";
 import { Breadcrumb } from "@/components/Breadcrumb";
@@ -2603,19 +2605,26 @@ export function SlideEditorPage() {
             onClick={saveAndExit}
             disabled={saveStatus === "saving"}
             title="Save and exit (⌘S)"
+            aria-label="Save and exit"
             style={{
-              padding: "8px 20px",
-              borderRadius: 8,
+              width: 34,
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: radius.md,
               cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-              fontSize: 13,
-              fontWeight: 700,
               background: C.accent,
               border: "none",
               color: C.bg,
               opacity: saveStatus === "saving" ? 0.6 : 1,
             }}
           >
-            {saveStatus === "saving" ? "Saving…" : "Save"}
+            {saveStatus === "saving" ? (
+              <Loader2 size={15} style={{ animation: "slides-spin 0.8s linear infinite" }} />
+            ) : (
+              <Save size={15} />
+            )}
           </button>
         </div>
       </div>

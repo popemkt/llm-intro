@@ -9,9 +9,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { ExtensionsSidebarSection } from "@agent-native/core/client/extensions";
+import { SlidesMark } from "@/components/SlidesMark";
 import { createSlidesAppAgentRuntime } from "@/agent/appAgentRuntime";
 import { applyAppTheme } from "@/lib/appTheme";
 import { THEME_NAMES, type ThemeName } from "@/types";
@@ -419,7 +419,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="slides-app-rail" aria-label="Slides navigation">
         <div className="slides-app-rail__brand">
           <div className="slides-app-rail__mark" aria-hidden>
-            <Sparkles size={15} />
+            <SlidesMark size={22} />
           </div>
           {!collapsed && <span>Slides</span>}
           {!collapsed && (

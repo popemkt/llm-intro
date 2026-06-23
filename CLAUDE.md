@@ -43,11 +43,17 @@ The loop (each phase maps to an OpenLore tool — these become the steps of a fu
   skeleton intact or drift detection breaks.
 - `specs/bridging/`, `specs/principles.md` — intent/migration.
 
-### Embeddings (optional, sharpens every tool)
-Search currently runs **BM25 keyword fallback** (no embedding endpoint configured),
-which over-ranks keyword-dense files. To enable semantic search: run a local
-OpenAI-compatible embeddings server (e.g. `ollama pull nomic-embed-text`), then
-`EMBED_BASE_URL=http://localhost:11434/v1 EMBED_MODEL=nomic-embed-text pnpm exec openlore analyze --embed`.
+### Embeddings (enabled — keep ollama running)
+Semantic search is wired via local **ollama** + `nomic-embed-text`. It needs the
+`EMBED_*` env in **two** places:
+- **Index time** — `EMBED_BASE_URL=http://localhost:11434/v1 EMBED_MODEL=nomic-embed-text pnpm exec openlore analyze --embed`
+- **Query time** — the MCP server reads the same env (set in `.mcp.json`) to embed
+  your query; without it, search silently drops to BM25 keyword `bm25_fallback`.
+
+Setup once: install ollama, `ollama pull nomic-embed-text`, keep the service on
+`:11434`. If ollama is down, every tool **gracefully falls back to BM25** — no error,
+just keyword-quality results (`searchMode: "bm25_fallback"` in the output). With it up,
+`searchMode: "hybrid"`.
 
 ---
 

@@ -20,8 +20,27 @@ The prize is the **graph + MCP tools**, not the generated specs:
   scopes a change.
 - `search_specs` / `check_spec_drift` — find requirements by meaning and flag
   code/spec divergence.
-- 1500+ functions, ~97 routes, and the UI/route/env inventories are indexed locally
-  with zero network calls (BM25 baseline).
+- 1500+ functions, ~97 routes, and the UI/route/env inventories are indexed locally.
+
+## Embeddings (enabled)
+
+Semantic search runs on local **ollama** + `nomic-embed-text`. The `EMBED_*` env is needed
+in **two** places: at index time (`pnpm exec openlore analyze --embed`) and in the MCP
+server env (set in `.mcp.json`) so it can embed queries at runtime. With ollama up,
+`searchMode: hybrid`; with it down, search **gracefully falls back to BM25** (no error).
+Keep the ollama service on `:11434`.
+
+## Harness agents (product chat backend)
+
+Agent-Native ships built-in harness agents (Claude Code, Codex, **Pi**) that own their own
+loop, distinct from the deterministic local App Mode runtime. The product chat can run
+through one:
+- Packages: `@ai-sdk/harness` + `@ai-sdk/harness-pi` (the `ai-sdk-harness:pi` runtime).
+- Plumbing: `apps/slides/server/agent/pi-harness.ts` + an opt-in branch in
+  `POST /_agent-native/agent-chat`. Enable with `SLIDES_AGENT_HARNESS=ai-sdk-harness:pi`;
+  default stays deterministic. The runtime needs an LLM provider to actually chat. Don't
+  wrap Pi as an `AgentEngine` — it owns its loop. Ref:
+  https://www.agent-native.com/docs/harness-agents
 
 ## The spec layer split (important)
 

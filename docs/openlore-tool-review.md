@@ -10,8 +10,10 @@ tools (`orient`, `search_code`, `analyze_impact`, `suggest_insertion_points`) ge
 blind file-reading and add call-topology that grep can't. The generated OpenSpec layer is a
 useful *data-model + API contract* artifact but does **not** capture product behaviour. Two
 fixable issues materially limit quality today: no embedding endpoint (BM25 fallback) and an
-easily-stale spec index. Verdict: **worth adopting; ~70% of its value is the graph, ~30% the
-specs, and embeddings would lift the graph from "useful" to "trustworthy".**
+easily-stale spec index — **both now fixed** (ollama embeddings wired into `.mcp.json`;
+analyze-after-generate made a hard rule). Verdict: **worth adopting; ~70% of its value is the
+graph, ~30% the specs. With embeddings on, search went from keyword-density guesses to
+semantic `hybrid` hits — graph navigation is now trustworthy, not just suggestive.**
 
 ## How it was evaluated
 
@@ -51,11 +53,21 @@ functions, 97 routes, 56 UI components). Also ran `analyze`, `generate`, `doctor
 
 ## Weaknesses & gotchas (with evidence)
 
-1. **BM25 fallback by default.** No embedding endpoint → keyword matching. Every call warned.
-   Concretely, `orient` for the chat-backend task ranked `APP_AGENT_MANIFEST`/`SUGGESTIONS`
-   (config constants) **above** `app-agent-runtime.ts` (the actual handler), because the
-   query words appear literally in the manifest. Lesson: under BM25, cross-check `orient` with
-   `search_code`; don't trust ranking alone. Fix: enable embeddings (below).
+1. **Embeddings need the env in TWO places** (now fixed). Out of the box, search ran
+   `bm25_fallback` keyword matching — `orient` for the chat-backend task ranked
+   `APP_AGENT_MANIFEST`/`SUGGESTIONS` (config constants) **above** `app-agent-runtime.ts`
+   (the actual handler), because the query words appear literally in the manifest.
+   After wiring local ollama + `nomic-embed-text`:
+   - the keyword-free query *"where is the in-app chat agent backend that answers prompts"*
+     returned `searchMode: "hybrid"` and surfaced the real handlers (`app-agent-runtime.ts`)
+     by meaning — not keyword density.
+   - **Gotcha that cost a step:** `analyze --embed` builds the vectors, but the MCP server
+     also needs `EMBED_BASE_URL`/`EMBED_MODEL` in **its own env** to embed the *query* at
+     runtime. Set it at index time only and search silently stays `bm25_fallback`. Fixed by
+     adding `env` to the `openlore` server in `.mcp.json`. Fallback is graceful (BM25, no
+     error) when ollama is down.
+   - Lesson retained: under BM25, cross-check `orient` with `search_code`; with embeddings,
+     ranking is trustworthy.
 2. **Spec index goes stale silently.** `search_specs` returned *"No spec index found"* and all
    `linkedSpecs` were empty — because `generate` ran *after* `analyze`, so the new specs were
    never indexed. Re-running `analyze` fixed it (40 sections). **Always `analyze` after
@@ -74,14 +86,14 @@ functions, 97 routes, 56 UI components). Also ran `analyze`, `generate`, `doctor
 
 - Provider `claude-code` (zero key, runs on the `claude` CLI). **codex is not a generate
   provider**; codex-via-Headroom is blocked (`uvx` absent). See `openlore-adoption.md`.
-- Embeddings **not yet enabled** — no local embedding server present. Enable with:
-  `ollama pull nomic-embed-text` then
-  `EMBED_BASE_URL=http://localhost:11434/v1 EMBED_MODEL=nomic-embed-text pnpm exec openlore analyze --embed`.
-- `generate` took ~9 min via the claude CLI for this codebase.
+- Embeddings **now enabled** — local ollama + `nomic-embed-text`; `.mcp.json` passes
+  `EMBED_*` so MCP queries run `hybrid`. Re-index touched only gitignored `.openlore/`.
+- `generate` took ~9 min via the claude CLI; `analyze --embed` ~3.5 min for this codebase.
 
 ## Recommendations
 
-1. **Enable embeddings.** Biggest single quality lever; turns BM25 guesses into semantic hits.
+1. **Embeddings — done.** Local ollama + `nomic-embed-text`, `EMBED_*` in `.mcp.json`. Keep
+   ollama running for `hybrid` search; it degrades gracefully to BM25 when down.
 2. **Wire the analyze-after-change / analyze-after-generate rule** (done in `CLAUDE.md`).
 3. **Keep `specs/functional/` hand-written.** OpenLore can't reverse-engineer capability prose.
 4. Optionally re-run `generate --domains actions,editor,export,presentation,agent-native` to

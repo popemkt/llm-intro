@@ -27,6 +27,8 @@
   "dependencies": {
     "@agent-native/core": "0.58.2",
     "@ai-sdk/anthropic": "^3.0.71",
+    "@ai-sdk/harness": "1.0.0-canary.13",
+    "@ai-sdk/harness-pi": "1.0.0-canary.9",
     "@ai-sdk/openai": "^3.0.53",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

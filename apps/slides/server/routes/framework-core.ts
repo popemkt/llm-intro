@@ -5,6 +5,7 @@ import { createLocalHarnessProtocols, localHarnessEnvValue } from "../local-harn
 import type { SlideDeckActions } from "../../actions/index.js";
 import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
 import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
+import { configuredHarnessName, isHarnessReady, runHarnessChatTurn } from "../agent/pi-harness.js";
 
 type LocalAgentChatMessage = {
   id: string;
@@ -633,6 +634,35 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
     try {
       const prompt = getPromptFromAgentChatBody(req.body);
       const scope = getScopeFromAgentChatBody(req.body);
+      const threadId = getThreadIdFromAgentChatBody(req.body);
+
+      // Opt-in: back the product chat with an Agent-Native harness agent (e.g.
+      // Pi) that owns its own loop. Default stays the deterministic local App
+      // Mode runtime. Only the streaming path is harness-capable.
+      const harnessName = configuredHarnessName();
+      if (harnessName && wantsEventStream(req) && isHarnessReady(harnessName)) {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        });
+        const send = (event: unknown) => res.write(`data: ${JSON.stringify(event)}\n\n`);
+        try {
+          const { text: harnessText } = await runHarnessChatTurn({
+            name: harnessName,
+            prompt,
+            send,
+          });
+          upsertLocalThread(threads, { prompt, text: harnessText, scope, threadId });
+          res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          res.write(`data: ${JSON.stringify({ type: "error", error: message })}\n\n`);
+        }
+        res.end();
+        return;
+      }
+
       const text = await handleAppAgentPrompt(options.actions, {
         prompt,
         scope,
@@ -641,7 +671,7 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
         prompt,
         text,
         scope,
-        threadId: getThreadIdFromAgentChatBody(req.body),
+        threadId,
       });
 
       if (wantsEventStream(req)) {

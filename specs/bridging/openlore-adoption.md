@@ -30,17 +30,33 @@ server env (set in `.mcp.json`) so it can embed queries at runtime. With ollama 
 `searchMode: hybrid`; with it down, search **gracefully falls back to BM25** (no error).
 Keep the ollama service on `:11434`.
 
-## Harness agents (product chat backend)
+## Product chat backend (native Pi SDK)
 
-Agent-Native ships built-in harness agents (Claude Code, Codex, **Pi**) that own their own
-loop, distinct from the deterministic local App Mode runtime. The product chat can run
-through one:
-- Packages: `@ai-sdk/harness` + `@ai-sdk/harness-pi` (the `ai-sdk-harness:pi` runtime).
-- Plumbing: `apps/slides/server/agent/pi-harness.ts` + an opt-in branch in
+The product chat runs turns through Pi's **native** SDK (`@earendil-works/pi-coding-agent`,
+`createAgentSession`), not the `@ai-sdk/harness-pi` adapter. Why: the adapter runs each
+session in a hermetic throwaway dir and demands an env API key, so it can't see the host
+`pi login` creds. `createAgentSession` defaults to the real `~/.pi/agent` + `auth.json`, so
+it uses whatever provider you authed locally — OAuth (e.g. `openai-codex`) or key, any
+provider, no API key required.
+- Packages: `@earendil-works/pi-coding-agent` (native runner) + `@ai-sdk/harness-pi`
+  (kept only as the readiness-gate package the registry checks).
+- Plumbing: `apps/slides/server/agent/pi-session.ts` (`runPiChatTurn`, the active backend)
+  + `pi-harness.ts` (opt-in toggle + `isHarnessReady` gate) + an opt-in branch in
   `POST /_agent-native/agent-chat`. Enable with `SLIDES_AGENT_HARNESS=ai-sdk-harness:pi`;
-  default stays deterministic. The runtime needs an LLM provider to actually chat. Don't
-  wrap Pi as an `AgentEngine` — it owns its loop. Ref:
-  https://www.agent-native.com/docs/harness-agents
+  default stays the zero-dependency deterministic App Mode. Tools are disabled
+  (`noTools: "all"`) — it's a chat assistant; deck mutations stay on the deterministic
+  app-actions.
+- **Interop TODO:** Pi owns its own loop, so it isn't an `AgentEngine` today. The everything-app
+  dispatch/A2A/sub-agent seam is the open `registerAgentEngine` registry; a future
+  `PiAgentEngine` (streaming off `@earendil-works/pi-ai` `stream()`) is the interop-clean
+  home. Tracked in the `pi-session.ts` header.
+- **Model picker (authed-creds driven):** `apps/slides/server/agent/pi-models.ts` enumerates
+  Pi's `ModelRegistry.getAvailable()` (only models with auth in `~/.pi/agent/auth.json` —
+  `pi login` is the source) and buckets them into the engine names the packaged AgentPanel
+  allowlists (`anthropic`, `ai-sdk:openai`, `ai-sdk:google`). The `manage-agent-engine`
+  action returns these + a `current` default; the picker sends `{model,effort}` per turn,
+  which `runPiChatTurn` maps to the authed model id + Pi `thinkingLevel`. Providers outside
+  the 3 buckets are dropped (the client can't render them).
 
 ## The spec layer split (important)
 
@@ -55,12 +71,14 @@ duplicate each other:
 
 | Layer | Path | Owner | Content |
 |-------|------|-------|---------|
-| Capabilities / behaviour | `specs/functional/` | hand-written | What users and agents can *do* (the ~150 action/editor behaviours) |
+| Intent / behaviour (source of truth) | the **approved plan** (per change) | human + agent, Phase-4 back-and-forth | What we're building and why; reviewed and committed-to before edits |
 | Data model + API contracts | `openspec/specs/` | OpenLore `generate` (drift-checked) | Typed entities, validation rules, endpoint contracts |
 | Intent / migration | `specs/bridging/`, `specs/principles.md`, `specs/harness.md` | hand-written | Why, adoption constraints, roadmap |
+| ~~Capabilities / behaviour~~ | ~~`specs/functional/`~~ | — | **OBSOLETE.** Frozen reference; superseded by per-change plans. Not maintained. |
 
-`openspec/specs/` is the **contract/data layer and drift target**, not the functional
-source of truth. Do not retire `specs/functional/` in favour of it.
+`openspec/specs/` is the **contract/data layer and drift target**. The behaviour
+source of truth is the approved plan, not a maintained functional catalogue —
+`specs/functional/` is frozen, not the source of truth.
 
 When editing generated specs, **keep the OpenSpec skeleton** (`### Requirement:`,
 `#### Scenario:`, Given/When/Then). `orient`/`drift` parse those anchors; reshaping the
@@ -129,4 +147,5 @@ corrections (like the product-name fix in `overview/spec.md`) are fine.
 - It hallucinated the product name as "OpenSpec" in `overview/spec.md` (corrected by
   hand). Re-check the product name and confidence (`> Confidence:`) on regeneration.
 - A targeted `generate --domains <...>` run may improve capability coverage but the
-  entity-bias is inherent; the functional layer stays hand-written regardless.
+  entity-bias is inherent. Behaviour coverage is no longer the spec's job — that intent
+  now lives in the per-change approved plan (`specs/functional/` is frozen).

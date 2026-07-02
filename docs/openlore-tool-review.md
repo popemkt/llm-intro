@@ -95,7 +95,9 @@ functions, 97 routes, 56 UI components). Also ran `analyze`, `generate`, `doctor
 1. **Embeddings — done.** Local ollama + `nomic-embed-text`, `EMBED_*` in `.mcp.json`. Keep
    ollama running for `hybrid` search; it degrades gracefully to BM25 when down.
 2. **Wire the analyze-after-change / analyze-after-generate rule** (done in `CLAUDE.md`).
-3. **Keep `specs/functional/` hand-written.** OpenLore can't reverse-engineer capability prose.
+3. **Behaviour lives in the per-change plan, not a maintained spec.** `specs/functional/`
+   is frozen/obsolete — OpenLore can't reverse-engineer capability prose, and we no longer
+   keep a hand-written catalogue. The approved Phase-4 plan is the behaviour source of truth.
 4. Optionally re-run `generate --domains actions,editor,export,presentation,agent-native` to
    deepen contract coverage, accepting the entity bias.
 5. Use it as the **front of every change** (orient-first), which is where the round-trip

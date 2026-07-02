@@ -42,15 +42,48 @@ function requireSlide(slidesRepo: SlidesRepository, presentationId: number, slid
   return slide;
 }
 
+/** Recursively list slide source files, skipping shared chrome (`_*.tsx`). */
+function listSlideSources(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...listSlideSources(full));
+    } else if (entry.isFile() && entry.name.endsWith(".tsx") && !entry.name.startsWith("_")) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+/**
+ * The code_id a slide file maps to, derived from its location under
+ * `src/slides`: a file in folder `X` is `X-<basename>`; a root file is just
+ * `<basename>`. This matches the registry's own keys (e.g. `ssh-01-title`,
+ * `harness-00-title`, `01-opener`).
+ */
+function deriveCodeId(fullPath: string): string {
+  const rel = path.relative(SLIDES_SOURCE_ROOT, fullPath).replace(/\.tsx$/, "");
+  const parts = rel.split(path.sep);
+  const base = parts.pop() ?? rel;
+  const folder = parts.join("-");
+  return folder ? `${folder}-${base}` : base;
+}
+
+/**
+ * Resolve a code slide's source file by scanning the slides tree. Works for any
+ * deck folder without special-casing, and falls back to a bare-basename match
+ * so a slide can be moved between folders without breaking feedback.
+ */
 function resolveCodeSlideSource(codeId: string) {
   if (!/^[a-z0-9-]+$/.test(codeId)) throw new AppError(400, "invalid code slide id");
-  const fileName = codeId.startsWith("ssh-")
-    ? path.join("ssh", `${codeId.slice("ssh-".length)}.tsx`)
-    : `${codeId}.tsx`;
-  const fullPath = path.join(SLIDES_SOURCE_ROOT, fileName);
-  const relativePath = path.relative(process.cwd(), fullPath).replaceAll(path.sep, "/");
-  if (!fs.existsSync(fullPath)) throw new AppError(404, "code slide source not found");
-  return { fullPath, relativePath };
+  const files = listSlideSources(SLIDES_SOURCE_ROOT);
+  const match =
+    files.find((f) => deriveCodeId(f) === codeId) ??
+    files.find((f) => path.basename(f, ".tsx") === codeId);
+  if (!match) throw new AppError(404, "code slide source not found");
+  const relativePath = path.relative(process.cwd(), match).replaceAll(path.sep, "/");
+  return { fullPath: match, relativePath };
 }
 
 function baseLocation(slide: ApiSlide, sourcePath?: string): SlideFeedbackSourceLocation {

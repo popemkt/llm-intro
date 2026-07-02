@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { THEME_META, THEME_NAMES, type ThemeName } from "@llm-intro/api-contract";
 import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
+import { configuredHarnessName, isHarnessReady } from "../agent/pi-harness.js";
+import { runPiChatTurn } from "../agent/pi-session.js";
 import { AppError } from "../errors.js";
 import type { SlideDeckActions } from "../../actions/index.js";
 import type { NormalSlideLayout } from "../../actions/normal-slide-layouts.js";
@@ -864,6 +866,30 @@ async function handleCreateSlidePrompt(
   return responseTextForCreatedSlide(result);
 }
 
+/**
+ * Canned deterministic reply when no app-action handler matches the prompt. Exported
+ * so the runtime route can detect "no deterministic match" by identity and, when the
+ * Pi harness is wired, answer the free-form turn with a real model instead.
+ */
+export const APP_AGENT_SUGGESTIONS = [
+  "I can work with this deck through app actions.",
+  "",
+  "Try:",
+  "- summarize this deck",
+  "- list available themes",
+  "- save a snapshot of this deck",
+  "- list slides",
+  "- rename slide 2 to Roadmap",
+  '- set slide 2 notes to "Pause for questions"',
+  '- create a title slide called "Roadmap"',
+  "- create a bullets slide with a short outline",
+  "- export this deck as HTML",
+  "- export this deck as JSON",
+  "- export this deck as Markdown",
+  "",
+  "For repository code changes, switch to CLI mode and use your local Codex or Claude Code login.",
+].join("\n");
+
 export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppAgentRequest) {
   const prompt = getText(body.prompt);
   const deckId = getDeckId(body.scope);
@@ -896,24 +922,7 @@ export async function handleAppAgentPrompt(actions: SlideDeckActions, body: AppA
   ]);
   if (deckResponse) return deckResponse;
 
-  return [
-    "I can work with this deck through app actions.",
-    "",
-    "Try:",
-    "- summarize this deck",
-    "- list available themes",
-    "- save a snapshot of this deck",
-    "- list slides",
-    "- rename slide 2 to Roadmap",
-    '- set slide 2 notes to "Pause for questions"',
-    '- create a title slide called "Roadmap"',
-    "- create a bullets slide with a short outline",
-    "- export this deck as HTML",
-    "- export this deck as JSON",
-    "- export this deck as Markdown",
-    "",
-    "For repository code changes, switch to CLI mode and use your local Codex or Claude Code login.",
-  ].join("\n");
+  return APP_AGENT_SUGGESTIONS;
 }
 
 export function createAppAgentRuntimeRouter(actions: SlideDeckActions) {
@@ -939,7 +948,21 @@ export function createAppAgentRuntimeRouter(actions: SlideDeckActions) {
 
   router.post("/", async (req, res, next) => {
     try {
-      res.json({ text: await handleAppAgentPrompt(actions, req.body as AppAgentRequest) });
+      const body = req.body as AppAgentRequest;
+      const deterministic = await handleAppAgentPrompt(actions, body);
+      // Deterministic app-actions win (navigate, theme, create-slide, export…). Only
+      // when nothing matched — the canned suggestion fallback — and the Pi harness is
+      // wired do we answer the free-form turn with a real model using local creds.
+      // This endpoint is non-streaming (client posts plain JSON), so return the full
+      // text. Per-turn model selection needs the streaming /agent-chat path (the
+      // AgentEngine TODO); here Pi uses the local default model (settings.json).
+      const harness = configuredHarnessName();
+      if (deterministic === APP_AGENT_SUGGESTIONS && harness && isHarnessReady(harness)) {
+        const { text } = await runPiChatTurn({ prompt: getText(body.prompt), send: () => {} });
+        res.json({ text: text || deterministic });
+        return;
+      }
+      res.json({ text: deterministic });
     } catch (err) {
       next(err);
     }

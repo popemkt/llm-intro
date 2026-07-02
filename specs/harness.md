@@ -54,6 +54,22 @@ The harness keeps four loops explicit:
 | `specs/bridging/slides-app-implementation.md` | Code-to-behavior bridge for the slide app. |
 | `specs/bridging/agent-native-adoption.md` | Framework adoption map and guardrails. |
 
+## Motion & Animation References (to study)
+
+Interactive slides are React + `motion/react` today, but the slide model should
+stay **framework-agnostic**: a slide is fundamentally HTML/visuals that React can
+mount — any renderer that produces that is fair game.
+
+**HyperFrames** (`https://hyperframes.heygen.com`, installed `hyperframes-*` skills)
+is a deterministic HTML→video renderer — *not* a runtime-interactive framework, so
+it does not host our live interactions (drag scrubbers, click reveals, shared-layout
+morphs). But its **motion craft is worth mining**: study and reuse its patterns —
+scene blueprints, easing libraries, scene-transition recipes, and its 7 animation
+adapters (GSAP, Lottie, Three.js, Anime.js, CSS, WAAPI, TypeGPU) — as a reference
+for our slide animations. Two concrete future uses: (1) a pattern source to elevate
+slide motion; (2) an optional deck→MP4 export path for sharing finished decks.
+Keep the live deck in React; borrow the patterns, don't port the runtime.
+
 ## Registered Commands
 
 | Command | Meaning |

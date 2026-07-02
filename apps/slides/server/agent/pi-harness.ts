@@ -2,27 +2,21 @@ import {
   getAgentHarnessEntry,
   isAgentHarnessPackageInstalled,
   registerBuiltinAgentHarnesses,
-  resolveAgentHarness,
-  sendAgentHarnessEvent,
-  type AgentHarnessEvent,
 } from "@agent-native/core/agent/harness";
 
 /**
- * Product-chat harness backend.
+ * Product-chat harness gate.
  *
- * Agent-Native ships built-in "harness agents" (Claude Code, Codex, Pi) that own
- * their own agent loop and native tools — distinct from the deterministic local
- * App Mode runtime. This module is the plumbing that lets the product chat
- * (`POST /_agent-native/agent-chat`) optionally run a turn through one of those
- * harnesses (default: Pi) and relay its native event stream back to the
- * AgentPanel as canonical AgentChatEvents.
+ * The product chat runs turns through Pi's NATIVE SDK (`pi-session.ts`,
+ * `createAgentSession`) so it uses the locally-authed provider/OAuth rather than an
+ * env API key. This module is only the opt-in toggle + readiness check: the chat
+ * route turns on the Pi branch when `SLIDES_AGENT_HARNESS` is set and the runtime
+ * package resolves; default stays the zero-dependency deterministic App Mode.
  *
- * It is opt-in via the SLIDES_AGENT_HARNESS env var so the zero-dependency
- * deterministic App Mode stays the default. The harness runtime needs an LLM
- * provider/model configured; without one, createSession/streamTurn throws and
- * the caller surfaces the error (it does not silently degrade).
- *
- * Ref: https://www.agent-native.com/docs/harness-agents
+ * The heavier `AgentHarnessAdapter` path (`@ai-sdk/harness-pi`, sandbox, host tools)
+ * was removed here: it runs each session in a hermetic throwaway dir and demands an
+ * env key, so it can't see the host `pi login` creds — the wrong abstraction for a
+ * chat assistant. See `pi-session.ts` for the rationale and the AgentEngine TODO.
  */
 
 let builtinsRegistered = false;
@@ -45,48 +39,4 @@ export function isHarnessReady(name: string): boolean {
   const entry = getAgentHarnessEntry(name);
   if (!entry) return false;
   return isAgentHarnessPackageInstalled({ installPackage: entry.installPackage });
-}
-
-export type HarnessTurnResult = { text: string };
-
-/**
- * Run one product-chat turn through the named harness agent, forwarding native
- * harness events to `send` as canonical AgentChatEvents. Returns the accumulated
- * assistant text so the caller can persist the thread.
- */
-export async function runHarnessChatTurn(opts: {
-  name: string;
-  prompt: string;
-  cwd?: string;
-  instructions?: string;
-  signal?: AbortSignal;
-  send: (event: unknown) => void;
-}): Promise<HarnessTurnResult> {
-  ensureBuiltinsRegistered();
-  const adapter = resolveAgentHarness(opts.name);
-  const session = await adapter.createSession({
-    cwd: opts.cwd ?? process.cwd(),
-    instructions: opts.instructions,
-    permissionMode: "allow-reads",
-    signal: opts.signal,
-  });
-
-  const emit = sendAgentHarnessEvent as (
-    send: (event: unknown) => void,
-    event: AgentHarnessEvent,
-  ) => void;
-
-  let text = "";
-  try {
-    for await (const event of session.streamTurn({
-      prompt: opts.prompt,
-      abortSignal: opts.signal,
-    })) {
-      if (event.type === "text-delta") text += event.text;
-      emit(opts.send, event);
-    }
-  } finally {
-    await session.destroy?.();
-  }
-  return { text };
 }

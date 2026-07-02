@@ -59,6 +59,17 @@ Run `pnpm lint` when changing source boundaries, Nx package tags, or lint rules.
 
 ## Slide Authoring
 
+**Storytelling is the cardinal rule: one thing at a time, slowly.** Each beat
+reveals exactly one element; a viewer reads one picture OR one line of text, never
+both at once; pace reveals deliberately and keep text minimal; **no explaining
+prose** (cut paragraphs/hint sentences — carry meaning with keywords, labels,
+diagrams, color, motion); no on-screen "click to continue" guides. Full rule in
+`.agents/skills/slide-authoring/SKILL.md` (Storytelling section).
+
+For motion/react (Framer Motion) work, read `.agents/skills/motion-react/SKILL.md`
+first — the reliable subset and the potholes (shared-layout morphs need
+`AnimatePresence`; `layout` replays on resize; element-type swaps remount).
+
 Use `.agents/skills/slide-authoring/SKILL.md` and
 `.claude/skills/slide-authoring.md` for slide work. The invariant is a fixed
 1000 x 562.5 logical canvas rendered through `SlideShell`; avoid viewport units

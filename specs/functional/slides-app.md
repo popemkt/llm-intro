@@ -1,5 +1,11 @@
 # Slides App Functional Spec
 
+> **⚠ OBSOLETE — frozen reference, no longer maintained.** We no longer keep a
+> hand-written functional catalogue. Behaviour/intent now lives in the **approved plan**
+> for each change (the Phase-4 gate in the OpenLore workflow). Contracts live in
+> `openspec/specs/`. This file is kept only as a historical snapshot; do not update it
+> or cite it as current behaviour. See `specs/bridging/openlore-adoption.md`.
+
 ## Purpose
 
 The app is an interactive slide-deck workspace for teaching LLM and agent

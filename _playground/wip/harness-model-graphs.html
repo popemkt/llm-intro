@@ -40,7 +40,7 @@ svg { width: 100%; height: auto; display: block; }
 .cast-group.alive .cast-group-h { color: #fb923c; }
 .cast-group { display: flex; flex-direction: column; gap: 0.55rem; }
 .actor { border: 1px solid rgba(148,163,184,0.14); border-radius: 9px; background: rgba(255,255,255,0.015); overflow: hidden; }
-/* per-actor color, matching the graph nodes: agent emerald, intent amber, judge orange */
+/* per-actor color, matching the graph nodes: agent emerald, intent amber, validator orange */
 .cast-group.alive .actor { border-left-width: 3px; }
 .actor.agent  { border-color: rgba(52,211,153,0.22);  border-left-color: #34d399; background: rgba(52,211,153,0.04); }
 .actor.intent { border-color: rgba(251,191,36,0.22);  border-left-color: #fbbf24; background: rgba(251,191,36,0.04); }
@@ -69,6 +69,11 @@ svg { width: 100%; height: auto; display: block; }
 .traits li { font-size: 0.78rem; line-height: 1.4; color: #cbd5e1; }
 .traits b { color: #e2e8f0; font-weight: 600; }
 .traits .lever { display: block; color: #34d399; font-size: 0.74rem; margin-top: 0.12rem; }
+/* weakness (must compensate) vs asset (can exploit) */
+.traits .mk { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 4px; padding: 0.05rem 0.36rem; margin-right: 0.42rem; vertical-align: 1px; }
+.traits .mk.wk { color: #f3a4a4; background: rgba(239,68,68,0.13); }
+.traits .mk.st { color: #86dcb0; background: rgba(52,211,153,0.13); }
+.traits li.more-tr { color: #64748b; font-style: italic; opacity: 0.8; margin-top: 0.15rem; }
 /* dead-actor skill inheritance — who kept the skillset */
 .skills { list-style: none; margin: 0.45rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
 .skills li { font-size: 0.74rem; line-height: 1.35; color: #94a3b8; display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
@@ -243,14 +248,14 @@ svg { width: 100%; height: auto; display: block; }
   <b>it’s the wrong thing</b> — you were misunderstood — or <b>it’s the right thing, built wrong</b> — it doesn’t match what was agreed.<br>
   There is no third way to fail a request — every bug, every disappointment is one of these wearing a costume.<br>
   Software is a controlled disc inside a drifting world; meaning must cross <b>two membranes</b> to get in — one membrane per failure.
-  Three actors: one <b>wants</b>, one <b>crosses</b>, one <b>watches</b>. From that loop we derive the <b>stabilizers</b> that keep judgment affordable —
+  Three actors: one <b>wants</b>, one <b>crosses</b>, one <b>watches</b>. From that loop we derive the <b>stabilizers</b> that keep validation affordable —
   and the watcher exists only until the membranes stop lying.
 </p>
 
 <!-- ════════════════ TOWER · HISTORY (1a) ════════════════ -->
 <div class="card">
   <h2>1a · Tower of abstraction, read as history — every translator was once human</h2>
-  <p class="hint">Story. Machines ate the tower bottom-up; each conquered hop deleted its judge. AI is the newest wave — climbing the top two.</p>
+  <p class="hint">Story. Machines ate the tower bottom-up; each conquered hop deleted its validator. AI is the newest wave — climbing the top two.</p>
   <svg viewBox="0 0 1160 520" font-family="ui-sans-serif, system-ui">
     <!-- side rails -->
     <line x1="300" y1="50" x2="300" y2="460" stroke="#64748b" stroke-opacity="0.35" stroke-dasharray="2 4"/>
@@ -301,26 +306,26 @@ svg { width: 100%; height: auto; display: block; }
     <text x="530" y="421" text-anchor="middle" fill="#d9a066" font-size="9.5" text-decoration="line-through" text-decoration-color="#d9a066">once · HUMAN operator, plugboards &amp; switches</text>
     <text x="530" y="435" text-anchor="middle" fill="#94a3b8" font-size="10.5">now · <tspan fill="#8ea0b5">CPU fetch–decode–execute</tspan></text>
 
-    <!-- the judge — one occupation per hop. Same job (verification), new title each era. -->
+    <!-- the validator — one occupation per hop. Same job (verification), new title each era. -->
     <!-- top two: still employed (unproven translator) -->
-    <text x="845" y="104" fill="#fb923c" fill-opacity="0.9" font-size="10" font-weight="600" font-style="italic">judge: product owner / second analyst</text>
-    <text x="845" y="204" fill="#fb923c" fill-opacity="0.9" font-size="10" font-weight="600" font-style="italic">judge: code reviewer</text>
+    <text x="845" y="104" fill="#fb923c" fill-opacity="0.9" font-size="10" font-weight="600" font-style="italic">validator: product owner / second analyst</text>
+    <text x="845" y="204" fill="#fb923c" fill-opacity="0.9" font-size="10" font-weight="600" font-style="italic">validator: code reviewer</text>
     <!-- lower three: laid off when the translator became proven -->
-    <text x="845" y="289" fill="#8ea0b5" fill-opacity="0.8" font-size="9.5" font-style="italic" text-decoration="line-through" text-decoration-color="#8ea0b5">judge: desk-checker</text>
-    <text x="845" y="359" fill="#8ea0b5" fill-opacity="0.8" font-size="9.5" font-style="italic" text-decoration="line-through" text-decoration-color="#8ea0b5">judge: proofreader</text>
-    <text x="845" y="429" fill="#8ea0b5" fill-opacity="0.8" font-size="9.5" font-style="italic" text-decoration="line-through" text-decoration-color="#8ea0b5">judge: second operator</text>
+    <text x="845" y="289" fill="#8ea0b5" fill-opacity="0.8" font-size="9.5" font-style="italic" text-decoration="line-through" text-decoration-color="#8ea0b5">validator: desk-checker</text>
+    <text x="845" y="359" fill="#8ea0b5" fill-opacity="0.8" font-size="9.5" font-style="italic" text-decoration="line-through" text-decoration-color="#8ea0b5">validator: proofreader</text>
+    <text x="845" y="429" fill="#8ea0b5" fill-opacity="0.8" font-size="9.5" font-style="italic" text-decoration="line-through" text-decoration-color="#8ea0b5">validator: second operator</text>
 
     <text x="580" y="505" text-anchor="middle" fill="#64748b" font-size="10.5" font-style="italic">
-      Every translator was once a human. As each hop became a proven machine, its judge was deleted. AI repeats the move on the top two — unproven, so the judge stays.
+      Every translator was once a human. As each hop became a proven machine, its validator was deleted. AI repeats the move on the top two — unproven, so the validator stays.
     </text>
   </svg>
 </div>
 
 <!-- ════════════════ TRANSITION 1a → 1b ════════════════ -->
 <p class="transition">
-  Every earlier automation arrived <b>already proven</b> — a compiler that mis-compiles is a bug, not a coin-flip, so its judge was deleted on arrival.
+  Every earlier automation arrived <b>already proven</b> — a compiler that mis-compiles is a bug, not a coin-flip, so its validator was deleted on arrival.
   The AI wave is the first to land on the top two hops <b>still stochastic</b>: same input, different output, no proof.
-  We took the human out without the machine being proven — so the deleted judge must be <b>rebuilt by hand</b>, around an unproven translator.
+  We took the human out without the machine being proven — so the deleted validator must be <b>rebuilt by hand</b>, around an unproven translator.
   <b>That rebuilding is harness engineering.</b>
 </p>
 
@@ -376,12 +381,12 @@ svg { width: 100%; height: auto; display: block; }
     <text x="475" y="429" text-anchor="middle" fill="#94a3b8" font-size="10.5">↓&#160;&#160;translator: <tspan fill="#8ea0b5">fetch–decode–execute</tspan></text>
 
     <!-- story note (left) -->
-    <text x="12" y="318" fill="#8ea0b5" font-size="9.5" font-style="italic">proven — judge deleted ~50 years ago</text>
+    <text x="12" y="318" fill="#8ea0b5" font-size="9.5" font-style="italic">proven — validator deleted ~50 years ago</text>
 
     <!-- spans (brackets, right) -->
-    <!-- the judge: outside the tower on the left, watching the two probabilistic hops -->
+    <!-- the validator: outside the tower on the left, watching the two probabilistic hops -->
     <rect x="12" y="130" width="170" height="40" rx="9" fill="rgba(251,146,60,0.05)" stroke="#fb923c" stroke-opacity="0.5" stroke-dasharray="5 4"/>
-    <text x="97" y="147" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">JUDGE</text>
+    <text x="97" y="147" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">VALIDATOR</text>
     <text x="97" y="161" text-anchor="middle" fill="#b07a4a" font-size="8.5">outside the tower, watching</text>
     <line x1="105" y1="130" x2="170" y2="109" stroke="#fb923c" stroke-opacity="0.85" stroke-width="1.5" stroke-dasharray="4 3"/>
     <line x1="105" y1="170" x2="170" y2="195" stroke="#fb923c" stroke-opacity="0.85" stroke-width="1.5" stroke-dasharray="4 3"/>
@@ -420,7 +425,7 @@ svg { width: 100%; height: auto; display: block; }
         <div class="body">
           <p>Product owner / second analyst — read the draft back against what was wanted, signed off.</p>
           <ul class="skills">
-            <li>checked the spec said the right thing <span class="to judge">JUDGE</span></li>
+            <li>checked the spec said the right thing <span class="to judge">VALIDATOR</span></li>
             <li>authority to accept <span class="to intent">INTENT HOLDER</span></li>
           </ul>
         </div>
@@ -440,8 +445,8 @@ svg { width: 100%; height: auto; display: block; }
         <div class="body">
           <p>Read the diff against the spec, caught the mismatch.</p>
           <ul class="skills">
-            <li>checked code matched spec <span class="to judge">JUDGE</span> <span class="via">tests = pre-paid</span></li>
-            <li>held the quality bar <span class="to judge">JUDGE</span></li>
+            <li>checked code matched spec <span class="to judge">VALIDATOR</span> <span class="via">tests = pre-paid</span></li>
+            <li>held the quality bar <span class="to judge">VALIDATOR</span></li>
           </ul>
         </div>
       </details>
@@ -454,11 +459,12 @@ svg { width: 100%; height: auto; display: block; }
         <div class="body">
           <p class="role">The new translator. Does both hand-labor jobs — but unproven.</p>
           <ul class="traits">
-            <li><b>stateless</b> — starts blank every run<span class="lever">→ give it memory: specs, checkpoint history, and harness records as external state</span></li>
-            <li><b>forward-only, no built-in verdict</b> — can't feel when it's wrong<span class="lever">→ build programmatic sensors: tests, drift checks, lint sense right/wrong for it</span></li>
-            <li><b>fully programmable</b> — total control of its inputs, tools, loop<span class="lever">→ sandboxes, fixed entrypoints, MCP — make it reliably do what no employee would</span></li>
-            <li><b>stochastic</b> — same input, different output<span class="lever">→ keep the judge; wrap the unproven hops in disciplines</span></li>
-            <li><b>cheap &amp; parallel</b> — no fatigue, fans out<span class="lever">→ afford exhaustive interviewing, many drafts, broad review</span></li>
+            <li><span class="mk wk">weakness</span><b>stateless</b> — starts blank every run<span class="lever">→ give it memory: specs, learnings, CHANGELOG as external state</span></li>
+            <li><span class="mk wk">weakness</span><b>forward-only, no built-in verdict</b> — can't feel when it's wrong<span class="lever">→ build programmatic sensors: tests, drift checks, lint sense right/wrong for it</span></li>
+            <li><span class="mk st">strength</span><b>fully programmable</b> — total control of its inputs, tools, loop<span class="lever">→ sandboxes, fixed entrypoints, MCP — make it reliably do what no employee would</span></li>
+            <li><span class="mk wk">weakness</span><b>stochastic</b> — same input, different output<span class="lever">→ keep the validator; wrap the unproven hops in disciplines</span></li>
+            <li><span class="mk st">strength</span><b>cheap &amp; parallel</b> — no fatigue, fans out<span class="lever">→ afford exhaustive interviewing, many drafts, broad review</span></li>
+            <li class="more-tr">… more to come</li>
           </ul>
         </div>
       </details>
@@ -467,22 +473,23 @@ svg { width: 100%; height: auto; display: block; }
         <div class="body">
           <p class="role">What's left of the human after the agent took the labor — the irreducible <i>wanting.</i></p>
           <ul class="traits">
-            <li><b>holds tacit intent</b> — knows the want, can't fully state it<span class="lever">→ exhaustive interviewing, recommend + veto pulls it out</span></li>
-            <li><b>the living reference (hop 1)</b> — only they can confirm "that's what I meant"<span class="lever">→ their sign-off is the verdict; the written spec makes it transferable after</span></li>
-            <li><b>drifts</b> — the want changes over time<span class="lever">→ durable record freezes intent at decision time</span></li>
-            <li><b>scarce attention</b> — won't read everything<span class="lever">→ keep the work legible and small</span></li>
+            <li><span class="mk wk">weakness</span><b>holds tacit intent</b> — knows the want, can't fully state it<span class="lever">→ exhaustive interviewing, recommend + veto pulls it out</span></li>
+            <li><span class="mk st">strength</span><b>the living reference (hop 1)</b> — only they can confirm "that's what I meant"<span class="lever">→ their sign-off is the verdict; the written spec makes it transferable after</span></li>
+            <li><span class="mk wk">weakness</span><b>drifts</b> — the want changes over time<span class="lever">→ durable record freezes intent at decision time</span></li>
+            <li><span class="mk wk">weakness</span><b>scarce attention</b> — won't read everything<span class="lever">→ keep the work legible and small</span></li>
+            <li class="more-tr">… more to come</li>
           </ul>
         </div>
       </details>
       <details class="actor judge">
-        <summary><span class="who">JUDGE</span><span class="tag">watches · contingent</span></summary>
+        <summary><span class="who">VALIDATOR</span><span class="tag">validates · contingent</span></summary>
         <div class="body">
-          <p class="role">The two reviewers, merged into one watcher — now judging machine output, not human.</p>
+          <p class="role">The two reviewers, merged into one watcher — now validating machine output, not human.</p>
           <ul class="traits">
-            <li><b>contingent</b> — exists only because the translator is unproven<span class="lever">→ drive stochasticity to zero and it deletes itself, like the lower tower did</span></li>
-            <li><b>judges machine output now</b> — new failure modes: fluent, confident, wrong<span class="lever">→ adversarial checks, not trust</span></li>
-            <li><b>expensive</b> — burns human attention<span class="lever">→ legible work + tests (judgment pre-paid) keep it affordable</span></li>
-            <li><b>transferable</b> — once a spec exists, any spec-reader can judge<span class="lever">→ the record moves the verdict off the one head</span></li>
+            <li><span class="mk wk">weakness</span><b>validates machine output now</b> — new failure modes: fluent, confident, wrong<span class="lever">→ adversarial checks, not trust</span></li>
+            <li><span class="mk wk">weakness</span><b>expensive</b> — burns human attention<span class="lever">→ legible work + tests (validation pre-paid) keep it affordable</span></li>
+            <li><span class="mk st">strength</span><b>transferable</b> — once a spec exists, any spec-reader can validate<span class="lever">→ the record moves the verdict off the one head</span></li>
+            <li class="more-tr">… more to come</li>
           </ul>
         </div>
       </details>
@@ -490,15 +497,15 @@ svg { width: 100%; height: auto; display: block; }
   </div>
   <p class="cast-foot">
     No skill was lost — the four split three ways: the <b class="t-agent">doing</b> went to the AGENT,
-    the <b class="t-judge">checking</b> to the JUDGE, the <b class="t-intent">wanting &amp; authority</b> to the INTENT HOLDER.
-    What didn't transfer — memory, built-in judgment, steady intent — is exactly what the <span class="t-lever">levers</span> rebuild.
+    the <b class="t-judge">checking</b> to the VALIDATOR, the <b class="t-intent">wanting &amp; authority</b> to the INTENT HOLDER.
+    What didn't transfer — memory, built-in validation, steady intent — is exactly what the <span class="t-lever">levers</span> rebuild.
   </p>
 </div>
 
 <!-- ════════════════ BRIDGE · MERIDIAN VARIANT ════════════════ -->
 <div class="card">
   <h2>3✦ · The world — simplified spatial sketch of 1d</h2>
-  <p class="hint">Interactive synthesis. This card deliberately compresses the judge-side closure; 1d is where Evidence, Judgment, and Verdict are unpacked. Labels stay quiet until hover/focus; the grammar matches 1d: boxes are actors, shells are artifacts/phenomena, dashed arcs are processes, the outer field is environment.</p>
+  <p class="hint">Interactive synthesis. This card deliberately compresses the validator-side closure; 1d is where Evidence, Validation, and Verdict are unpacked. Labels stay quiet until hover/focus; the grammar matches 1d: boxes are actors, shells are artifacts/phenomena, dashed arcs are processes, the outer field is environment.</p>
   <div class="stepper">
     <button id="b2-prev">‹</button>
     <button id="b2-next">›</button>
@@ -518,8 +525,8 @@ svg { width: 100%; height: auto; display: block; }
       <text x="256" y="38" text-anchor="end" fill="#8a93a3" font-size="8.5" font-style="italic">intent</text>
       <text x="1048" y="38" fill="#8a93a3" font-size="8.5" font-style="italic">behavior</text>
       <line x1="640" y1="60" x2="640" y2="600" stroke="#ef4444" stroke-opacity="0.72" stroke-width="2"/>
-      <text x="632" y="52" text-anchor="end" fill="#94a3b8" font-size="9.5" font-weight="600">build</text>
-      <text x="648" y="52" fill="#94a3b8" font-size="9.5" font-weight="600">run</text>
+      <text x="632" y="52" text-anchor="end" fill="#94a3b8" font-size="9.5" font-weight="600">building phase</text>
+      <text x="648" y="52" fill="#94a3b8" font-size="9.5" font-weight="600">running phase</text>
       <circle cx="640" cy="330" r="128" fill="#0f1a16" stroke="#64748b" stroke-opacity="0.3" stroke-width="1"/>
       <text x="640" y="334" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">software</text>
 
@@ -540,7 +547,7 @@ svg { width: 100%; height: auto; display: block; }
         <g class="label">
           <rect x="286" y="382" width="230" height="54" rx="8" fill="#121821" stroke="#a78bfa" stroke-opacity="0.5"/>
           <text x="300" y="404" fill="#a78bfa" font-size="10" font-weight="700">Artifact · Specification</text>
-          <text x="300" y="420" class="tagline">the durable reference consumed by judgment.</text>
+          <text x="300" y="420" class="tagline">the durable reference consumed by validation.</text>
         </g>
       </g>
       <g class="hot" tabindex="0">
@@ -575,7 +582,7 @@ svg { width: 100%; height: auto; display: block; }
       </g>
       <g class="hot" tabindex="0">
         <path class="target" d="M 640 202 A 128 128 0 0 1 640 458" fill="none" stroke="#60a5fa" stroke-opacity="0.78" stroke-width="1.8" stroke-dasharray="6 5"/>
-        <text x="726" y="214" text-anchor="middle" fill="#60a5fa" font-size="9.5" font-weight="600">launch</text>
+        <text x="726" y="214" text-anchor="middle" fill="#60a5fa" font-size="9.5" font-weight="600">launch conditions</text>
         <g class="label">
           <rect x="724" y="102" width="236" height="54" rx="8" fill="#121821" stroke="#60a5fa" stroke-opacity="0.5"/>
           <text x="738" y="124" fill="#60a5fa" font-size="10" font-weight="700">Environment · runtime world</text>
@@ -601,7 +608,7 @@ svg { width: 100%; height: auto; display: block; }
         <g class="label">
           <rect x="472" y="276" width="254" height="62" rx="8" fill="#121821" stroke="#fb7185" stroke-opacity="0.5"/>
           <text x="486" y="298" fill="#fb7185" font-size="10" font-weight="700">Process · code-spec binding</text>
-          <text x="486" y="314" class="tagline">Specification + Evidence feed Judgment.</text>
+          <text x="486" y="314" class="tagline">Specification + Evidence feed Validation.</text>
           <text x="486" y="328" class="tagline">Failure here: the thing built wrong.</text>
         </g>
       </g>
@@ -621,37 +628,39 @@ svg { width: 100%; height: auto; display: block; }
         <rect class="target" x="40" y="164" width="180" height="46" rx="10" fill="rgba(52,211,153,0.05)" stroke="#34d399" stroke-opacity="0.55"/>
         <text x="130" y="190" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">AGENT</text>
         <path d="M 220 187 Q 380 220 516 322" fill="none" stroke="#34d399" stroke-opacity="0.28" stroke-dasharray="3 5"/>
+        <!-- the agent (green diamond) carries the intent (amber) inside, reaches software, then starts over -->
+        <g>
+          <animateMotion dur="3s" repeatCount="indefinite" keyTimes="0;0.85;1" keyPoints="0;1;1" calcMode="linear" path="M 220 187 Q 380 220 516 322"/>
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.82;0.9" dur="3s" repeatCount="indefinite"/>
+          <polygon points="0,-7 8,0 0,7 -8,0" fill="#34d399"/>
+          <circle cx="0" cy="-13" r="5.5" fill="#fbbf24"/>
+          <text x="0" y="-10.5" font-size="6.5" fill="#0d1117" font-weight="700" text-anchor="middle">i</text>
+        </g>
         <g class="label">
           <rect x="236" y="158" width="226" height="54" rx="8" fill="#121821" stroke="#34d399" stroke-opacity="0.5"/>
           <text x="250" y="180" fill="#34d399" font-size="10" font-weight="700">Actor · Agent</text>
           <text x="250" y="196" class="tagline">participates in elicitation and generation.</text>
         </g>
       </g>
+      <!-- static intent label — the moving token can't be hovered -->
+      <rect x="268" y="106" width="236" height="46" rx="8" fill="#121821" stroke="#fbbf24" stroke-opacity="0.5"/>
+      <circle cx="286" cy="129" r="5.5" fill="#fbbf24"/>
+      <text x="286" y="131.5" font-size="6.5" fill="#0d1117" font-weight="700" text-anchor="middle">i</text>
+      <text x="300" y="125" fill="#fbbf24" font-size="10" font-weight="700">intent</text>
+      <text x="300" y="140" class="tagline">the agent carries it inside → software.</text>
+      <path d="M 388 152 C 388 178, 360 196, 338 207" fill="none" stroke="#fbbf24" stroke-opacity="0.3" stroke-dasharray="3 4"/>
       <g class="hot" tabindex="0">
         <rect class="target" x="40" y="498" width="180" height="44" rx="10" fill="rgba(251,146,60,0.05)" stroke="#fb923c" stroke-opacity="0.55" stroke-dasharray="5 4"/>
-        <text x="130" y="524" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">JUDGE</text>
+        <text x="130" y="524" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">VALIDATOR</text>
         <g class="label">
           <rect x="236" y="494" width="220" height="54" rx="8" fill="#121821" stroke="#fb923c" stroke-opacity="0.5"/>
-          <text x="250" y="516" fill="#fb923c" font-size="10" font-weight="700">Actor · Judge</text>
-          <text x="250" y="532" class="tagline">participates in Judgment; produces Verdict.</text>
+          <text x="250" y="516" fill="#fb923c" font-size="10" font-weight="700">Actor · Validator</text>
+          <text x="250" y="532" class="tagline">participates in Validation; produces Verdict.</text>
         </g>
       </g>
     </g>
 
     <g class="g" data-s="6">
-      <rect x="330" y="504" width="520" height="58" rx="10" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.1)"/>
-      <text x="590" y="528" text-anchor="middle" fill="#94a3b8" font-size="10.5" font-weight="700">stabilizers are derived obligations, not node kinds</text>
-      <text x="590" y="546" text-anchor="middle" fill="#64748b" font-size="9">
-        Keep the world view ontological; this sketch flattens the judge-side closure, and 1d unpacks it.
-      </text>
-    </g>
-
-    <g class="g" data-s="7">
-      <path d="M 768 440 C 948 520, 1012 430, 910 372" fill="none" stroke="#2dd4bf" stroke-opacity="0.42" stroke-width="1.4" marker-end="url(#b2-fwd)"/>
-      <text x="844" y="538" text-anchor="middle" fill="#5eead4" font-size="9">behavior acts on the world; new wants form</text>
-    </g>
-
-    <g class="g" data-s="8">
       <rect x="838" y="442" width="248" height="120" rx="10" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.1)"/>
       <text x="856" y="466" fill="#94a3b8" font-size="9.5" font-weight="700">single grammar</text>
       <text x="856" y="488" fill="#cbd5e1" font-size="8.5">boxes = actors</text>
@@ -669,9 +678,7 @@ svg { width: 100%; height: auto; display: block; }
     "typed participants: Spec and Code are artifacts; Behavior is a phenomenon",
     "mechanical boundary: code becomes executable software, software launches inside runtime",
     "probabilistic processes: elicitation and code-spec binding are the risky crossings",
-    "actors enter: Intent Holder, Agent and Judge remain boxes, not shell levels",
-    "stabilizers are derived obligations; this sketch still leaves Evidence, Judgment, and Verdict to 1d",
-    "loop closure: behavior acts back on the world and creates future intent",
+    "actors enter: Intent Holder, Agent and Validator remain boxes, not shell levels",
     "legend: the diagram now uses one visual grammar",
   ];
   let step = 1;
@@ -681,10 +688,10 @@ svg { width: 100%; height: auto; display: block; }
     svg.querySelectorAll(".g").forEach((g) => {
       g.style.opacity = Number(g.dataset.s) <= step ? "1" : "0";
     });
-    cap.textContent = step + " / 8 — " + CAPS[step - 1];
+    cap.textContent = step + " / 6 — " + CAPS[step - 1];
   };
   document.getElementById("b2-prev").onclick = () => { step = Math.max(1, step - 1); render(); };
-  document.getElementById("b2-next").onclick = () => { step = Math.min(8, step + 1); render(); };
+  document.getElementById("b2-next").onclick = () => { step = Math.min(6, step + 1); render(); };
   render();
 })();
 </script>
@@ -715,13 +722,15 @@ svg { width: 100%; height: auto; display: block; }
     <text x="274" y="64" fill="#fbbf24" font-size="10" font-weight="700" letter-spacing="0.08em">PROCESSES</text>
     <text x="274" y="80" fill="#64748b" font-size="8.5">transitions: consume inputs, produce outputs</text>
 
-    <rect x="536" y="38" width="250" height="360" rx="12" fill="rgba(167,139,250,0.025)" stroke="#a78bfa" stroke-opacity="0.18"/>
-    <text x="558" y="64" fill="#a78bfa" font-size="10" font-weight="700" letter-spacing="0.08em">ARTIFACTS / RECORD</text>
-    <text x="558" y="80" fill="#64748b" font-size="8.5">durable information objects</text>
-
-    <rect x="820" y="38" width="304" height="360" rx="12" fill="rgba(148,163,184,0.02)" stroke="#94a3b8" stroke-opacity="0.18"/>
-    <text x="842" y="64" fill="#94a3b8" font-size="10" font-weight="700" letter-spacing="0.08em">WORLD-SIDE NODES</text>
-    <text x="842" y="80" fill="#64748b" font-size="8.5">Environment and Phenomenon stay disjoint here</text>
+    <!-- NON-ACTORS: artifact + environment + phenomenon — merged into one group, kept distinct inside -->
+    <rect x="536" y="38" width="588" height="360" rx="12" fill="none" stroke="#94a3b8" stroke-opacity="0.22"/>
+    <rect x="540" y="88" width="264" height="304" rx="9" fill="rgba(167,139,250,0.022)"/>
+    <rect x="808" y="88" width="312" height="304" rx="9" fill="rgba(148,163,184,0.025)"/>
+    <line x1="806" y1="92" x2="806" y2="388" stroke="#94a3b8" stroke-opacity="0.13" stroke-dasharray="3 6"/>
+    <text x="558" y="64" fill="#94a3b8" font-size="10" font-weight="700" letter-spacing="0.08em">NON-ACTORS</text>
+    <text x="558" y="80" fill="#64748b" font-size="8.5">refine into → artifact · environment · phenomenon</text>
+    <text x="558" y="385" fill="#a78bfa" fill-opacity="0.75" font-size="8.5" letter-spacing="0.06em">ARTIFACT · RECORD</text>
+    <text x="1108" y="385" text-anchor="end" fill="#94a3b8" font-size="8.5" letter-spacing="0.06em">ENVIRONMENT · PHENOMENON</text>
 
     <!-- actors -->
     <rect x="58" y="116" width="140" height="42" rx="9" fill="rgba(251,191,36,0.07)" stroke="#fbbf24" stroke-opacity="0.55"/>
@@ -729,7 +738,7 @@ svg { width: 100%; height: auto; display: block; }
     <rect x="58" y="198" width="140" height="42" rx="9" fill="rgba(52,211,153,0.07)" stroke="#34d399" stroke-opacity="0.55"/>
     <text x="128" y="223" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">Agent</text>
     <rect x="58" y="280" width="140" height="42" rx="9" fill="rgba(251,146,60,0.06)" stroke="#fb923c" stroke-opacity="0.55" stroke-dasharray="5 4"/>
-    <text x="128" y="305" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">Judge</text>
+    <text x="128" y="305" text-anchor="middle" fill="#e2e8f0" font-size="11.5" font-weight="600">Validator</text>
 
     <!-- processes -->
     <rect x="296" y="94" width="164" height="44" rx="22" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" stroke-opacity="0.55"/>
@@ -739,7 +748,7 @@ svg { width: 100%; height: auto; display: block; }
     <rect x="296" y="238" width="164" height="44" rx="22" fill="rgba(96,165,250,0.07)" stroke="#60a5fa" stroke-opacity="0.55"/>
     <text x="378" y="264" text-anchor="middle" fill="#60a5fa" font-size="11.5" font-weight="700">Observation</text>
     <rect x="296" y="310" width="164" height="44" rx="22" fill="rgba(251,146,60,0.07)" stroke="#fb923c" stroke-opacity="0.55"/>
-    <text x="378" y="336" text-anchor="middle" fill="#fb923c" font-size="11.5" font-weight="700">Judgment</text>
+    <text x="378" y="336" text-anchor="middle" fill="#fb923c" font-size="11.5" font-weight="700">Validation</text>
 
     <!-- artifacts -->
     <rect x="570" y="90" width="182" height="42" rx="9" fill="rgba(167,139,250,0.08)" stroke="#a78bfa" stroke-opacity="0.55"/>
@@ -767,6 +776,10 @@ svg { width: 100%; height: auto; display: block; }
     <text x="232" y="203" fill="#5e9c82" font-size="8.5">participates</text>
     <line x1="198" y1="301" x2="288" y2="332" stroke="#fb923c" stroke-width="1.3" marker-end="url(#d-judge)"/>
     <text x="232" y="335" fill="#b07a4a" font-size="8.5">participates</text>
+    <!-- the VALIDATION process reaches the two probabilistic hops; the validator's one participation is Validation -->
+    <path d="M 300 322 C 248 300, 246 150, 294 122" fill="none" stroke="#fb923c" stroke-opacity="0.5" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#d-judge)"/>
+    <path d="M 300 326 C 260 314, 258 212, 294 190" fill="none" stroke="#fb923c" stroke-opacity="0.5" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#d-judge)"/>
+    <text x="242" y="250" text-anchor="middle" fill="#b07a4a" font-size="8" font-style="italic">validates the two hops</text>
 
     <!-- process/output edges -->
     <line x1="460" y1="116" x2="562" y2="111" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#d-flow)"/>
@@ -788,7 +801,7 @@ svg { width: 100%; height: auto; display: block; }
     <line x1="460" y1="260" x2="562" y2="247" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#d-flow)"/>
     <text x="496" y="276" fill="#94a3b8" font-size="8.5">produces</text>
 
-    <!-- judgment inputs/output -->
+    <!-- validation inputs/output -->
     <line x1="570" y1="111" x2="460" y2="318" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="4 4" marker-end="url(#d-store)"/>
     <text x="486" y="300" fill="#8b85a8" font-size="8.5">reference</text>
     <line x1="570" y1="247" x2="460" y2="326" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4 4" marker-end="url(#d-flow)"/>
@@ -805,6 +818,7 @@ svg { width: 100%; height: auto; display: block; }
     <!-- stabilizers: derived obligations, not ontology nodes -->
     <rect x="36" y="438" width="1088" height="152" rx="12" fill="rgba(255,255,255,0.018)" stroke="rgba(255,255,255,0.08)"/>
     <text x="58" y="466" fill="#94a3b8" font-size="10" font-weight="700" letter-spacing="0.08em">DERIVED STABILIZERS</text>
+    <text x="1100" y="466" text-anchor="end" fill="#64748b" font-size="9" font-style="italic">… more to come</text>
     <text x="58" y="482" fill="#64748b" font-size="8.8">Hover a stabilizer: it highlights the actor/process/object/environment obligations it touches. These are not MECE node kinds.</text>
 
     <g class="stabilizer" tabindex="0">
@@ -819,7 +833,7 @@ svg { width: 100%; height: auto; display: block; }
       <rect class="stabilizer-card" x="58" y="504" width="230" height="62" rx="10" fill="rgba(167,139,250,0.045)" stroke="#a78bfa" stroke-opacity="0.45"/>
       <text x="74" y="526" fill="#a78bfa" font-size="10.5" font-weight="700">Durable record</text>
       <text x="74" y="542" fill="#cbd5e1" font-size="8.4">Reference and memory must persist:</text>
-      <text x="74" y="555" fill="#64748b" font-size="8.1">specs, evidence, verdict, history.</text>
+      <text x="74" y="555" fill="#64748b" font-size="8.1">spec, evidence, verdict, learnings.</text>
     </g>
 
     <g class="stabilizer" tabindex="0">
@@ -858,10 +872,10 @@ svg { width: 100%; height: auto; display: block; }
       <rect class="st-highlight" x="566" y="222" width="190" height="50" rx="10" fill="none" stroke="#fb923c" stroke-width="2.2"/>
       <rect class="st-highlight" x="566" y="290" width="190" height="50" rx="10" fill="none" stroke="#fb923c" stroke-width="2.2"/>
       <text class="st-note" x="770" y="428" fill="#fdba74">keeps review affordable</text>
-      <text class="st-note" x="694" y="388" fill="#fdba74">pre-pays judgment with tests</text>
+      <text class="st-note" x="694" y="388" fill="#fdba74">pre-pays validation with tests</text>
       <rect class="stabilizer-card" x="844" y="504" width="250" height="62" rx="10" fill="rgba(251,146,60,0.04)" stroke="#fb923c" stroke-opacity="0.45"/>
       <text x="860" y="526" fill="#fb923c" font-size="10.5" font-weight="700">Legible work</text>
-      <text x="860" y="542" fill="#cbd5e1" font-size="8.4">Judgment must be affordable:</text>
+      <text x="860" y="542" fill="#cbd5e1" font-size="8.4">Validation must be affordable:</text>
       <text x="860" y="555" fill="#64748b" font-size="8.1">small diffs, readable evidence, tests.</text>
     </g>
 
@@ -872,7 +886,7 @@ svg { width: 100%; height: auto; display: block; }
     <text x="58" y="692" fill="#cbd5e1" font-size="10.5">I2 · every Process consumes at least one input and produces at least one output.</text>
     <text x="58" y="716" fill="#cbd5e1" font-size="10.5">I3 · only Actors participate in Processes; Artifacts do not act.</text>
     <text x="58" y="740" fill="#cbd5e1" font-size="10.5">I4 · Generation must consume Specification and produce Code; Observation must consume Behavior and produce Evidence.</text>
-    <text x="58" y="764" fill="#cbd5e1" font-size="10.5">I5 · Judgment must consume Specification plus Evidence and produce exactly one Verdict.</text>
+    <text x="58" y="764" fill="#cbd5e1" font-size="10.5">I5 · Validation must consume Specification plus Evidence and produce exactly one Verdict.</text>
     <text x="58" y="788" fill="#cbd5e1" font-size="10.5">I6 · Verdict may update Record; it does not automatically rewrite the Specification.</text>
   </svg>
 </div>
@@ -903,13 +917,13 @@ svg { width: 100%; height: auto; display: block; }
 
     <div class="ptile" style="border-left-color:#a78bfa" data-panel="records" tabindex="0" role="button">
       <svg class="picon" viewBox="0 0 46 46"><g fill="rgba(167,139,250,0.12)" stroke="#a78bfa" stroke-width="1.5"><rect x="9" y="11" width="20" height="14" rx="2"/><rect x="13" y="17" width="20" height="14" rx="2"/><rect x="17" y="23" width="20" height="14" rx="2"/></g></svg>
-      <div class="pmeta"><span class="ptitle">System of records</span><span class="parrow" style="color:#a78bfa">→ durable record</span><span class="ptag">meaning pinned in writing — legible to judge &amp; agent</span></div>
+      <div class="pmeta"><span class="ptitle">System of records</span><span class="parrow" style="color:#a78bfa">→ durable record</span><span class="ptag">meaning pinned in writing — legible to validator &amp; agent</span></div>
     </div>
 
     <!-- row 2 -->
     <div class="ptile" style="border-left-color:#fb923c" data-panel="code" tabindex="0" role="button">
       <svg class="picon" viewBox="0 0 46 46"><rect x="8" y="11" width="30" height="7" rx="2" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.4"/><rect x="8" y="20" width="30" height="7" rx="2" fill="rgba(251,146,60,0.08)" stroke="#fb923c" stroke-width="1.2"/><rect x="8" y="29" width="30" height="7" rx="2" fill="none" stroke="#fb923c" stroke-width="1.1" stroke-dasharray="3 2"/></svg>
-      <div class="pmeta"><span class="ptitle">What the code looks like</span><span class="parrow" style="color:#fb923c">→ legible work</span><span class="ptag">small, single-responsibility units — judgeable</span></div>
+      <div class="pmeta"><span class="ptitle">What the code looks like</span><span class="parrow" style="color:#fb923c">→ legible work</span><span class="ptag">small, single-responsibility units — validatable</span></div>
     </div>
 
     <div class="ptile" style="border-left-color:#34d399" data-panel="capability" tabindex="0" role="button">
@@ -921,6 +935,12 @@ svg { width: 100%; height: auto; display: block; }
     <div class="ptile" style="border-left-color:#22d3ee" data-panel="graph" tabindex="0" role="button">
       <svg class="picon" viewBox="0 0 46 46"><g stroke="#22d3ee" stroke-width="1.4" stroke-opacity="0.7"><line x1="13" y1="13" x2="33" y2="13"/><line x1="13" y1="13" x2="13" y2="33"/><line x1="13" y1="33" x2="33" y2="33"/><line x1="33" y1="13" x2="33" y2="33"/><line x1="13" y1="13" x2="33" y2="33"/></g><g fill="rgba(34,211,238,0.18)" stroke="#22d3ee" stroke-width="1.4"><circle cx="13" cy="13" r="4"/><circle cx="33" cy="13" r="4"/><circle cx="13" cy="33" r="4"/><circle cx="33" cy="33" r="4"/></g></svg>
       <div class="pmeta"><span class="ptitle">One connected graph</span><span class="parrow" style="color:#22d3ee">→ the direction</span><span class="ptag">specs + code as one queryable substrate — the single source of truth</span></div>
+    </div>
+
+    <!-- more to come -->
+    <div class="ptile soon" style="border-left-color:#64748b">
+      <svg class="picon" viewBox="0 0 46 46"><circle cx="23" cy="23" r="14" fill="none" stroke="#64748b" stroke-width="1.4" stroke-dasharray="4 3"/><g stroke="#64748b" stroke-width="2"><line x1="23" y1="17" x2="23" y2="29"/><line x1="17" y1="23" x2="29" y2="23"/></g></svg>
+      <div class="pmeta"><span class="ptitle">More to come</span><span class="parrow" style="color:#64748b">→ …</span><span class="ptag">more of the harness, materialized as it grows</span></div>
     </div>
 
   </div>
@@ -950,28 +970,28 @@ svg { width: 100%; height: auto; display: block; }
           <text x="12" y="40" fill="#64748b" font-size="8">a fresh shell, no prior env</text>
           <rect x="10" y="52" width="218" height="34" rx="8" fill="rgba(148,163,184,0.05)" stroke="#94a3b8" stroke-opacity="0.4"/>
           <text x="22" y="68" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm dev</text>
-          <text x="22" y="80" fill="#64748b" font-size="7.5">Vite + Express · local SQLite · no auth</text>
+          <text x="22" y="80" fill="#64748b" font-size="7.5">mock runtime · all fixtures · no auth</text>
           <line x1="230" y1="69" x2="356" y2="120" stroke="#64748b" stroke-opacity="0.4" marker-end="url(#ep-dim)"/>
           <rect x="10" y="94" width="218" height="34" rx="8" fill="rgba(148,163,184,0.05)" stroke="#94a3b8" stroke-opacity="0.4"/>
-          <text x="22" y="110" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm server</text>
-          <text x="22" y="122" fill="#64748b" font-size="7.5">Express API alone</text>
+          <text x="22" y="110" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm dev:real-llm</text>
+          <text x="22" y="122" fill="#64748b" font-size="7.5">copilot-sdk · sonnet-4.6 · mocked tools</text>
           <line x1="230" y1="111" x2="356" y2="140" stroke="#64748b" stroke-opacity="0.4" marker-end="url(#ep-dim)"/>
           <rect x="10" y="136" width="218" height="34" rx="8" fill="rgba(96,165,250,0.1)" stroke="#60a5fa" stroke-opacity="0.85" stroke-width="1.4">
             <animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="2.4s" repeatCount="indefinite"/>
           </rect>
-          <text x="22" y="152" fill="#e2e8f0" font-size="10.5" font-weight="600">pnpm test:e2e</text>
-          <text x="22" y="164" fill="#7d9bc4" font-size="7.5">isolated browser + API + SQLite</text>
+          <text x="22" y="152" fill="#e2e8f0" font-size="10.5" font-weight="600">pnpm dev:online</text>
+          <text x="22" y="164" fill="#7d9bc4" font-size="7.5">real LLM + real ADO + docker sandbox + sqlite</text>
           <line x1="230" y1="153" x2="356" y2="160" stroke="#60a5fa" stroke-opacity="0.7" marker-end="url(#ep-fwd)"/>
           <rect x="10" y="178" width="218" height="34" rx="8" fill="rgba(148,163,184,0.05)" stroke="#94a3b8" stroke-opacity="0.4"/>
-          <text x="22" y="194" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm test</text>
-          <text x="22" y="206" fill="#64748b" font-size="7.5">Vitest unit + API coverage</text>
+          <text x="22" y="194" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm dev:api</text>
+          <text x="22" y="206" fill="#64748b" font-size="7.5">API alone · Postman work</text>
           <line x1="230" y1="195" x2="356" y2="180" stroke="#64748b" stroke-opacity="0.4" marker-end="url(#ep-dim)"/>
           <rect x="10" y="220" width="218" height="34" rx="8" fill="rgba(148,163,184,0.05)" stroke="#94a3b8" stroke-opacity="0.4"/>
-          <text x="22" y="236" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm build</text>
-          <text x="22" y="248" fill="#64748b" font-size="7.5">TypeScript + production build</text>
+          <text x="22" y="236" fill="#cbd5e1" font-size="10.5" font-weight="600">pnpm dev:studio</text>
+          <text x="22" y="248" fill="#64748b" font-size="7.5">UI alone · styling</text>
           <line x1="230" y1="237" x2="356" y2="200" stroke="#64748b" stroke-opacity="0.4" marker-end="url(#ep-dim)"/>
           <rect x="358" y="44" width="9" height="266" rx="3" fill="rgba(96,165,250,0.16)" stroke="#60a5fa" stroke-opacity="0.45"/>
-          <text x="352" y="177" fill="#60a5fa" font-size="9" font-weight="600" text-anchor="middle" transform="rotate(-90 352 177)">registered commands</text>
+          <text x="352" y="177" fill="#60a5fa" font-size="9" font-weight="600" text-anchor="middle" transform="rotate(-90 352 177)">config validated @ boot (Zod)</text>
           <text x="372" y="318" fill="#64748b" font-size="7.5" font-style="italic">conflict → fail fast, before traffic</text>
           <rect x="436" y="118" width="152" height="120" rx="14" fill="rgba(96,165,250,0.06)" stroke="#60a5fa" stroke-opacity="0.55"/>
           <text x="512" y="170" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">software</text>
@@ -979,18 +999,18 @@ svg { width: 100%; height: auto; display: block; }
           <text x="512" y="202" text-anchor="middle" fill="#5e7a9c" font-size="7.5">"how is it running?" =</text>
           <text x="512" y="212" text-anchor="middle" fill="#5e7a9c" font-size="7.5">read the launch command</text>
           <line x1="368" y1="178" x2="430" y2="178" stroke="#60a5fa" stroke-opacity="0.7" stroke-width="1.5" marker-end="url(#ep-fwd)"/>
-          <text x="12" y="332" fill="#64748b" font-size="8" font-style="italic">registry: specs/harness.md · no ad-hoc local-only commands in shared specs</text>
+          <text x="12" y="332" fill="#64748b" font-size="8" font-style="italic">not listed = doesn't exist · no raw tsx/node · the registry is technical-specs/14</text>
         </svg>
         <div class="prail">
           <h4 style="color:#60a5fa">→ predictable world — the launch conditions, pinned</h4>
           <p class="lead">The product of harness engineering <i>is the software</i> — so the ways to start it must be as controlled as the software itself. A small, fixed set of doors; everything else is sealed.</p>
           <ul>
-            <li><b>Minimal &amp; complete</b> — <code>pnpm dev</code> starts the usable app; Playwright starts its own isolated browser/API/database stack.</li>
-            <li><b>Proxy is explicit</b> — Vite proxies <code>/api</code> to Express; tests set a per-run DB path and API port.</li>
-            <li><b>Count stays small</b> — app, API-only, build, unit/API tests, browser tests, demo scripts, and harness setup.</li>
-            <li><b>Not listed = doesn't exist</b> — <code>specs/harness.md</code> is the command registry; shared automation uses those commands.</li>
+            <li><b>Minimal &amp; complete</b> — each <code>dev:*</code> encodes one whole valid config (provider, model, db, sandbox, origin). A fresh shell boots known-good — no "also export X first".</li>
+            <li><b>Validated @ boot</b> — a Zod env schema rejects missing/conflicting values before the process accepts traffic (fail-fast).</li>
+            <li><b>Count stays small</b> — 5 dev modes + QA. A new durable configuration is a new script, never ad-hoc env exports or raw <code>tsx</code>.</li>
+            <li><b>Not listed = doesn't exist</b> — the registry (<code>technical-specs/14</code>) is the source of truth; "how is it running?" is answered by reading the launch command.</li>
           </ul>
-          <p class="ex">e.g. <code>pnpm dev</code> · <code>pnpm test</code> · <code>pnpm build</code> · <code>pnpm test:e2e</code></p>
+          <p class="ex">e.g. <code>pnpm dev</code> (pure mocks) · <code>pnpm dev:online</code> (real LLM + ADO + sandbox) · scenario steering via <code>MOCK:HAPPY_MORTGAGE</code></p>
         </div>
       </div>
     </div>
@@ -1002,16 +1022,16 @@ svg { width: 100%; height: auto; display: block; }
       <div class="pcols">
         <svg viewBox="0 0 600 320" font-family="ui-sans-serif, system-ui">
           <defs><marker id="wf-fwd" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#fb7185"/></marker></defs>
-          <text x="300" y="16" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">change-check.yaml — advisory graph</text>
+          <text x="300" y="16" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">feature-intake.yaml — 14 nodes, in order</text>
           <g font-size="10" font-weight="600">
-            <rect x="170" y="24" width="260" height="26" rx="7" fill="rgba(251,113,133,0.07)" stroke="#fb7185" stroke-opacity="0.5"/><text x="300" y="41" text-anchor="middle" fill="#e2e8f0">1 · read README / PLAN / harness</text>
-            <rect x="170" y="60" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45" stroke-dasharray="5 3"/><text x="300" y="77" text-anchor="middle" fill="#e2e8f0">2 · scope diff</text>
-            <rect x="170" y="96" width="260" height="26" rx="7" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.3"/><text x="300" y="113" text-anchor="middle" fill="#fbbf24">3 · classify change area</text>
-            <rect x="170" y="132" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="149" text-anchor="middle" fill="#e2e8f0">4 · recommend validation</text>
-            <rect x="170" y="168" width="260" height="26" rx="7" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.3"/><text x="300" y="185" text-anchor="middle" fill="#fbbf24">5 · human runs commands</text>
-            <rect x="170" y="204" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="221" text-anchor="middle" fill="#e2e8f0">6 · reconcile specs/tests</text>
-            <rect x="170" y="240" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="257" text-anchor="middle" fill="#e2e8f0">7 · final status</text>
-            <rect x="170" y="276" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="293" text-anchor="middle" fill="#e2e8f0">8 · optional commit</text>
+            <rect x="170" y="24" width="260" height="26" rx="7" fill="rgba(251,113,133,0.07)" stroke="#fb7185" stroke-opacity="0.5"/><text x="300" y="41" text-anchor="middle" fill="#e2e8f0">1 · spec-first edit</text>
+            <rect x="170" y="60" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45" stroke-dasharray="5 3"/><text x="300" y="77" text-anchor="middle" fill="#e2e8f0">2 · intake interview ↻</text>
+            <rect x="170" y="96" width="260" height="26" rx="7" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.3"/><text x="300" y="113" text-anchor="middle" fill="#fbbf24">3 · spec gate ⛔ (4-eyes)</text>
+            <rect x="170" y="132" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="149" text-anchor="middle" fill="#e2e8f0">4 · implement</text>
+            <rect x="170" y="168" width="260" height="26" rx="7" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.3"/><text x="300" y="185" text-anchor="middle" fill="#fbbf24">5 · behavior-tests gate ⛔</text>
+            <rect x="170" y="204" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="221" text-anchor="middle" fill="#e2e8f0">6 · typecheck · test · lint ⇉</text>
+            <rect x="170" y="240" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="257" text-anchor="middle" fill="#e2e8f0">7 · reconcile spec ↔ code</text>
+            <rect x="170" y="276" width="260" height="26" rx="7" fill="rgba(251,113,133,0.05)" stroke="#fb7185" stroke-opacity="0.45"/><text x="300" y="293" text-anchor="middle" fill="#e2e8f0">8 · changelog + commit</text>
           </g>
           <g stroke="#fb7185" stroke-opacity="0.6">
             <line x1="300" y1="50" x2="300" y2="60" marker-end="url(#wf-fwd)"/>
@@ -1029,12 +1049,12 @@ svg { width: 100%; height: auto; display: block; }
           <h4 style="color:#fb7185">→ the membranes — the crossing process, guarded</h4>
           <p class="lead">A crossing is reliable only if the <i>process</i> is. We encode the rules as a runnable graph (Archon), so the discipline can't be skipped under deadline.</p>
           <ul>
-            <li><b>Harness before edits</b> — agents read the repo's command and layering contract first.</li>
-            <li><b>Diff classification</b> — changes are routed as UI, API, persistence, slide-content, demos, specs, or harness.</li>
-            <li><b>Validation map</b> — the workflow chooses from <code>pnpm test</code>, <code>pnpm build</code>, <code>pnpm test:e2e</code>, and demo scripts.</li>
-            <li><b>Advisory only</b> — the workflow recommends; registered commands remain the proof.</li>
+            <li><b>Spec before code</b> — spec edits sit before implementation in the graph order.</li>
+            <li><b>Interview to alignment</b> — an adaptive loop re-asks until the design tree is resolved.</li>
+            <li><b>4-eyes gates</b> — human approval nodes before code lands and before tests pass.</li>
+            <li><b>Tests · validate · reconcile</b> — story-named tests, parallel typecheck/test/lint with a fix-loop, then a spec-vs-code reconcile pass.</li>
           </ul>
-          <p class="ex">e.g. <code>/change-check</code> → <code>.archon/workflows/change-check.yaml</code></p>
+          <p class="ex">e.g. <code>/feature</code> → <code>feature-intake.yaml</code> (14 nodes) · <code>/cohesion-review</code> → <code>cohesion-review.yaml</code></p>
         </div>
       </div>
     </div>
@@ -1047,11 +1067,11 @@ svg { width: 100%; height: auto; display: block; }
         <svg viewBox="0 0 600 320" font-family="ui-sans-serif, system-ui">
           <defs><marker id="rc-fwd" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/></marker></defs>
           <g font-size="9.5" font-weight="600">
-            <rect x="14" y="26" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="45" fill="#cbd5e1">README.md <tspan fill="#64748b" font-weight="400">· app map</tspan></text>
-            <rect x="14" y="76" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="95" fill="#cbd5e1">PLAN.md <tspan fill="#64748b" font-weight="400">· technical notes</tspan></text>
-            <rect x="14" y="126" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="145" fill="#cbd5e1">specs/harness.md <tspan fill="#64748b" font-weight="400">· harness spec</tspan></text>
-            <rect x="14" y="176" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="195" fill="#cbd5e1">shared/api.ts <tspan fill="#64748b" font-weight="400">· contract</tspan></text>
-            <rect x="14" y="226" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="245" fill="#cbd5e1">SQLite DB <tspan fill="#64748b" font-weight="400">· deck data</tspan></text>
+            <rect x="14" y="26" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="45" fill="#cbd5e1">technical-specs/ <tspan fill="#64748b" font-weight="400">· 25 docs, reimpl-complete</tspan></text>
+            <rect x="14" y="76" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="95" fill="#cbd5e1">CHANGELOG.md <tspan fill="#64748b" font-weight="400">· every change</tspan></text>
+            <rect x="14" y="126" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="145" fill="#cbd5e1">ExecutionLog → sqlite <tspan fill="#64748b" font-weight="400">· traces</tspan></text>
+            <rect x="14" y="176" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="195" fill="#cbd5e1">learnings/ <tspan fill="#64748b" font-weight="400">· substrate memory</tspan></text>
+            <rect x="14" y="226" width="206" height="30" rx="7" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.5"/><text x="26" y="245" fill="#cbd5e1">rules-index <tspan fill="#64748b" font-weight="400">· enforcement</tspan></text>
           </g>
           <g stroke="#a78bfa" stroke-opacity="0.45">
             <line x1="222" y1="41" x2="392" y2="120" marker-end="url(#rc-fwd)"/>
@@ -1062,20 +1082,20 @@ svg { width: 100%; height: auto; display: block; }
           </g>
           <rect x="394" y="110" width="192" height="92" rx="12" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-opacity="0.55"/>
           <text x="490" y="146" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="600">read by</text>
-          <text x="490" y="164" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">judge + agent</text>
+          <text x="490" y="164" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">validator + agent</text>
           <text x="490" y="182" text-anchor="middle" fill="#64748b" font-size="8">one home per concept</text>
           <text x="300" y="300" text-anchor="middle" fill="#64748b" font-size="8" font-style="italic">nothing important lives only in someone's head</text>
         </svg>
         <div class="prail">
           <h4 style="color:#a78bfa">→ durable record — meaning pinned in writing</h4>
-          <p class="lead">Drift is the enemy. Every concept has one written home, shaped so the human judge and the agent can both read it.</p>
+          <p class="lead">Drift is the enemy. Every concept has one written home, shaped so the human validator and the agent can both read it.</p>
           <ul>
-            <li><b>Specs are the source</b> — <code>README.md</code>, <code>PLAN.md</code>, and <code>specs/harness.md</code> define the app and harness.</li>
-            <li><b>Shared contract</b> — <code>shared/api.ts</code> is the client/server shape boundary.</li>
-            <li><b>Data in one sink</b> — SQLite stores presentations, groups, slides, themes, and ordering.</li>
-            <li><b>Agent memory</b> — Entire checkpoints capture session history when the CLI is installed.</li>
+            <li><b>Specs are the source</b> — <code>technical-specs/</code> (25 docs), reimplementation-complete.</li>
+            <li><b>Every change logged</b> — <code>CHANGELOG.md</code> in the same commit; <code>yymmdd-hhmm</code> messages.</li>
+            <li><b>Traces in one sink</b> — <code>ExecutionLogService</code> → sqlite: agent starts/completes/failures, structured.</li>
+            <li><b>Substrate memory</b> — <code>learnings/</code> holds the multi-hour-debug knowledge; <code>rules-index</code> tracks enforcement state.</li>
           </ul>
-          <p class="ex">e.g. API tests prove repository/service behavior; Playwright proves browser deck flows.</p>
+          <p class="ex">e.g. <code>recordAgentFailed()</code> carries the first 10 Zod issues + a 2 KB raw preview — failures debuggable without ssh.</p>
         </div>
       </div>
     </div>
@@ -1109,15 +1129,15 @@ svg { width: 100%; height: auto; display: block; }
           <text x="300" y="232" text-anchor="middle" fill="#64748b" font-size="8.5" font-style="italic">size is a signal; the boundary is the gate</text>
         </svg>
         <div class="prail">
-          <h4 style="color:#fb923c">→ legible work — kept small enough to judge</h4>
+          <h4 style="color:#fb923c">→ legible work — kept small enough to validate</h4>
           <p class="lead">The work is shaped so a reviewer (human or agent) can hold one unit in their head. Three layers + a body-shape rule.</p>
           <ul>
-            <li><b>Layered server</b> — db, repositories, services, routes, app/runtime stay separate.</li>
-            <li><b>Shared types</b> — request/response and block shapes live in <code>shared/api.ts</code>.</li>
-            <li><b>Slide registry</b> — code-backed slides are explicit registry entries, not file-system magic.</li>
-            <li><b>Canvas discipline</b> — slides target the fixed 1000 x 562.5 logical canvas.</li>
+            <li><b>L1 — lane fences</b> (<code>no-restricted-imports</code>) block cross-lane reach: hard error.</li>
+            <li><b>L2 — oxlint sensors</b> (complexity / depth / params) warn on creep: never block.</li>
+            <li><b>L3 — LLM cohesion</b> reviewer opines KEEP/PROMOTE/SPLIT/MERGE: advisory.</li>
+            <li><b>SLAP + DI</b> — bodies narrate one level as named steps; <code>@Inject(TOKEN)</code> hides internals; <code>DraiverError</code> codes make failures branchable.</li>
           </ul>
-          <p class="ex">e.g. <code>server/services/*</code> own invariants; <code>server/routes/*</code> stay thin.</p>
+          <p class="ex">e.g. <code>/cohesion-review</code> · <code>.oxlintrc.json</code> · the <code>forge.plugin.run</code> narrating orchestrator</p>
         </div>
       </div>
     </div>
@@ -1150,12 +1170,12 @@ svg { width: 100%; height: auto; display: block; }
           <h4 style="color:#34d399">→ capable agent — eyes &amp; hands, granted</h4>
           <p class="lead">The translator gets what the base model lacks at run time: knowledge, persistence, endurance, real tools.</p>
           <ul>
-            <li><b>Skills</b> — <code>.claude/skills/slide-authoring.md</code> carries the slide canvas contract.</li>
-            <li><b>Memory</b> — Entire hooks preserve checkpoint history across sessions when installed.</li>
+            <li><b>Skills</b> — subject knowledge + procedural workflows not in training.</li>
+            <li><b>Memory</b> — persistent facts carried across sessions.</li>
             <li><b>Context compression</b> — the conversation is summarized so long tasks survive.</li>
-            <li><b>Tools</b> — browser tests, API tests, build, and demo scripts are the repo's runnable proof surfaces.</li>
+            <li><b>Tools</b> — sandboxes + per-run <code>ToolRuntime</code> grants + source tools; the agent calls only what its run allows.</li>
           </ul>
-          <p class="ex">e.g. <code>slide-authoring</code> skill · Entire hooks · <code>pnpm test:e2e</code> as browser proof</p>
+          <p class="ex">e.g. Copilot SDK runtime with dynamic <code>ToolRuntime</code> grants · <code>.claude/</code> skills + memory · <code>learnings/</code> as substrate knowledge</p>
         </div>
       </div>
     </div>
@@ -1203,7 +1223,7 @@ svg { width: 100%; height: auto; display: block; }
           <line x1="463" y1="106" x2="445" y2="233" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5" marker-end="url(#gr-bind)"/>
           <line x1="477" y1="106" x2="498" y2="233" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5" marker-end="url(#gr-bind)"/>
           <text x="470" y="296" text-anchor="middle" fill="#b89046" font-size="7.5">2 nodes, 1 concept → duplicate</text>
-          <text x="300" y="328" text-anchor="middle" fill="#64748b" font-size="8" font-style="italic">one substrate — drift &amp; duplicates become queries; judge + agent both traverse it</text>
+          <text x="300" y="328" text-anchor="middle" fill="#64748b" font-size="8" font-style="italic">one substrate — drift &amp; duplicates become queries; validator + agent both traverse it</text>
         </svg>
         <div class="prail">
           <h4 style="color:#22d3ee">→ the direction — one canonical source of truth</h4>
@@ -1212,9 +1232,9 @@ svg { width: 100%; height: auto; display: block; }
             <li><b>One substrate</b> — spec-graph ⇄ code-graph over the same concepts; specs / code / traces / learnings become <i>views</i> of it, not separate stores.</li>
             <li><b>Drift becomes a query</b> — a spec node with no binding edge = unbuilt; a code node with no spec edge = undocumented drift. <code>check_spec_drift</code> = diff the graphs.</li>
             <li><b>Duplicates surface mechanically</b> — two nodes for one concept = the <i>no-duplicate-concepts</i> violation, found by the graph, not by review.</li>
-            <li><b>Membranes are edge ops</b> — elicitation makes spec nodes, binding makes code edges; both readers (judge + agent) traverse one queryable thing.</li>
+            <li><b>Membranes are edge ops</b> — elicitation makes spec nodes, binding makes code edges; both readers (validator + agent) traverse one queryable thing.</li>
           </ul>
-          <p class="ex">seed: future code graph over <code>shared/</code>, <code>server/</code>, and <code>src/</code> — nodes = routes, services, repositories, components, slides, and shared API types.</p>
+          <p class="ex">seed: the code-graph <code>TODO NGH:</code> in <code>technical-specs/20</code> — nodes = lib/file/unit/concept, edges = imports + DI bindings + type refs; candidates openlore / understand-anything.</p>
         </div>
       </div>
     </div>
@@ -1258,7 +1278,7 @@ svg { width: 100%; height: auto; display: block; }
 <!-- ════════════════ TOWER · BEHAVIOR BRIDGE (1c) ════════════════ -->
 <div class="card">
   <h2>1c · The tower was only half — code must become behavior</h2>
-  <p class="hint">Bridge. Keep the clean tower, then extend it just far enough: code is not success; observed behavior is what gets judged.</p>
+  <p class="hint">Bridge. Keep the clean tower, then extend it just far enough: code is not success; observed behavior is what gets validated.</p>
   <svg viewBox="0 0 1160 430" font-family="ui-sans-serif, system-ui">
     <defs>
       <marker id="c-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1280,7 +1300,7 @@ svg { width: 100%; height: auto; display: block; }
 
     <rect x="548" y="56" width="568" height="260" rx="14" fill="rgba(96,165,250,0.026)" stroke="#60a5fa" stroke-opacity="0.18"/>
     <text x="570" y="82" fill="#60a5fa" font-size="10" font-weight="700" letter-spacing="0.08em">BEHAVIOR HALF</text>
-    <text x="570" y="99" fill="#94a3b8" font-size="10">trust: code runs, behavior is observed, judgment produces a verdict</text>
+    <text x="570" y="99" fill="#94a3b8" font-size="10">trust: code runs, behavior is observed, validation produces a verdict</text>
 
     <!-- main chain -->
     <rect x="78" y="156" width="112" height="54" rx="10" fill="rgba(251,191,36,0.07)" stroke="#fbbf24" stroke-opacity="0.55"/>
@@ -1308,7 +1328,7 @@ svg { width: 100%; height: auto; display: block; }
     <text x="979" y="194" text-anchor="middle" fill="#5b80ab" font-size="8.5">captured facts</text>
 
     <rect x="744" y="260" width="142" height="48" rx="10" fill="rgba(251,146,60,0.06)" stroke="#fb923c" stroke-opacity="0.55"/>
-    <text x="815" y="280" text-anchor="middle" fill="#fb923c" font-size="12" font-weight="600">Judgment</text>
+    <text x="815" y="280" text-anchor="middle" fill="#fb923c" font-size="12" font-weight="600">Validation</text>
     <text x="815" y="296" text-anchor="middle" fill="#b07a4a" font-size="8.5">evidence vs spec</text>
 
     <rect x="432" y="260" width="142" height="48" rx="10" fill="rgba(251,113,133,0.07)" stroke="#fb7185" stroke-opacity="0.55"/>
@@ -1327,7 +1347,7 @@ svg { width: 100%; height: auto; display: block; }
     <line x1="876" y1="183" x2="910" y2="183" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#c-blue)"/>
     <text x="893" y="172" text-anchor="middle" fill="#5b80ab" font-size="8">observe</text>
 
-    <!-- judgment comparison -->
+    <!-- validation comparison -->
     <path d="M 979 210 C 980 250, 900 284, 894 284" fill="none" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#c-blue)"/>
     <path d="M 288 210 C 360 332, 650 330, 744 292" fill="none" stroke="#a78bfa" stroke-opacity="0.7" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#c-slate)"/>
     <text x="530" y="345" text-anchor="middle" fill="#8b85a8" font-size="9">the recorded spec travels forward as the reference</text>
@@ -1343,7 +1363,7 @@ svg { width: 100%; height: auto; display: block; }
     <text x="332" y="278" text-anchor="middle" fill="#64748b" font-size="7.5">does the crossing</text>
 
     <rect x="922" y="248" width="112" height="40" rx="9" fill="rgba(251,146,60,0.04)" stroke="#fb923c" stroke-opacity="0.38" stroke-dasharray="5 4"/>
-    <text x="978" y="265" text-anchor="middle" fill="#fb923c" font-size="10" font-weight="600">Judge</text>
+    <text x="978" y="265" text-anchor="middle" fill="#fb923c" font-size="10" font-weight="600">Validator</text>
     <text x="978" y="278" text-anchor="middle" fill="#64748b" font-size="7.5">refuses bad work</text>
 
     <line x1="134" y1="248" x2="134" y2="212" stroke="#fbbf24" stroke-opacity="0.32" stroke-dasharray="3 4"/>
@@ -1437,7 +1457,7 @@ svg { width: 100%; height: auto; display: block; }
       <text x="318" y="171" fill="#5e9c82" font-size="8.5">the only one who crosses — in and back out</text>
 
       <rect x="40" y="500" width="180" height="44" rx="10" fill="rgba(251,146,60,0.05)" stroke="#fb923c" stroke-opacity="0.55" stroke-dasharray="5 4"/>
-      <text x="130" y="518" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">JUDGE</text>
+      <text x="130" y="518" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">VALIDATOR</text>
       <text x="130" y="533" text-anchor="middle" fill="#b07a4a" font-size="9">refuses — watches the membranes</text>
       <line x1="212" y1="508" x2="448" y2="470" stroke="#fb923c" stroke-opacity="0.5" stroke-dasharray="4 3"/>
       <line x1="200" y1="522" x2="510" y2="423" stroke="#fb923c" stroke-opacity="0.5" stroke-dasharray="4 3"/>
@@ -1466,10 +1486,10 @@ svg { width: 100%; height: auto; display: block; }
       <text x="640" y="629" text-anchor="middle" fill="#7d9bc4" font-size="9.5">machinery held still — output repeats</text>
       <text x="640" y="642" text-anchor="middle" fill="#64748b" font-size="8.5" font-style="italic">= Controlled inputs → stable outputs</text>
 
-      <!-- LEGIBLE WORK — judge × the work → readable -->
+      <!-- LEGIBLE WORK — validator × the work → readable -->
       <line x1="368" y1="450" x2="552" y2="364" stroke="#fb923c" stroke-opacity="0.5"/>
       <text x="226" y="438" fill="#fb923c" font-size="11.5" font-weight="600">LEGIBLE WORK</text>
-      <text x="226" y="453" fill="#fb923c" font-size="9.5" font-weight="600">JUDGE × the work</text>
+      <text x="226" y="453" fill="#fb923c" font-size="9.5" font-weight="600">VALIDATOR × the work</text>
       <text x="226" y="467" fill="#bd8a5e" font-size="9.5">kept small enough to read</text>
       <text x="226" y="480" fill="#64748b" font-size="8.5" font-style="italic">= the 4th — the old three missed it</text>
     </g>
@@ -1486,8 +1506,8 @@ svg { width: 100%; height: auto; display: block; }
     <g class="g" data-s="8">
       <text x="880" y="384" fill="#b89046" font-size="8" font-style="italic">e.g. exhaustive interviewing, recommend + veto</text>
       <text x="780" y="423" fill="#b56575" font-size="8" font-style="italic">e.g. story-tests, drift checks, spec-first workflow</text>
-      <text x="882" y="291" fill="#64748b" font-size="8" font-style="italic">e.g. README, PLAN, specs/harness</text>
-      <text x="236" y="279" fill="#64748b" font-size="8" font-style="italic">e.g. real commands, tests, browser harness</text>
+      <text x="882" y="291" fill="#64748b" font-size="8" font-style="italic">e.g. specs, learnings, CHANGELOG</text>
+      <text x="236" y="279" fill="#64748b" font-size="8" font-style="italic">e.g. spec-gen MCP, real commands, sandboxes</text>
       <text x="640" y="655" text-anchor="middle" fill="#64748b" font-size="8" font-style="italic">e.g. fixed entrypoints, pinned env, config validated at boot</text>
       <text x="226" y="493" fill="#64748b" font-size="8" font-style="italic">e.g. complexity caps, story-named tests, small PRs</text>
     </g>
@@ -1502,7 +1522,7 @@ svg { width: 100%; height: auto; display: block; }
     "the tower is the radius — the innermost crossing is proven, free",
     "two membranes, two failures: lie at the first → the wrong thing; at the second → the thing wrong",
     "three actors: one wants, one crosses, one watches",
-    "four guarantees, each an actor meeting a world: intent×outside → durable record · agent×tools → capable agent · agent×inside → predictable world · judge×work → legible work",
+    "four guarantees, each an actor meeting a world: intent×outside → durable record · agent×tools → capable agent · agent×inside → predictable world · validator×work → legible work",
     "the loop closes: the software ships back out — the world uses it, new wants form",
     "every item guards a membrane or keeps a guarantee — that is the whole sorting rule",
   ];
@@ -1579,7 +1599,7 @@ svg { width: 100%; height: auto; display: block; }
       <tr><td><b>reference</b></td><td class="need">translate <i>from</i> what — must not drift</td><td class="g-rec">DURABLE RECORD</td><td class="who">intent holder</td></tr>
       <tr><td><b>translator</b></td><td class="need">translate <i>with</i> what — must be able</td><td class="g-cap">CAPABLE AGENT</td><td class="who">agent</td></tr>
       <tr><td><b>medium</b></td><td class="need">land <i>onto</i> what — must hold still</td><td class="g-med">PREDICTABLE WORLD</td><td class="who">the inside world</td></tr>
-      <tr><td><b>verdict</b></td><td class="need">confirm it landed — must be checkable</td><td class="g-ver">LEGIBLE WORK (+ tests)</td><td class="who">judge</td></tr>
+      <tr><td><b>verdict</b></td><td class="need">confirm it landed — must be checkable</td><td class="g-ver">LEGIBLE WORK (+ tests)</td><td class="who">validator</td></tr>
     </tbody>
   </table>
   <p class="prose">That set is <b>MECE</b> — drop any one and you get a distinct failure mode. So the concept is sound. The original anatomy (controlled inputs / capability / system-of-record) had reference, translator, medium but <b>no verdict</b> — that's the hole "legible work" fills. One honest wobble: legible work is really the <i>human half</i> of the verdict provision; tests are the <i>machine half</i>. So the 4th guarantee is "the crossing is checkable," and legible-work + tests are its two mechanisms. Minor naming, not a structural flaw.</p>
@@ -1587,7 +1607,7 @@ svg { width: 100%; height: auto; display: block; }
 <!-- ════════════════ RELATION GRAPH ════════════════ -->
 <div class="card">
   <h2>4 · Relation graph — what attaches to what</h2>
-  <p class="hint">Static structure. Disciplines attach to arrows; guarantees attach to roles. 2 arrows + 4 roles = 6; both enumerations closed (produce = reference·producer·object; check adds the judge).</p>
+  <p class="hint">Static structure. Disciplines attach to arrows; guarantees attach to roles. 2 arrows + 4 roles = 6; both enumerations closed (produce = reference·producer·object; check adds the validator).</p>
   <svg viewBox="0 0 1160 600" font-family="ui-sans-serif, system-ui">
     <defs>
       <marker id="m-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1652,12 +1672,12 @@ svg { width: 100%; height: auto; display: block; }
 
       <rect x="40" y="252" width="1080" height="86" rx="11" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.1)"/>
       <text x="580" y="276" text-anchor="middle" fill="#94a3b8" font-size="11.5" font-weight="600">producing has three roles — checking adds a fourth</text>
-      <text x="580" y="292" text-anchor="middle" fill="#5b6b80" font-size="9.5">(produce = input · process · output; a check is performed by someone — the judge. No fifth participant exists.)</text>
+      <text x="580" y="292" text-anchor="middle" fill="#5b6b80" font-size="9.5">(produce = input · process · output; a check is performed by someone — the validator. No fifth participant exists.)</text>
 
       <text x="165" y="322" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">reference <tspan fill="#64748b" font-weight="400" font-size="10">— its input</tspan></text>
       <text x="435" y="322" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">producer <tspan fill="#64748b" font-weight="400" font-size="10">— the worker</tspan></text>
       <text x="705" y="322" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">object <tspan fill="#64748b" font-weight="400" font-size="10">— its output</tspan></text>
-      <text x="975" y="322" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">judge <tspan fill="#64748b" font-weight="400" font-size="10">— who compares</tspan></text>
+      <text x="975" y="322" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">validator <tspan fill="#64748b" font-weight="400" font-size="10">— who compares</tspan></text>
       <text x="975" y="334" text-anchor="middle" fill="#64748b" font-size="8.5" font-style="italic">contingent — exists only while the hop is probabilistic</text>
     </g>
 
@@ -1702,15 +1722,15 @@ svg { width: 100%; height: auto; display: block; }
       intent is perishable → Elicitation checks once, at capture · the spec is durable → Binding checks continuously, forever
     </text>
     <text x="580" y="548" text-anchor="middle" fill="#64748b" font-size="10.5" font-style="italic">
-      judge corollary: the judge exists only while the hop is probabilistic — a deterministic step is its own proof.
-      The lower tower deleted its judge by driving stochasticity to zero; we can’t yet, so the role stays — a principle to uphold.
+      validator corollary: the validator exists only while the hop is probabilistic — a deterministic step is its own proof.
+      The lower tower deleted its validator by driving stochasticity to zero; we can’t yet, so the role stays — a principle to uphold.
     </text>
     <text x="580" y="568" text-anchor="middle" fill="#64748b" font-size="10.5" font-style="italic">
-      two-hats corollary: at Elicitation the judge must be the intent holder — the reference is their head.
-      Once the spec exists, anyone who can read it can judge: the record makes judgment transferable.
+      two-hats corollary: at Elicitation the validator must be the intent holder — the reference is their head.
+      Once the spec exists, anyone who can read it can validate: the record makes validation transferable.
     </text>
     <text x="580" y="588" text-anchor="middle" fill="#64748b" font-size="10.5" font-style="italic">
-      and a test is judgment pre-paid: the human encodes a verdict once, the machine replays it forever — Legible work guards the residue that can’t be.
+      and a test is validation pre-paid: the human encodes a verdict once, the machine replays it forever — Legible work guards the residue that can’t be.
     </text>
   </svg>
 </div>
@@ -1740,9 +1760,9 @@ svg { width: 100%; height: auto; display: block; }
     <text x="215" y="53" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">INTENT HOLDER</text>
     <text x="215" y="71" text-anchor="middle" fill="#64748b" font-size="9.5">permanent — intent lives here, nowhere else</text>
 
-    <!-- JUDGE: contingent participant (dashed) -->
+    <!-- VALIDATOR: contingent participant (dashed) -->
     <rect x="40" y="140" width="230" height="72" rx="10" fill="rgba(251,146,60,0.05)" stroke="#fb923c" stroke-opacity="0.55" stroke-dasharray="5 4"/>
-    <text x="155" y="163" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">JUDGE</text>
+    <text x="155" y="163" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">VALIDATOR</text>
     <text x="155" y="181" text-anchor="middle" fill="#b07a4a" font-size="9.5">refuses bad work — ⑥ terminates here</text>
     <text x="155" y="196" text-anchor="middle" fill="#64748b" font-size="9">kept affordable by LEGIBLE WORK</text>
 
@@ -1751,7 +1771,7 @@ svg { width: 100%; height: auto; display: block; }
     <text x="150" y="104" text-anchor="end" fill="#64748b" font-size="8.5" font-style="italic">often one body,</text>
     <text x="150" y="116" text-anchor="end" fill="#64748b" font-size="8.5" font-style="italic">never one mission</text>
 
-    <!-- judge contingency caption -->
+    <!-- validator contingency caption -->
     <text x="152" y="228" text-anchor="middle" fill="#64748b" font-size="8.5" font-style="italic">dashed = contingent: exists only while the hop is</text>
     <text x="152" y="241" text-anchor="middle" fill="#64748b" font-size="8.5" font-style="italic">probabilistic. The lower tower deleted this node;</text>
     <text x="152" y="254" text-anchor="middle" fill="#64748b" font-size="8.5" font-style="italic">we can’t yet — so upholding it is a principle.</text>
@@ -1765,7 +1785,7 @@ svg { width: 100%; height: auto; display: block; }
     <rect x="86" y="300" width="226" height="76" rx="12" fill="rgba(167,139,250,0.07)" stroke="#a78bfa" stroke-opacity="0.6" stroke-width="1.5"/>
     <rect x="92" y="306" width="214" height="64" rx="9" fill="none" stroke="#a78bfa" stroke-opacity="0.25"/>
     <text x="199" y="332" text-anchor="middle" fill="#a78bfa" font-size="13.5" font-weight="600">DURABLE RECORD</text>
-    <text x="199" y="350" text-anchor="middle" fill="#8b85a8" font-size="9.5">specs · decisions · history</text>
+    <text x="199" y="350" text-anchor="middle" fill="#8b85a8" font-size="9.5">specs · decisions · learnings · history</text>
     <text x="199" y="364" text-anchor="middle" fill="#64748b" font-size="9">the reference chain, made durable</text>
 
     <!-- WORLD -->
@@ -1785,7 +1805,7 @@ svg { width: 100%; height: auto; display: block; }
     <circle cx="470" cy="61" r="11" fill="#0d1117" stroke="#fbbf24"/>
     <text x="470" y="65" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">1</text>
     <text x="540" y="46" text-anchor="middle" fill="#b89046" font-size="10.5">ELICITATION — interview · recommend + veto · sign-off</text>
-    <text x="540" y="88" text-anchor="middle" fill="#b89046" font-size="8.5" font-style="italic">the sign-off in ① is judging too — there the judge hat is fused to the holder (the reference is still a head)</text>
+    <text x="540" y="88" text-anchor="middle" fill="#b89046" font-size="8.5" font-style="italic">the sign-off in ① is validating too — there the validator hat is fused to the holder (the reference is still a head)</text>
 
     <!-- 1b: intent holder -> record (spec captured) -->
     <line x1="272" y1="86" x2="262" y2="292" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#i-amber)"/>
@@ -1796,7 +1816,7 @@ svg { width: 100%; height: auto; display: block; }
     <line x1="318" y1="306" x2="790" y2="110" stroke="#a78bfa" stroke-width="1.7" marker-end="url(#i-violet)"/>
     <circle cx="500" cy="231" r="11" fill="#0d1117" stroke="#a78bfa"/>
     <text x="500" y="235" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">2</text>
-    <text x="568" y="210" fill="#8b85a8" font-size="10.5">reads the record: specs, tests, decisions</text>
+    <text x="568" y="210" fill="#8b85a8" font-size="10.5">reads the record: spec, learnings, decisions</text>
 
     <!-- 2b: world -> agent (grounding) -->
     <line x1="836" y1="292" x2="818" y2="114" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#i-emerald)"/>
@@ -1827,9 +1847,9 @@ svg { width: 100%; height: auto; display: block; }
     <circle cx="160" cy="520" r="11" fill="#0d1117" stroke="#fb7185"/>
     <text x="160" y="524" text-anchor="middle" fill="#fb7185" font-size="11" font-weight="700">5</text>
     <text x="182" y="508" fill="#b56575" font-size="10.5">write back: drift notes, decisions,</text>
-    <text x="182" y="522" fill="#b56575" font-size="10.5">history — next session starts informed</text>
+    <text x="182" y="522" fill="#b56575" font-size="10.5">learnings — next session starts informed</text>
 
-    <!-- 6: binding -> judge (verdicts for judgment), wide curve on the far left -->
+    <!-- 6: binding -> validator (verdicts for validation), wide curve on the far left -->
     <path d="M 400 540 C 60 560, -10 360, 50 214" fill="none" stroke="#fb923c" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#i-orange)"/>
     <circle cx="32" cy="330" r="11" fill="#0d1117" stroke="#fb923c"/>
     <text x="32" y="334" text-anchor="middle" fill="#fb923c" font-size="11" font-weight="700">6</text>
@@ -1838,7 +1858,7 @@ svg { width: 100%; height: auto; display: block; }
       the two disciplines never touch each other directly — Elicitation hands off to Binding only through the record. Cut the record, and they disconnect.
     </text>
     <text x="565" y="634" text-anchor="middle" fill="#64748b" font-size="11" font-style="italic">
-      every check terminates at the JUDGE — a node that exists only because ② and ③ are probabilistic. Drive that to zero and the node is deleted; the lower tower already did.
+      every check terminates at the VALIDATOR — a node that exists only because ② and ③ are probabilistic. Drive that to zero and the node is deleted; the lower tower already did.
     </text>
   </svg>
 </div>
@@ -1858,7 +1878,7 @@ svg { width: 100%; height: auto; display: block; }
   </div>
   <div class="fact">
     <div class="t" style="color:#fb923c">Kill legible work</div>
-    <div class="b">Edge ⑥ becomes unaffordable. The other three guarantees still hold — and the judgment silently stops happening anyway. “Reviewed” degrades into the rubber-stamped 3,000-line PR.</div>
+    <div class="b">Edge ⑥ becomes unaffordable. The other three guarantees still hold — and the validation silently stops happening anyway. “Reviewed” degrades into the rubber-stamped 3,000-line PR.</div>
   </div>
 </div>
 </template>

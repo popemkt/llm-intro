@@ -13,6 +13,7 @@ const BUILT_IN_SLIDES = [
   { code_id: "01-opener", title: "What is an LLM?" },
   { code_id: "02-linear-regression", title: "Linear Regression → LLM" },
   { code_id: "10-word-dimensions", title: "How Words Become Numbers" },
+  { code_id: "11-prediction-inputs", title: "Two Inputs: Model + Context" },
   { code_id: "03-context", title: "Context Window" },
   { code_id: "04-tool-use", title: "Tool Use / Agent Loop" },
   { code_id: "05-claude-desktop", title: "Claude Desktop" },
@@ -32,12 +33,69 @@ const SEED_LAYOUT = {
       title: "How it works from a visible standpoint",
       slides: ["01-opener", "02-linear-regression", "04-tool-use", "03-context"],
     },
-    { title: "Indepth theory", slides: ["10-word-dimensions"] },
+    { title: "Indepth theory", slides: ["10-word-dimensions", "11-prediction-inputs"] },
     { title: "Claude code", slides: ["05-claude-desktop", "07-workspace-setup"] },
     { title: "Advanced tools and workflows", slides: ["09-appendix"] },
     { title: "Cowork", slides: [] as string[] },
   ],
 } as const;
+
+// ── The Harness Model deck (code-backed; built from harness-model-graphs) ──
+const HARNESS_SLIDES = [
+  { code_id: "harness-00-title", title: "The Harness Model" },
+  { code_id: "harness-01-tower-history", title: "Every translator was once human" },
+  { code_id: "harness-02-tower-today", title: "Where the problem lives" },
+  { code_id: "harness-03-cast", title: "Who died, who took over" },
+  { code_id: "harness-04-world", title: "Intent in, behavior out" },
+  { code_id: "harness-05-typed", title: "What the arrows are allowed to mean" },
+] as const;
+
+const HARNESS_LAYOUT = {
+  ungrouped: [
+    "harness-00-title",
+    "harness-01-tower-history",
+    "harness-02-tower-today",
+    "harness-03-cast",
+    "harness-04-world",
+    "harness-05-typed",
+  ] as string[],
+  groups: [] as Array<{ title: string; slides: string[] }>,
+} as const;
+
+// fade transition → lets the shared-layout tower morph cleanly between 1a and 1b.
+const HARNESS_TRANSITION_JSON = JSON.stringify({ name: "fade", duration: 450 });
+
+type DeckSeed = {
+  key: string;
+  name: string;
+  theme: string;
+  slides: ReadonlyArray<{ code_id: string; title: string }>;
+  layout: {
+    ungrouped: ReadonlyArray<string>;
+    groups: ReadonlyArray<{ title: string; slides: ReadonlyArray<string> }>;
+  };
+  /** When set, applied as the deck default + to every built-in slide lacking one. */
+  transitionJson?: string;
+};
+
+// Every system deck seeded on bootstrap. Add a deck by appending a descriptor.
+const DECK_SEEDS: ReadonlyArray<DeckSeed> = [
+  {
+    key: SEED_PRESENTATION_KEY,
+    name: SEED_PRESENTATION_NAME,
+    theme: "dark-green",
+    slides: BUILT_IN_SLIDES,
+    layout: SEED_LAYOUT,
+  },
+  {
+    key: "harness-model",
+    name: "The Harness Model",
+    theme: "dark-green",
+    slides: HARNESS_SLIDES,
+    layout: HARNESS_LAYOUT,
+    transitionJson: HARNESS_TRANSITION_JSON,
+  },
+];
 
 export function openDatabase(filePath = process.env.LLM_INTRO_DB_PATH ?? DB_PATH) {
   const db = new Database(filePath);
@@ -52,7 +110,9 @@ export function bootstrapDatabase(
 ) {
   migrate(db);
   if (options.seedSystemPresentation ?? true) {
-    seedSystemPresentation(db);
+    for (const deck of DECK_SEEDS) {
+      seedSystemPresentation(db, deck);
+    }
   }
 }
 
@@ -347,23 +407,24 @@ function normalizeSlidePositions(db: Database.Database) {
   })();
 }
 
-function seedSystemPresentation(db: Database.Database) {
+function seedSystemPresentation(db: Database.Database, deck: DeckSeed) {
   const selectBySystemKey = db.prepare("SELECT id FROM presentations WHERE system_key=?");
   const selectByName = db.prepare("SELECT id FROM presentations WHERE name=?");
   const attachSystemKey = db.prepare("UPDATE presentations SET system_key=? WHERE id=?");
 
-  const existing = (selectBySystemKey.get(SEED_PRESENTATION_KEY) ??
-    selectByName.get(SEED_PRESENTATION_NAME)) as { id: number } | undefined;
+  const existing = (selectBySystemKey.get(deck.key) ?? selectByName.get(deck.name)) as
+    | { id: number }
+    | undefined;
 
   let presentationId: number;
 
   if (existing) {
     presentationId = existing.id;
-    attachSystemKey.run(SEED_PRESENTATION_KEY, presentationId);
+    attachSystemKey.run(deck.key, presentationId);
   } else {
     const { lastInsertRowid } = db
       .prepare("INSERT INTO presentations (name, theme, system_key) VALUES (?, ?, ?)")
-      .run(SEED_PRESENTATION_NAME, "dark-green", SEED_PRESENTATION_KEY);
+      .run(deck.name, deck.theme, deck.key);
     presentationId = Number(lastInsertRowid);
   }
 
@@ -378,11 +439,11 @@ function seedSystemPresentation(db: Database.Database) {
     `DELETE FROM slides
      WHERE presentation_id=?
        AND kind='code'
-       AND code_id NOT IN (${BUILT_IN_SLIDES.map(() => "?").join(", ")})`,
+       AND code_id NOT IN (${deck.slides.map(() => "?").join(", ")})`,
   );
 
   db.transaction(() => {
-    BUILT_IN_SLIDES.forEach(({ code_id, title }, position) => {
+    deck.slides.forEach(({ code_id, title }, position) => {
       const row = selectSlide.get(presentationId, code_id) as { id: number } | undefined;
       if (row) {
         updateSlide.run(position, title, row.id);
@@ -390,13 +451,34 @@ function seedSystemPresentation(db: Database.Database) {
         insertSlide.run(presentationId, position, code_id, title);
       }
     });
-    deleteMissing.run(presentationId, ...BUILT_IN_SLIDES.map((slide) => slide.code_id));
+    deleteMissing.run(presentationId, ...deck.slides.map((slide) => slide.code_id));
   })();
 
-  seedSystemLayout(db, presentationId);
+  seedSystemLayout(db, presentationId, deck.layout);
+
+  if (deck.transitionJson) {
+    db.prepare("UPDATE presentations SET default_transition_json=? WHERE id=?").run(
+      deck.transitionJson,
+      presentationId,
+    );
+    const setSlideTransition = db.prepare(
+      `UPDATE slides SET transition_json=?
+       WHERE presentation_id=? AND code_id=?
+         AND (transition_json IS NULL OR transition_json='' OR transition_json NOT LIKE '%duration%')`,
+    );
+    db.transaction(() => {
+      for (const { code_id } of deck.slides) {
+        setSlideTransition.run(deck.transitionJson, presentationId, code_id);
+      }
+    })();
+  }
 }
 
-function seedSystemLayout(db: Database.Database, presentationId: number) {
+function seedSystemLayout(
+  db: Database.Database,
+  presentationId: number,
+  layout: DeckSeed["layout"],
+) {
   const existingGroupCount = db
     .prepare("SELECT COUNT(*) as n FROM slide_groups WHERE presentation_id=?")
     .get(presentationId) as { n: number };
@@ -410,10 +492,10 @@ function seedSystemLayout(db: Database.Database, presentationId: number) {
   );
 
   db.transaction(() => {
-    SEED_LAYOUT.ungrouped.forEach((codeId, index) => {
+    layout.ungrouped.forEach((codeId, index) => {
       setSlide.run(index, null, presentationId, codeId);
     });
-    SEED_LAYOUT.groups.forEach((group, groupIndex) => {
+    layout.groups.forEach((group, groupIndex) => {
       const { lastInsertRowid } = insertGroup.run(presentationId, group.title, groupIndex);
       const groupId = Number(lastInsertRowid);
       group.slides.forEach((codeId, index) => {

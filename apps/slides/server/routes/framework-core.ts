@@ -5,7 +5,9 @@ import { createLocalHarnessProtocols, localHarnessEnvValue } from "../local-harn
 import type { SlideDeckActions } from "../../actions/index.js";
 import { APP_AGENT_MANIFEST } from "../../shared/app-agent-manifest.js";
 import { handleAppAgentPrompt, type AppAgentRequest } from "./app-agent-runtime.js";
-import { configuredHarnessName, isHarnessReady, runHarnessChatTurn } from "../agent/pi-harness.js";
+import { configuredHarnessName, isHarnessReady } from "../agent/pi-harness.js";
+import { getAuthedHarnessEngines } from "../agent/pi-models.js";
+import { runPiChatTurn } from "../agent/pi-session.js";
 
 type LocalAgentChatMessage = {
   id: string;
@@ -171,28 +173,41 @@ function registerFrameworkStatusRoutes(router: Router, options: FrameworkStatusR
 
   router.post("/actions/manage-agent-engine", (_req, res) => {
     const status = getLocalProviderStatus(options.localModelProvider);
-    res.json({
-      engines: [
-        {
-          id: "local-app-agent",
-          label: "Local App Agent",
-          runtime: "local-app-agent",
-          hosted: false,
-          configured: true,
-        },
-        {
-          id: "local-code-mode",
-          label: "Local Code Mode",
-          runtime: "local-terminal",
-          hosted: false,
-          configured: localCodeModeEnabled(),
-        },
-      ],
+    const engines: Array<Record<string, unknown>> = [
+      {
+        id: "local-app-agent",
+        label: "Local App Agent",
+        runtime: "local-app-agent",
+        hosted: false,
+        configured: true,
+      },
+      {
+        id: "local-code-mode",
+        label: "Local Code Mode",
+        runtime: "local-terminal",
+        hosted: false,
+        configured: localCodeModeEnabled(),
+      },
+    ];
+    const payload: Record<string, unknown> = {
+      engines,
       providers: [createLocalProviderDescriptor(status)],
       configured: status.available,
       hosted: false,
       requiresHostedModel: false,
-    });
+    };
+    // When the Pi harness is opted in + ready, expose its locally-authed models so
+    // the chat picker can switch between them. Bucketed into client-renderable
+    // engine names; `current` gives the picker a default selection.
+    const harnessName = configuredHarnessName();
+    if (harnessName && isHarnessReady(harnessName)) {
+      const authed = getAuthedHarnessEngines();
+      if (authed.engines.length > 0) {
+        engines.push(...authed.engines);
+        payload.current = authed.current;
+      }
+    }
+    res.json(payload);
   });
 }
 
@@ -648,9 +663,11 @@ function registerFrameworkChatRoutes(router: Router, options: { actions?: SlideD
         });
         const send = (event: unknown) => res.write(`data: ${JSON.stringify(event)}\n\n`);
         try {
-          const { text: harnessText } = await runHarnessChatTurn({
-            name: harnessName,
+          const selection = (req.body ?? {}) as { model?: unknown; effort?: unknown };
+          const { text: harnessText } = await runPiChatTurn({
             prompt,
+            model: typeof selection.model === "string" ? selection.model : undefined,
+            effort: typeof selection.effort === "string" ? selection.effort : undefined,
             send,
           });
           upsertLocalThread(threads, { prompt, text: harnessText, scope, threadId });

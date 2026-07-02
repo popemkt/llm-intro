@@ -55,6 +55,19 @@ Interactive slides are valid when interaction teaches the concept. This includes
 - keyboard and pointer states must reset predictably when leaving/re-entering a slide;
 - use `isActive` to pause timers, loops, and expensive visual work.
 
+## Storytelling — one thing at a time
+
+The cardinal rule for every slide. Tell the story sequentially and slowly.
+
+- **One idea per beat.** Each click/advance introduces exactly one new element. Never dump a finished diagram; build it up.
+- **Picture OR text, never both at once.** A viewer reads one image or one line — not both simultaneously. When a visual is the focus, keep text to a short caption; when text is the focus, hold the visual still.
+- **Slowly.** Pace reveals deliberately (generous durations, gentle stagger). Settle or fade the previous focus before the next appears. Resist cramming.
+- **Less text.** Trim every label and caption to the minimum that still lands. If a sentence and a diagram say the same thing, drop the sentence.
+- **No explaining prose.** A slide is not a document. Cut paragraphs, hint sentences, and footnotes entirely — carry meaning with keywords, labels, diagrams, color, and motion. If you feel the urge to write a sentence that explains, put it in the spoken track / notes, not on the slide.
+- **No on-screen "how to drive" guides.** Don't add "click to continue" hints or progress chrome; just present.
+
+This applies to all slides, but especially staged/interactive ones.
+
 ## Motion And Transitions
 
 Do not lock the app to one animation technology. Use the smallest fit:
